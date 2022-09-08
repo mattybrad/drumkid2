@@ -1,1 +1,3 @@
-# drumkid2
+# Drumkid 2
+
+Aleatoric drum machine
