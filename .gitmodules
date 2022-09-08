@@ -4,3 +4,6 @@
 [submodule "code/pico-extras"]
 	path = code/pico-extras
 	url = git@github.com:raspberrypi/pico-extras.git
+[submodule "pcb/dk2_00/KiCad-RP-Pico"]
+	path = pcb/dk2_00/KiCad-RP-Pico
+	url = https://github.com/ncarandini/KiCad-RP-Pico
