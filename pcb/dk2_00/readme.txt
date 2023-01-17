@@ -2,7 +2,7 @@ This is an early prototype PCB for Drumkid 2. It is almost a proof-of-concept ra
 
 Rough specs:
 MCU: Raspberry Pi Pico
-DAC: PCM510X
+DAC: PCM510XA
 Pots: up to 8
 LEDs: up to 16
 MIDI: in/out, 3.5mm
