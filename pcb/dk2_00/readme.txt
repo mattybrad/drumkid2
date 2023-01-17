@@ -7,6 +7,7 @@ Pots: up to 8
 LEDs: up to 16
 MIDI: in/out, 3.5mm
 Sync: in/out, 3.5mm
-Audio: out, not sure whether 3.5mm or 6.35mm (or both?)
+Audio: out, not sure whether 3.5mm or 6.35mm (or both? inc headphone?)
 Buttons: 6+
-Power: USB?
+Power: USB? 
+Data: SD card
