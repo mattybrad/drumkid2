@@ -71,7 +71,7 @@ int main()
 
     for (int i = 0; i < SINE_WAVE_TABLE_LEN; i++)
     {
-        sine_wave_table[i] = 0.25 * 32767 * (cosf(i * 2 * (float)(4 * M_PI / SINE_WAVE_TABLE_LEN)) + cosf(i * 2 * (float)(5 * M_PI / SINE_WAVE_TABLE_LEN)));
+        sine_wave_table[i] = 0.25 * 32767 * (cosf(i * 2 * (float)(4 * M_PI / SINE_WAVE_TABLE_LEN)) + cosf(i * 2 * (float)(7 * M_PI / SINE_WAVE_TABLE_LEN)));
     }
 
     struct audio_buffer_pool *ap = init_audio();
