@@ -1183,6 +1183,23 @@
     )
   )
 
+  (sheet (at 58.42 143.51) (size 41.91 26.67) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 632d8ec1-04db-44bc-a1c5-2bf4018ca73f)
+    (property "Sheetname" "CV" (at 58.42 142.7984 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "cv.kicad_sch" (at 58.42 170.7646 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "dk2_00"
+        (path "/87a59a99-d509-467e-85da-26d34072acb7" (page "9"))
+      )
+    )
+  )
+
   (sheet (at 49.53 100.33) (size 41.91 26.67) (fields_autoplaced)
     (stroke (width 0.1524) (type solid))
     (fill (color 0 0 0 0.0000))

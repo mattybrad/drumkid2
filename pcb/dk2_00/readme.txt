@@ -11,3 +11,9 @@ Audio: out, not sure whether 3.5mm or 6.35mm (or both? inc headphone?)
 Buttons: 6+
 Power: USB? 
 Data: SD card
+
+Might try and include some more Eurorack things to speed up later development. For instance:
+Eurorack power input, maybe with jumper to power device instead of USB
+CV inputs using MCP6004
+CV outputs using MCP4922? Into some sort of op-amp, a TL072?
+Maybe this stuff is best as a stripboard addition for easy tweaking
