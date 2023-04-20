@@ -730,6 +730,11 @@
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 127c9f22-e863-4cee-b05b-f2b6ce76c56d)
   )
+  (text "DOUBLE CHECK THIS PAGE BEFORE CONTINUING!\nDON'T REALLY KNOW WHAT I'M DOING"
+    (at 111.76 36.83 0)
+    (effects (font (size 1.27 1.27) (thickness 0.254) bold) (justify left bottom))
+    (uuid 62a88381-f5b0-450d-a267-d12c43d34999)
+  )
   (text "Voltage regulator for DAC\nMIC5219, as used on the DAC breakout I use for prototyping\nCould also use AP7333-33SRG, as used by Pimoroni"
     (at 41.91 55.88 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
