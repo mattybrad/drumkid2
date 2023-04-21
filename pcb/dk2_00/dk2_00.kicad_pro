@@ -232,10 +232,10 @@
       "no_connect_dangling": "warning",
       "pin_not_connected": "error",
       "pin_not_driven": "error",
-      "pin_to_pin": "warning",
+      "pin_to_pin": "error",
       "power_pin_not_driven": "error",
       "similar_labels": "warning",
-      "simulation_model_issue": "error",
+      "simulation_model_issue": "ignore",
       "unannotated": "error",
       "unit_value_mismatch": "error",
       "unresolved_variable": "error",
@@ -364,10 +364,6 @@
     [
       "a1783777-3c7d-4cc4-9255-28fca529e5f7",
       "Sync"
-    ],
-    [
-      "632d8ec1-04db-44bc-a1c5-2bf4018ca73f",
-      "CV"
     ]
   ],
   "text_variables": {}

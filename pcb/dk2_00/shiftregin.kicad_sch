@@ -139,46 +139,6 @@
         )
       )
     )
-    (symbol "GND_1" (power) (pin_names (offset 0)) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -6.35 0)
-        (effects (font (size 1.27 1.27)) hide)
-      )
-      (property "Value" "GND_1" (at 0 -3.81 0)
-        (effects (font (size 1.27 1.27)))
-      )
-      (property "Footprint" "" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) hide)
-      )
-      (property "Datasheet" "" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) hide)
-      )
-      (property "ki_keywords" "global power" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) hide)
-      )
-      (property "ki_description" "Power symbol creates a global label with name \"GND\" , ground" (at 0 0 0)
-        (effects (font (size 1.27 1.27)) hide)
-      )
-      (symbol "GND_1_0_1"
-        (polyline
-          (pts
-            (xy 0 0)
-            (xy 0 -1.27)
-            (xy 1.27 -1.27)
-            (xy 0 -2.54)
-            (xy -1.27 -1.27)
-            (xy 0 -1.27)
-          )
-          (stroke (width 0) (type default))
-          (fill (type none))
-        )
-      )
-      (symbol "GND_1_1_1"
-        (pin power_in line (at 0 0 270) (length 0) hide
-          (name "GND" (effects (font (size 1.27 1.27))))
-          (number "1" (effects (font (size 1.27 1.27))))
-        )
-      )
-    )
     (symbol "Switch:SW_Push" (pin_numbers hide) (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
       (property "Reference" "SW" (at 1.27 2.54 0)
         (effects (font (size 1.27 1.27)) (justify left))
@@ -246,7 +206,7 @@
       (property "Datasheet" "" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (property "ki_keywords" "power-flag" (at 0 0 0)
+      (property "ki_keywords" "global power" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
       (property "ki_description" "Power symbol creates a global label with name \"+3V3\"" (at 0 0 0)
@@ -298,7 +258,7 @@
       (property "Datasheet" "" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (property "ki_keywords" "power-flag" (at 0 0 0)
+      (property "ki_keywords" "global power" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
       (property "ki_description" "Power symbol creates a global label with name \"GND\" , ground" (at 0 0 0)
@@ -615,7 +575,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 115.57 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 076ef2bf-2068-41c8-b96e-60c9884501b7)
-    (property "Reference" "SW?" (at 113.03 107.95 0)
+    (property "Reference" "SW6" (at 113.03 107.95 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 110.49 0)
@@ -632,7 +592,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW6") (unit 1)
         )
       )
     )
@@ -641,7 +601,7 @@
   (symbol (lib_id "74xx:74HC165") (at 167.64 73.66 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0b5f4aca-3ca4-442a-ad34-4f73b452cf97)
-    (property "Reference" "U?" (at 169.6594 50.8 0)
+    (property "Reference" "U3" (at 169.6594 50.8 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "74HC165" (at 169.6594 53.34 0)
@@ -672,7 +632,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "U?") (unit 1)
+          (reference "U3") (unit 1)
         )
       )
     )
@@ -681,7 +641,7 @@
   (symbol (lib_id "Device:R") (at 121.92 92.71 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0c7766ec-5dc3-46bd-aa03-dc6085c12a3f)
-    (property "Reference" "R?" (at 121.92 86.36 90)
+    (property "Reference" "R12" (at 121.92 86.36 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 88.9 90)
@@ -698,7 +658,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R12") (unit 1)
         )
       )
     )
@@ -707,7 +667,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 81.28 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2dea793a-4b2a-4ad4-a170-14071f8fe743)
-    (property "Reference" "SW?" (at 113.03 73.66 0)
+    (property "Reference" "SW3" (at 113.03 73.66 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 76.2 0)
@@ -724,7 +684,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW3") (unit 1)
         )
       )
     )
@@ -733,7 +693,7 @@
   (symbol (lib_id "Device:R") (at 121.92 69.85 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2f610c49-b8c4-44fc-bf4f-c24dbd5229b8)
-    (property "Reference" "R?" (at 121.92 63.5 90)
+    (property "Reference" "R10" (at 121.92 63.5 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 66.04 90)
@@ -750,7 +710,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R10") (unit 1)
         )
       )
     )
@@ -759,7 +719,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 92.71 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 30b440a8-157f-453a-8774-07b570b9ae8c)
-    (property "Reference" "SW?" (at 113.03 85.09 0)
+    (property "Reference" "SW4" (at 113.03 85.09 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 87.63 0)
@@ -776,7 +736,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW4") (unit 1)
         )
       )
     )
@@ -785,7 +745,7 @@
   (symbol (lib_id "Device:R") (at 121.92 58.42 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 47b9a92e-6429-414c-b8b6-58b14d799b59)
-    (property "Reference" "R?" (at 121.92 52.07 90)
+    (property "Reference" "R9" (at 121.92 52.07 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 54.61 90)
@@ -802,7 +762,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R9") (unit 1)
         )
       )
     )
@@ -811,7 +771,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 69.85 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4dabb7df-2256-407e-8f4e-31afcb09b691)
-    (property "Reference" "SW?" (at 113.03 62.23 0)
+    (property "Reference" "SW2" (at 113.03 62.23 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 64.77 0)
@@ -828,7 +788,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW2") (unit 1)
         )
       )
     )
@@ -837,7 +797,7 @@
   (symbol (lib_id "power:+3V3") (at 107.95 48.26 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 503a1d02-7318-43f9-9065-4665d2ae51df)
-    (property "Reference" "#PWR?" (at 107.95 52.07 0)
+    (property "Reference" "#PWR09" (at 107.95 52.07 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3V3" (at 107.95 43.18 0)
@@ -853,7 +813,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "#PWR?") (unit 1)
+          (reference "#PWR09") (unit 1)
         )
       )
     )
@@ -862,7 +822,7 @@
   (symbol (lib_id "Device:R") (at 121.92 81.28 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 519f522b-ea31-4f1f-8c05-b2a2db654158)
-    (property "Reference" "R?" (at 121.92 74.93 90)
+    (property "Reference" "R11" (at 121.92 74.93 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 77.47 90)
@@ -879,7 +839,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R11") (unit 1)
         )
       )
     )
@@ -888,7 +848,7 @@
   (symbol (lib_id "power:GND") (at 125.73 143.51 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 54bb3085-c887-4bb6-9599-1ccfff2f12b6)
-    (property "Reference" "#PWR?" (at 125.73 149.86 0)
+    (property "Reference" "#PWR010" (at 125.73 149.86 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 125.73 148.59 0)
@@ -904,7 +864,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "#PWR?") (unit 1)
+          (reference "#PWR010") (unit 1)
         )
       )
     )
@@ -913,7 +873,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 104.14 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 57723348-51a9-4174-b612-e895c6b4f5fd)
-    (property "Reference" "SW?" (at 113.03 96.52 0)
+    (property "Reference" "SW5" (at 113.03 96.52 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 99.06 0)
@@ -930,7 +890,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW5") (unit 1)
         )
       )
     )
@@ -939,7 +899,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 138.43 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 5a7034ce-d523-4cfb-a5b9-1fa3c3bb3f77)
-    (property "Reference" "SW?" (at 113.03 130.81 0)
+    (property "Reference" "SW8" (at 113.03 130.81 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 133.35 0)
@@ -956,7 +916,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW8") (unit 1)
         )
       )
     )
@@ -965,7 +925,7 @@
   (symbol (lib_id "Device:R") (at 121.92 127 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 960e65c5-1f3a-4354-8ac3-fba3e70b06ad)
-    (property "Reference" "R?" (at 121.92 120.65 90)
+    (property "Reference" "R15" (at 121.92 120.65 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 123.19 90)
@@ -982,7 +942,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R15") (unit 1)
         )
       )
     )
@@ -1010,7 +970,7 @@
           (reference "#PWR?") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR012") (unit 1)
         )
       )
     )
@@ -1019,7 +979,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 127 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 97181880-94fa-42d4-b759-0e5452e90cce)
-    (property "Reference" "SW?" (at 113.03 119.38 0)
+    (property "Reference" "SW7" (at 113.03 119.38 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 121.92 0)
@@ -1036,7 +996,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW7") (unit 1)
         )
       )
     )
@@ -1045,7 +1005,7 @@
   (symbol (lib_id "Device:R") (at 121.92 115.57 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid a3bf6e77-7b05-4728-b799-8bbc24a87d8a)
-    (property "Reference" "R?" (at 121.92 109.22 90)
+    (property "Reference" "R14" (at 121.92 109.22 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 111.76 90)
@@ -1062,16 +1022,16 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R14") (unit 1)
         )
       )
     )
   )
 
-  (symbol (lib_name "GND_1") (lib_id "power:GND") (at 167.64 99.06 0) (unit 1)
+  (symbol (lib_id "power:GND") (at 167.64 99.06 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid bd330d16-f1b5-4627-82b4-147b77e2ecbc)
-    (property "Reference" "#PWR04" (at 167.64 105.41 0)
+    (property "Reference" "#PWR013" (at 167.64 105.41 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 167.64 103.1955 0)
@@ -1087,7 +1047,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR013") (unit 1)
         )
       )
     )
@@ -1096,7 +1056,7 @@
   (symbol (lib_id "Device:R") (at 121.92 138.43 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c606035d-aefb-4475-8c3e-092bdc52c198)
-    (property "Reference" "R?" (at 121.92 132.08 90)
+    (property "Reference" "R16" (at 121.92 132.08 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 134.62 90)
@@ -1113,7 +1073,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R16") (unit 1)
         )
       )
     )
@@ -1122,7 +1082,7 @@
   (symbol (lib_id "Device:R") (at 121.92 104.14 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e5d93832-5e34-484f-83c5-476027c62810)
-    (property "Reference" "R?" (at 121.92 97.79 90)
+    (property "Reference" "R13" (at 121.92 97.79 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10k" (at 121.92 100.33 90)
@@ -1139,7 +1099,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "R?") (unit 1)
+          (reference "R13") (unit 1)
         )
       )
     )
@@ -1148,7 +1108,7 @@
   (symbol (lib_id "Switch:SW_Push") (at 113.03 58.42 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e60252dd-706c-49b9-b91c-aa000f530128)
-    (property "Reference" "SW?" (at 113.03 50.8 0)
+    (property "Reference" "SW1" (at 113.03 50.8 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "SW_Push" (at 113.03 53.34 0)
@@ -1165,7 +1125,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "SW?") (unit 1)
+          (reference "SW1") (unit 1)
         )
       )
     )
@@ -1193,7 +1153,7 @@
           (reference "#PWR?") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/c399aef9-3678-4747-9295-3eabdcc57d0c"
-          (reference "#PWR05") (unit 1)
+          (reference "#PWR011") (unit 1)
         )
       )
     )
