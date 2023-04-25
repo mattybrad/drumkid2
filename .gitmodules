@@ -7,3 +7,6 @@
 [submodule "pcb/dk2_00/KiCad-RP-Pico"]
 	path = pcb/dk2_00/KiCad-RP-Pico
 	url = https://github.com/ncarandini/KiCad-RP-Pico
+[submodule "pcb/AudioJacks"]
+	path = pcb/AudioJacks
+	url = https://github.com/clacktronics/AudioJacks
