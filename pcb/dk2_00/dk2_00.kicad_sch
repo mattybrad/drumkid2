@@ -1570,6 +1570,26 @@
     )
   )
 
+  (sheet (at 49.53 138.43) (size 41.91 26.67) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid be1ddc4d-f499-4b75-b4b5-b626a320d90d)
+    (property "Sheetname" "Eurorack Power" (at 49.53 137.7184 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "europower.kicad_sch" (at 49.53 165.6846 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (property "Field2" "" (at 49.53 138.43 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (instances
+      (project "dk2_00"
+        (path "/87a59a99-d509-467e-85da-26d34072acb7" (page "9"))
+      )
+    )
+  )
+
   (sheet (at 217.17 62.23) (size 41.91 26.67) (fields_autoplaced)
     (stroke (width 0.1524) (type solid))
     (fill (color 0 0 0 0.0000))
