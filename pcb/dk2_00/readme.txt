@@ -14,6 +14,5 @@ Data: SD card
 
 Might try and include some more Eurorack things to speed up later development. For instance:
 Eurorack power input, maybe with jumper to power device instead of USB
-CV inputs using MCP6004
-CV outputs using MCP4922? Into some sort of op-amp, a TL072?
-Maybe this stuff is best as a stripboard addition for easy tweaking
+CV inputs using MCP6002 (basic part on JLC)
+CV outputs using MCP4922? Into some sort of op-amp, an MCP6002 again?
