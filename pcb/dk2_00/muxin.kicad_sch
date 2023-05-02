@@ -100,11 +100,11 @@
         )
       )
     )
-    (symbol "Device:R_Potentiometer" (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
+    (symbol "Device:R_Potentiometer_US" (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
       (property "Reference" "RV" (at -4.445 0 90)
         (effects (font (size 1.27 1.27)))
       )
-      (property "Value" "R_Potentiometer" (at -2.54 0 90)
+      (property "Value" "R_Potentiometer_US" (at -2.54 0 90)
         (effects (font (size 1.27 1.27)))
       )
       (property "Footprint" "" (at 0 0 0)
@@ -116,13 +116,29 @@
       (property "ki_keywords" "resistor variable" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (property "ki_description" "Potentiometer" (at 0 0 0)
+      (property "ki_description" "Potentiometer, US symbol" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
       (property "ki_fp_filters" "Potentiometer*" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (symbol "R_Potentiometer_0_1"
+      (symbol "R_Potentiometer_US_0_1"
+        (polyline
+          (pts
+            (xy 0 -2.286)
+            (xy 0 -2.54)
+          )
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+        (polyline
+          (pts
+            (xy 0 2.54)
+            (xy 0 2.286)
+          )
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
         (polyline
           (pts
             (xy 2.54 0)
@@ -141,12 +157,41 @@
           (stroke (width 0) (type default))
           (fill (type outline))
         )
-        (rectangle (start 1.016 2.54) (end -1.016 -2.54)
-          (stroke (width 0.254) (type default))
+        (polyline
+          (pts
+            (xy 0 -0.762)
+            (xy 1.016 -1.143)
+            (xy 0 -1.524)
+            (xy -1.016 -1.905)
+            (xy 0 -2.286)
+          )
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+        (polyline
+          (pts
+            (xy 0 0.762)
+            (xy 1.016 0.381)
+            (xy 0 0)
+            (xy -1.016 -0.381)
+            (xy 0 -0.762)
+          )
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+        (polyline
+          (pts
+            (xy 0 2.286)
+            (xy 1.016 1.905)
+            (xy 0 1.524)
+            (xy -1.016 1.143)
+            (xy 0 0.762)
+          )
+          (stroke (width 0) (type default))
           (fill (type none))
         )
       )
-      (symbol "R_Potentiometer_1_1"
+      (symbol "R_Potentiometer_US_1_1"
         (pin passive line (at 0 3.81 270) (length 1.27)
           (name "1" (effects (font (size 1.27 1.27))))
           (number "1" (effects (font (size 1.27 1.27))))
@@ -547,7 +592,7 @@
     (uuid 333d934a-eeec-402b-9e9a-a31060a7fef7)
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 102.87 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 102.87 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 1000595c-102c-42ef-ad86-749ad836547a)
     (property "Reference" "RV6" (at 179.07 104.1401 0)
@@ -577,7 +622,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 123.19 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 123.19 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4346fde0-8cb0-4486-bffc-9e6b3c9a086a)
     (property "Reference" "RV8" (at 179.07 124.4601 0)
@@ -635,7 +680,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 52.07 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 52.07 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 6a39d43d-2897-49e4-99d9-df2c1570c57f)
     (property "Reference" "RV1" (at 179.07 53.3401 0)
@@ -665,7 +710,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 72.39 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 72.39 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 71d7cf93-e286-40ea-844f-be658a77f727)
     (property "Reference" "RV3" (at 179.07 73.6601 0)
@@ -695,7 +740,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 82.55 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 82.55 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 9a60fa71-8a22-46d0-8ada-45be7a6368fa)
     (property "Reference" "RV4" (at 179.07 83.8201 0)
@@ -753,7 +798,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 113.03 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 113.03 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid a4a14bf4-c394-4663-9ac3-da737c7a52a5)
     (property "Reference" "RV7" (at 179.07 114.3001 0)
@@ -811,7 +856,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 92.71 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 92.71 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid aeff17cd-eee9-452f-bb08-67d3e14bcdc5)
     (property "Reference" "RV5" (at 179.07 93.9801 0)
@@ -841,7 +886,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Potentiometer") (at 176.53 62.23 180) (unit 1)
+  (symbol (lib_id "Device:R_Potentiometer_US") (at 176.53 62.23 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid be25eabc-71af-4797-aff3-3be7f8532c7d)
     (property "Reference" "RV2" (at 179.07 63.5001 0)
