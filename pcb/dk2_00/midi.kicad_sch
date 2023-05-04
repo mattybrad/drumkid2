@@ -371,11 +371,11 @@
         )
       )
     )
-    (symbol "power:+3V3" (power) (pin_names (offset 0)) (in_bom yes) (on_board yes)
+    (symbol "power:+3.3V" (power) (pin_names (offset 0)) (in_bom yes) (on_board yes)
       (property "Reference" "#PWR" (at 0 -3.81 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (property "Value" "+3V3" (at 0 3.556 0)
+      (property "Value" "+3.3V" (at 0 3.556 0)
         (effects (font (size 1.27 1.27)))
       )
       (property "Footprint" "" (at 0 0 0)
@@ -387,10 +387,10 @@
       (property "ki_keywords" "global power" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (property "ki_description" "Power symbol creates a global label with name \"+3V3\"" (at 0 0 0)
+      (property "ki_description" "Power symbol creates a global label with name \"+3.3V\"" (at 0 0 0)
         (effects (font (size 1.27 1.27)) hide)
       )
-      (symbol "+3V3_0_1"
+      (symbol "+3.3V_0_1"
         (polyline
           (pts
             (xy -0.762 1.27)
@@ -416,9 +416,9 @@
           (fill (type none))
         )
       )
-      (symbol "+3V3_1_1"
+      (symbol "+3.3V_1_1"
         (pin power_in line (at 0 0 90) (length 0) hide
-          (name "+3V3" (effects (font (size 1.27 1.27))))
+          (name "+3.3V" (effects (font (size 1.27 1.27))))
           (number "1" (effects (font (size 1.27 1.27))))
         )
       )
@@ -569,7 +569,7 @@
   (symbol (lib_id "Isolator:H11L1") (at 115.57 106.68 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 1d293c57-cc18-46bc-9354-74e5400bf5f1)
-    (property "Reference" "U8" (at 123.19 111.76 0)
+    (property "Reference" "U10" (at 123.19 111.76 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "H11L1" (at 123.19 114.3 0)
@@ -590,7 +590,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "U8") (unit 1)
+          (reference "U10") (unit 1)
         )
       )
     )
@@ -599,7 +599,7 @@
   (symbol (lib_id "power:GND") (at 203.2 102.87 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2e454c1b-5059-42ef-a058-cfd1a383ba34)
-    (property "Reference" "#PWR039" (at 203.2 109.22 0)
+    (property "Reference" "#PWR048" (at 203.2 109.22 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 203.2 107.0055 0)
@@ -615,7 +615,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "#PWR039") (unit 1)
+          (reference "#PWR048") (unit 1)
         )
       )
     )
@@ -624,7 +624,7 @@
   (symbol (lib_id "Device:R_US") (at 196.85 95.25 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 398c51cc-64d0-4775-9738-539c49adbe47)
-    (property "Reference" "R25" (at 196.85 91.2241 90)
+    (property "Reference" "R39" (at 196.85 91.2241 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "10R" (at 196.85 93.1451 90)
@@ -641,7 +641,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "R25") (unit 1)
+          (reference "R39") (unit 1)
         )
       )
     )
@@ -650,7 +650,7 @@
   (symbol (lib_id "power:GND") (at 115.57 114.3 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3f623e13-ff7b-45cf-9146-4661c4921ca0)
-    (property "Reference" "#PWR037" (at 115.57 120.65 0)
+    (property "Reference" "#PWR046" (at 115.57 120.65 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 115.57 119.38 0)
@@ -666,7 +666,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "#PWR037") (unit 1)
+          (reference "#PWR046") (unit 1)
         )
       )
     )
@@ -675,7 +675,7 @@
   (symbol (lib_id "Device:R_US") (at 88.9 104.14 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4516c691-dd66-499f-a7ff-fde9614442b2)
-    (property "Reference" "R22" (at 88.9 100.1141 90)
+    (property "Reference" "R36" (at 88.9 100.1141 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "220R" (at 88.9 102.0351 90)
@@ -692,7 +692,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "R22") (unit 1)
+          (reference "R36") (unit 1)
         )
       )
     )
@@ -701,7 +701,7 @@
   (symbol (lib_id "Device:R_US") (at 123.19 102.87 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4f90ef6f-3f35-4558-93d8-33b9be0a17ba)
-    (property "Reference" "R23" (at 124.968 102.2263 0)
+    (property "Reference" "R37" (at 124.968 102.2263 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "470R" (at 124.968 104.1473 0)
@@ -718,7 +718,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "R23") (unit 1)
+          (reference "R37") (unit 1)
         )
       )
     )
@@ -727,7 +727,7 @@
   (symbol (lib_id "Device:R_US") (at 177.8 97.79 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 844e15cd-5e95-4805-bff5-400cdf64693d)
-    (property "Reference" "R24" (at 177.8 93.7641 90)
+    (property "Reference" "R38" (at 177.8 93.7641 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "33R" (at 177.8 95.6851 90)
@@ -744,7 +744,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "R24") (unit 1)
+          (reference "R38") (unit 1)
         )
       )
     )
@@ -753,7 +753,7 @@
   (symbol (lib_id "Connector_Audio:AudioJack3") (at 208.28 97.79 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid d5131d10-2ab3-40d3-807f-3881a1f77ee4)
-    (property "Reference" "J6" (at 215.392 96.5113 0)
+    (property "Reference" "J11" (at 215.392 96.5113 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "AudioJack3" (at 215.392 98.4323 0)
@@ -771,7 +771,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "J6") (unit 1)
+          (reference "J11") (unit 1)
         )
       )
     )
@@ -806,7 +806,7 @@
   (symbol (lib_id "Connector_Audio:AudioJack3") (at 76.2 104.14 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid f4822b67-11ce-41f2-8ff7-27b569befe96)
-    (property "Reference" "J8" (at 74.295 97.3201 0)
+    (property "Reference" "J10" (at 74.295 97.3201 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "AudioJack3" (at 74.295 99.2411 0)
@@ -824,19 +824,19 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "J8") (unit 1)
+          (reference "J10") (unit 1)
         )
       )
     )
   )
 
-  (symbol (lib_id "power:+3V3") (at 115.57 99.06 0) (unit 1)
+  (symbol (lib_id "power:+3.3V") (at 115.57 99.06 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid f90ebbe4-02c3-4117-b4ff-691c1e5046ab)
-    (property "Reference" "#PWR036" (at 115.57 102.87 0)
+    (property "Reference" "#PWR045" (at 115.57 102.87 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Value" "+3V3" (at 115.57 93.98 0)
+    (property "Value" "+3.3V" (at 115.57 95.504 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "" (at 115.57 99.06 0)
@@ -849,19 +849,19 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "#PWR036") (unit 1)
+          (reference "#PWR045") (unit 1)
         )
       )
     )
   )
 
-  (symbol (lib_id "power:+3V3") (at 173.99 90.17 0) (unit 1)
+  (symbol (lib_id "power:+3.3V") (at 173.99 90.17 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid fcd53717-0657-42cd-9c7b-67a0dad498d3)
-    (property "Reference" "#PWR038" (at 173.99 93.98 0)
+    (property "Reference" "#PWR047" (at 173.99 93.98 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Value" "+3V3" (at 173.99 85.09 0)
+    (property "Value" "+3.3V" (at 173.99 86.614 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "" (at 173.99 90.17 0)
@@ -874,7 +874,7 @@
     (instances
       (project "dk2_00"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/62286cbd-6667-4b41-b284-5843ad1d3bbb"
-          (reference "#PWR038") (unit 1)
+          (reference "#PWR047") (unit 1)
         )
       )
     )
