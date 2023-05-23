@@ -707,7 +707,6 @@
     )
   )
 
-
   (junction (at 75.565 90.17) (diameter 0) (color 0 0 0 0)
     (uuid 0c3a7c6a-2bd6-465a-a15a-cc8523d8c9d6)
   )
@@ -1338,7 +1337,7 @@
     (property "Value" "CV_In_2" (at 57.15 91.44 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Footprint" "AudioJacks:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical" (at 62.865 90.17 0)
+    (property "Footprint" "Library:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_Labelled" (at 62.865 90.17 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 62.865 90.17 0)
@@ -1482,7 +1481,7 @@
     (property "Value" "CV_In_1" (at 57.15 47.625 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Footprint" "AudioJacks:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical" (at 62.865 46.355 0)
+    (property "Footprint" "Library:Jack_3.5mm_QingPu_WQP-PJ398SM_Vertical_Labelled" (at 62.865 46.355 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 62.865 46.355 0)
