@@ -2809,7 +2809,7 @@
     (property "Value" "AP7333-33SRG" (at 45.085 33.02 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "Package_TO_SOT_SMD:SOT-223-3_TabPin2" (at 45.085 32.385 0)
+    (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (at 45.085 32.385 0)
       (effects (font (size 1.27 1.27) italic) hide)
     )
     (property "Datasheet" "http://www.zlgmcu.com/Sipex/LDO/PDF/spx2920.pdf" (at 45.085 39.37 0)
