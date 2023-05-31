@@ -537,6 +537,14 @@
     (uuid d6feb43e-8d57-4984-a24a-da3cd77747ca)
   )
 
+  (text_box "IMPORTANT NOTE: I messed up here and picked the wrong footprint for the PCB, but literally can't even find the right footprint. Just a warning to future self not to copy/paste this part directly because it's broken."
+    (at 104.14 122.555 0) (size 42.545 17.78)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid 90aa0f5a-3d28-43c2-a4d5-01be8c00fe6f)
+  )
+
   (text "MIDI input\nUses H11L1 instead of 6N138\n(better for 3.3V)\nhttps://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/\n(although may actually have a 5V source after all...)"
     (at 66.04 91.44 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
