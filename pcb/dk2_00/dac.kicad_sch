@@ -1419,6 +1419,14 @@
     (uuid fb92839e-7cf4-4908-8105-7eb04bf572f2)
   )
 
+  (text_box "THIS PINOUT IS WRONG! MAGIC SMOKE RELEASED ON TEST BOARD!"
+    (at 23.495 53.34 0) (size 41.91 10.795)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid bafff3c8-5d19-465d-b7fa-06c96f53448d)
+  )
+
   (text "AVDD decoupling" (at 141.605 88.265 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 04dcc1d0-85fc-4158-a7b3-dc4d9ebcf28f)

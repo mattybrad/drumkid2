@@ -812,6 +812,14 @@
     (uuid fe8a6802-a4c9-4b7f-894c-fa053f0f1764)
   )
 
+  (text_box "BROKEN!? I don't know where I got this hookup info from but I don't think it's right!"
+    (at 156.21 199.39 0) (size 34.29 9.525)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid ce580a45-1c65-437f-be8e-bcbeadbfe1db)
+  )
+
   (global_label "MIDI_IN" (shape input) (at 133.35 45.72 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right))
     (uuid 0661954e-f25b-4f99-a409-ca063613e2b5)

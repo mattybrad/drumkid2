@@ -691,6 +691,13 @@
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 07ccd9b8-7a6f-47ca-8bf9-d5c053c5ff3c)
   )
+  (text_box "BROKEN! Couldn't get a 0V output with GND as the negative rail, so modded the PCB to use -12V for the negative rail, and it worked fine."
+    (at 189.865 63.5 0) (size 33.02 13.97)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid ab816a1e-a4bc-4a6d-9a3e-72befa8f07e4)
+  )
 
   (text ">=5V" (at 129.54 45.72 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))

@@ -1470,6 +1470,13 @@
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 72d04608-86d2-46d9-9004-e6084f9f80fb)
   )
+  (text_box "USE THE PROPER FOOTPRINT FOR A SHROUDED EURORACK HEADER NEXT TIME! I lazily just chose a male pin header footprint and it almost didn't fit on the board next to the 9V input."
+    (at 40.64 66.04 0) (size 41.91 13.97)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid b5145282-7a2b-4ce8-92a5-ffd95262e99b)
+  )
 
   (text "Eurorack power input" (at 52.07 25.4 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
