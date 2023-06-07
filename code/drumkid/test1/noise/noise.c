@@ -71,7 +71,7 @@ int main()
 
     for (int i = 0; i < SINE_WAVE_TABLE_LEN; i++)
     {
-        sine_wave_table[i] = 0.25 * 32767 * (cosf(i * 2 * (float)(3 * M_PI / SINE_WAVE_TABLE_LEN)) + cosf(i * 2 * (float)(2 * M_PI / SINE_WAVE_TABLE_LEN)));
+        sine_wave_table[i] = (float)rand() / (float)(RAND_MAX / 8000.0);
     }
 
     struct audio_buffer_pool *ap = init_audio();
@@ -84,7 +84,8 @@ int main()
         int16_t *samples = (int16_t *)buffer->buffer->bytes;
         for (uint i = 0; i < buffer->max_sample_count; i++)
         {
-            samples[i] = sine_wave_table[pos >> 16u];
+            //samples[i] = sine_wave_table[pos >> 16u];
+            samples[i] = (float)rand() / (float)(RAND_MAX / 8000.0);
             pos += step;
             if (pos >= pos_max)
                 pos -= pos_max;
