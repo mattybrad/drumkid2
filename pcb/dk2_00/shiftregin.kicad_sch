@@ -595,6 +595,14 @@
     (uuid f515deab-911d-495f-ac9f-f60a12c7769b)
   )
 
+  (text_box "I think CE should actually be pulled low, requires a mod!"
+    (at 142.24 104.14 0) (size 18.415 15.24)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid d4197285-5fac-494f-b426-1c1a02297081)
+  )
+
   (global_label "165_DATA" (shape output) (at 180.34 60.96 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left))
     (uuid 8a14e39c-24a5-4c2c-8972-b3c3735a0e5c)
