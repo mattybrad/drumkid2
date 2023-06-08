@@ -1,9 +1,3 @@
-/**
- * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include <stdio.h>
 #include <math.h>
 
@@ -25,6 +19,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 #define SAMPLES_PER_BUFFER 256
 
+#include "Sample.h"
+
 #include "kick.h"
 #include "snare.h"
 #include "closedhat.h"
@@ -33,9 +29,9 @@ struct audio_buffer_pool *init_audio()
 {
 
     static audio_format_t audio_format = {
-        .format = AUDIO_BUFFER_FORMAT_PCM_S16,
-        .sample_freq = 44100,
-        .channel_count = 1,
+        44100,
+        AUDIO_BUFFER_FORMAT_PCM_S16,
+        1,
     };
 
     static struct audio_buffer_format producer_format = {
@@ -65,11 +61,7 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
-int thing = 0;
-int step = 0;
-int kickPos = 0;
-int snarePos = 0;
-int closedHatPos = 0;
+Sample kick;
 
 int main()
 {
@@ -78,28 +70,34 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
+    int step = 0;
+    int stepPosition = 0;
+    int nextStepTime = 0;
+
+    // init samples
+    kick.sampleData = sampleKick;
+    kick.length = sampleKickLength;
+
     while (true)
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *samples = (int16_t *)buffer->buffer->bytes;
         for (uint i = 0; i < buffer->max_sample_count; i++)
         {
-            thing++;
-            kickPos ++;
-            snarePos ++;
-            closedHatPos ++;
-            if (thing >= 5500) {
-                thing = 0;
+            // sample updates go here
+            kick.update();
+            samples[i] = kick.value;
+
+            // increment step if needed
+            stepPosition ++;
+            if(stepPosition == 20000) {
+                stepPosition = 0;
                 step ++;
-                if(step == 8) step = 0;
-                if(step%4 == 0) kickPos = 0;
-                if(step == 4) snarePos = 0;
-                closedHatPos = 0;
+                if(step == 8) {
+                    step = 0;
+                }
+                kick.position = 0.0;
             }
-            samples[i] = 0;
-            if(kickPos<sampleKickLength) samples[i] += 0.25 * sampleKick[kickPos];
-            if(snarePos<sampleSnareLength) samples[i] += 0.25 * sampleSnare[snarePos];
-            if (closedHatPos < sampleClosedHatLength) samples[i] += 0.25 * sampleClosedHat[closedHatPos];
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);

@@ -1,7 +1,7 @@
 # only build I2S example if library is available
 if (TARGET pico_audio_i2s)
     add_executable(sample_i2s
-            sample.c
+            sample.cpp
             )
 
     target_link_libraries(sample_i2s PRIVATE

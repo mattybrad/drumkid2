@@ -1,15 +1,15 @@
 # only build I2S example if library is available
 if (TARGET pico_audio_i2s)
-    add_executable(leds_i2s
-            leds.cpp
+    add_executable(everything_i2s
+            everything.cpp
             )
 
-    target_link_libraries(leds_i2s PRIVATE
+    target_link_libraries(everything_i2s PRIVATE
             pico_stdlib
             pico_audio_i2s
             )
 
-    target_compile_definitions(leds_i2s PRIVATE
+    target_compile_definitions(everything_i2s PRIVATE
             # compile time configuration of I2S
             PICO_AUDIO_I2S_MONO_INPUT=1
             #define for our example code
@@ -21,5 +21,5 @@ if (TARGET pico_audio_i2s)
 #            PICO_DEFAULT_UART_RX_PIN=29
             )
     # create map/bin/hex file etc.
-    pico_add_extra_outputs(leds_i2s)
+    pico_add_extra_outputs(everything_i2s)
 endif ()

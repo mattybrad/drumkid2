@@ -25,13 +25,17 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 #define SAMPLES_PER_BUFFER 256
 
+#include "kick.h"
+#include "snare.h"
+#include "closedhat.h"
+
 struct audio_buffer_pool *init_audio()
 {
 
     static audio_format_t audio_format = {
-        .format = AUDIO_BUFFER_FORMAT_PCM_S16,
-        .sample_freq = 44100,
-        .channel_count = 1,
+        44100,
+        AUDIO_BUFFER_FORMAT_PCM_S16,
+        1,
     };
 
     static struct audio_buffer_format producer_format = {
@@ -67,51 +71,38 @@ int kickPos = 0;
 int snarePos = 0;
 int closedHatPos = 0;
 
-#define LED_PIN 25
-#define DATA_595 6
-#define CLOCK_595 7
-#define LATCH_595 8
-
 int main()
 {
 
     stdio_init_all();
 
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    gpio_init(DATA_595);
-    gpio_set_dir(DATA_595, GPIO_OUT);
-    gpio_init(CLOCK_595);
-    gpio_set_dir(CLOCK_595, GPIO_OUT);
-    gpio_init(LATCH_595);
-    gpio_set_dir(LATCH_595, GPIO_OUT);
-
     struct audio_buffer_pool *ap = init_audio();
-
-    int count = 0;
 
     while (true)
     {
-        /*int delay = 500;
-        gpio_put(LED_PIN, 1);
-        sleep_ms(delay);
-        gpio_put(LED_PIN, 0);
-        sleep_ms(delay);*/
-
-        gpio_put(LATCH_595, 0);
-        for(int i=0; i<8; i++) {
-            gpio_put(DATA_595, i==count);
-            gpio_put(CLOCK_595, 0);
-            sleep_ms(1);
-            gpio_put(CLOCK_595, 1);
-            sleep_ms(1);
-            gpio_put(CLOCK_595, 0);
-            sleep_ms(1);
+        struct audio_buffer *buffer = take_audio_buffer(ap, true);
+        int16_t *samples = (int16_t *)buffer->buffer->bytes;
+        for (uint i = 0; i < buffer->max_sample_count; i++)
+        {
+            thing++;
+            kickPos ++;
+            snarePos ++;
+            closedHatPos ++;
+            if (thing >= 5500) {
+                thing = 0;
+                step ++;
+                if(step == 8) step = 0;
+                if(step%4 == 0) kickPos = 0;
+                if(step == 4) snarePos = 0;
+                closedHatPos = 0;
+            }
+            samples[i] = 0;
+            if(kickPos<sampleKickLength) samples[i] += 0.25 * sampleKick[kickPos];
+            if(snarePos<sampleSnareLength) samples[i] += 0.25 * sampleSnare[snarePos];
+            if (closedHatPos < sampleClosedHatLength) samples[i] += 0.25 * sampleClosedHat[closedHatPos];
         }
-        gpio_put(LATCH_595, 1);
-        sleep_ms(1000);
-        count ++;
-        if(count == 8) count = 0;
+        buffer->sample_count = buffer->max_sample_count;
+        give_audio_buffer(ap, buffer);
     }
     return 0;
 }
