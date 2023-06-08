@@ -1,3 +1,10 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
+
 #include <stdio.h>
 #include <math.h>
 
@@ -5,6 +12,7 @@
 
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
+#include "hardware/adc.h"
 
 #endif
 
@@ -18,6 +26,13 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #endif
 
 #define SAMPLES_PER_BUFFER 256
+
+// pins
+#define MUX_ADDR_A 19
+#define MUX_ADDR_B 20
+#define MUX_ADDR_C 21
+#define MUX_READ_POTS 26
+#define MUX_READ_CV 27
 
 #include "Sample.h"
 
@@ -68,6 +83,18 @@ int main()
 
     stdio_init_all();
 
+    // init GPIO
+    adc_init();
+    adc_gpio_init(MUX_READ_POTS);
+    adc_gpio_init(MUX_READ_CV);
+    adc_select_input(1);
+    gpio_init(MUX_ADDR_A);
+    gpio_set_dir(MUX_ADDR_A, GPIO_OUT);
+    gpio_init(MUX_ADDR_B);
+    gpio_set_dir(MUX_ADDR_B, GPIO_OUT);
+    gpio_init(MUX_ADDR_C);
+    gpio_set_dir(MUX_ADDR_C, GPIO_OUT);
+
     struct audio_buffer_pool *ap = init_audio();
 
     int step = 0;
@@ -75,8 +102,8 @@ int main()
     int nextStepTime = 0;
 
     // init samples
-    kick.sampleData = sampleKick;
-    kick.length = sampleKickLength;
+    kick.sampleData = sampleSnare;
+    kick.length = sampleSnareLength;
 
     while (true)
     {
@@ -90,7 +117,7 @@ int main()
 
             // increment step if needed
             stepPosition ++;
-            if(stepPosition == 20000) {
+            if(stepPosition == 5000) {
                 stepPosition = 0;
                 step ++;
                 if(step == 8) {
@@ -101,6 +128,8 @@ int main()
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
+
+        kick.speed = 0.25 + 4.0 * ((float) adc_read()) / 4095.0;
     }
     return 0;
 }

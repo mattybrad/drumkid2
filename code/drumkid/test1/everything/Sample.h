@@ -1,6 +1,6 @@
 class Sample {
     public:
-        float speed = 2.0;
+        float speed = 1.0;
         float position = 0.0;
         int length = 0;
         int value = 0;

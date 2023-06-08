@@ -7,6 +7,7 @@ if (TARGET pico_audio_i2s)
     target_link_libraries(everything_i2s PRIVATE
             pico_stdlib
             pico_audio_i2s
+            hardware_adc
             )
 
     target_compile_definitions(everything_i2s PRIVATE
