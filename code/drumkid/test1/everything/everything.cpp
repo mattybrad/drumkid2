@@ -76,8 +76,6 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
-Sample kick;
-
 int main()
 {
 
@@ -87,7 +85,7 @@ int main()
     adc_init();
     adc_gpio_init(MUX_READ_POTS);
     adc_gpio_init(MUX_READ_CV);
-    adc_select_input(1);
+    adc_select_input(0);
     gpio_init(MUX_ADDR_A);
     gpio_set_dir(MUX_ADDR_A, GPIO_OUT);
     gpio_init(MUX_ADDR_B);
@@ -102,18 +100,23 @@ int main()
     int nextStepTime = 0;
 
     // init samples
-    kick.sampleData = sampleSnare;
-    kick.length = sampleSnareLength;
+    Sample samples[3];
+    samples[0].sampleData = sampleKick;
+    samples[0].length = sampleKickLength;
+    samples[1].sampleData = sampleSnare;
+    samples[1].length = sampleSnareLength;
+    samples[2].sampleData = sampleClosedHat;
+    samples[2].length = sampleClosedHatLength;
 
     while (true)
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
-        int16_t *samples = (int16_t *)buffer->buffer->bytes;
+        int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
         for (uint i = 0; i < buffer->max_sample_count; i++)
         {
             // sample updates go here
-            kick.update();
-            samples[i] = kick.value;
+            samples[0].update();
+            bufferSamples[i] = samples[0].value;
 
             // increment step if needed
             stepPosition ++;
@@ -123,13 +126,15 @@ int main()
                 if(step == 8) {
                     step = 0;
                 }
-                kick.position = 0.0;
+                if(step == 0) samples[0].position = 0.0;
+                if(step == 4) samples[1].position = 0.0;
+                samples[2].position = 0.0;
             }
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
 
-        kick.speed = 0.25 + 4.0 * ((float) adc_read()) / 4095.0;
+        samples[0].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
     }
     return 0;
 }
