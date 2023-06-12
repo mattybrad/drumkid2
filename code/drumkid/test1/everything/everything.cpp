@@ -116,7 +116,10 @@ int main()
         {
             // sample updates go here
             samples[0].update();
-            bufferSamples[i] = samples[0].value;
+            samples[1].update();
+            samples[2].update();
+            float floatValue = 0.25 * ((float)samples[0].value+(float)samples[1].value+(float)samples[2].value);
+            bufferSamples[i] = (int)floatValue;
 
             // increment step if needed
             stepPosition ++;
@@ -134,7 +137,7 @@ int main()
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
 
-        samples[0].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
+        samples[2].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
     }
     return 0;
 }
