@@ -13,4 +13,4 @@ set(CMAKE_CXX_STANDARD 17)
 # Initialize the Pico SDK
 pico_sdk_init()
 
-add_subdirectory(test1)
+add_subdirectory(dk)
