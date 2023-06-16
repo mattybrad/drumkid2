@@ -16,6 +16,12 @@ Aleatoric drum machine
 #include <stdio.h>
 #include <math.h>
 
+// Borrowing some useful Arduino macros
+#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
+
 // Include Pico-specific stuff and set up audio
 #if PICO_ON_DEVICE
 #include "hardware/clocks.h"
@@ -121,9 +127,10 @@ int main()
     int nextStepTime = 0;
 
     // temp, messing around
+    int ledStepPosition = 0;
     int phase595 = 0;
-    bool ledData = false;
-    bool storedLedData = false;
+    int ledData = 0;
+    int storedLedData = 0;
 
     // init samples (temporary, will be from SD card?)
     Sample samples[3];
@@ -167,7 +174,7 @@ int main()
 
             // increment step if needed
             stepPosition ++;
-            if(stepPosition == 5000) {
+            if(stepPosition == 1000) {
                 stepPosition = 0;
                 step ++;
                 if(step == 32) {
@@ -175,34 +182,49 @@ int main()
                 }
                 for(int j=0; j<3; j++) {
                     if(testBeat.hits[j][step]) samples[j].position = 0.0;
+                    bitWrite(ledData, j, testBeat.hits[j][step]);
                 }
-                if(testBeat.hits[1][step]) ledData = true;
-                else ledData = false;
                 
             }
+
+            ledStepPosition ++;
+            if(ledStepPosition == 10) {
+                ledStepPosition = 0;
+
+                // update hardware states
+                if (phase595 < 24)
+                {
+                    if (phase595 == 0)
+                    {
+                        gpio_put(LATCH_595, 0);
+                        storedLedData = ledData;
+                    }
+                    if (phase595 % 3 == 0)
+                    {
+                        gpio_put(DATA_595, bitRead(storedLedData, phase595/3));
+                        gpio_put(CLOCK_595, 0);
+                    }
+                    else if (phase595 % 3 == 1)
+                    {
+                        gpio_put(CLOCK_595, 1);
+                    }
+                    else if (phase595 % 3 == 2)
+                    {
+                        gpio_put(CLOCK_595, 0);
+                    }
+                }
+                else
+                {
+                    gpio_put(LATCH_595, 1);
+                }
+                phase595++;
+                if (phase595 == 25)
+                    phase595 = 0;
+            }
+            
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
-
-        // update hardware states
-        if(phase595 < 24) {
-            if(phase595 == 0) {
-                gpio_put(LATCH_595, 0);
-                storedLedData = ledData;
-            }
-            if(phase595 % 3 == 0) {
-                gpio_put(DATA_595, storedLedData);
-                gpio_put(CLOCK_595, 0);
-            } else if(phase595 % 3 == 1) {
-                gpio_put(CLOCK_595, 1);
-            } else if(phase595 % 3 == 2) {
-                gpio_put(CLOCK_595, 0);
-            }
-        } else {
-            gpio_put(LATCH_595, 1);
-        }
-        phase595++;
-        if(phase595 == 25) phase595 = 0;
 
         samples[2].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
     }
