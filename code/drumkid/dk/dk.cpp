@@ -37,6 +37,10 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #define MUX_ADDR_C 21
 #define MUX_READ_POTS 26
 #define MUX_READ_CV 27
+#define LED_PIN 25
+#define DATA_595 6
+#define CLOCK_595 7
+#define LATCH_595 8
 
 // Drumkid classes
 #include "Sample.h"
@@ -101,12 +105,25 @@ int main()
     gpio_set_dir(MUX_ADDR_B, GPIO_OUT);
     gpio_init(MUX_ADDR_C);
     gpio_set_dir(MUX_ADDR_C, GPIO_OUT);
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_init(DATA_595);
+    gpio_set_dir(DATA_595, GPIO_OUT);
+    gpio_init(CLOCK_595);
+    gpio_set_dir(CLOCK_595, GPIO_OUT);
+    gpio_init(LATCH_595);
+    gpio_set_dir(LATCH_595, GPIO_OUT);
 
     struct audio_buffer_pool *ap = init_audio();
 
     int step = 0;
     int stepPosition = 0;
     int nextStepTime = 0;
+
+    // temp, messing around
+    int phase595 = 0;
+    bool ledData = false;
+    bool storedLedData = false;
 
     // init samples (temporary, will be from SD card?)
     Sample samples[3];
@@ -159,11 +176,33 @@ int main()
                 for(int j=0; j<3; j++) {
                     if(testBeat.hits[j][step]) samples[j].position = 0.0;
                 }
+                if(testBeat.hits[1][step]) ledData = true;
+                else ledData = false;
                 
             }
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
+
+        // update hardware states
+        if(phase595 < 24) {
+            if(phase595 == 0) {
+                gpio_put(LATCH_595, 0);
+                storedLedData = ledData;
+            }
+            if(phase595 % 3 == 0) {
+                gpio_put(DATA_595, storedLedData);
+                gpio_put(CLOCK_595, 0);
+            } else if(phase595 % 3 == 1) {
+                gpio_put(CLOCK_595, 1);
+            } else if(phase595 % 3 == 2) {
+                gpio_put(CLOCK_595, 0);
+            }
+        } else {
+            gpio_put(LATCH_595, 1);
+        }
+        phase595++;
+        if(phase595 == 25) phase595 = 0;
 
         samples[2].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
     }

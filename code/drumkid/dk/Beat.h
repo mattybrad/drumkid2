@@ -1,5 +1,7 @@
 #include <cstdint>
 
+// maybe not a great use of space to store so many bools? Temp...
+
 class Beat {
     public:
         bool hits[3][32];
