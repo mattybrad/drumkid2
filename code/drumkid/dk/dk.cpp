@@ -47,6 +47,9 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #define DATA_595 6
 #define CLOCK_595 7
 #define LATCH_595 8
+#define LOAD_165 12
+#define CLOCK_165 13
+#define DATA_165 14
 
 // Drumkid classes
 #include "Sample.h"
@@ -94,7 +97,79 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
-// 
+// temporary (ish?) LED variables
+int ledStepPosition = 0;
+int phase595 = 0; // 25 "phases" of the 595 shift register
+int ledData = 0;
+int storedLedData = 0;
+
+void updateLeds() {
+    ledStepPosition++;
+    if (ledStepPosition == 10)
+    {
+        ledStepPosition = 0;
+
+        // update shift register
+        if (phase595 < 24)
+        {
+            if (phase595 == 0)
+            {
+                gpio_put(LATCH_595, 0);
+                storedLedData = ledData;
+            }
+            if (phase595 % 3 == 0)
+            {
+                gpio_put(DATA_595, bitRead(storedLedData, phase595 / 3));
+                gpio_put(CLOCK_595, 0);
+            }
+            else if (phase595 % 3 == 1)
+            {
+                gpio_put(CLOCK_595, 1);
+            }
+            else if (phase595 % 3 == 2)
+            {
+                gpio_put(CLOCK_595, 0);
+            }
+        }
+        else
+        {
+            gpio_put(LATCH_595, 1);
+        }
+        phase595++;
+        if (phase595 == 25)
+            phase595 = 0;
+    }
+}
+
+int buttonStepPosition = 0;
+int phase165 = 0;
+int buttonStates = 0;
+
+void updateButtons() {
+    buttonStepPosition ++;
+    if(buttonStepPosition == 10) {
+        buttonStepPosition = 0;
+
+        // update shift register
+        if(phase165 == 0) {
+            gpio_put(LOAD_165, 0);
+        } else if(phase165 == 1) {
+            gpio_put(LOAD_165, 1);
+        } else if(phase165 % 2 == 0) {
+            bitWrite(buttonStates, (phase165 - 2)/2, !gpio_get(DATA_165));
+            gpio_put(CLOCK_165, 0);
+        } else if(phase165 % 2 == 1) {
+            gpio_put(CLOCK_165, 1);
+        }
+        phase165 ++;
+        if(phase165 == 18) {
+            phase165 = 0;
+            ledData = buttonStates;
+        }
+    }
+}
+
+// main function, obviously
 int main()
 {
 
@@ -119,18 +194,18 @@ int main()
     gpio_set_dir(CLOCK_595, GPIO_OUT);
     gpio_init(LATCH_595);
     gpio_set_dir(LATCH_595, GPIO_OUT);
+    gpio_init(LOAD_165);
+    gpio_set_dir(LOAD_165, GPIO_OUT);
+    gpio_init(CLOCK_165);
+    gpio_set_dir(CLOCK_165, GPIO_OUT);
+    gpio_init(DATA_165);
+    gpio_set_dir(DATA_165, GPIO_IN);
 
     struct audio_buffer_pool *ap = init_audio();
 
     int step = 0;
     int stepPosition = 0;
     int nextStepTime = 0;
-
-    // temp, messing around
-    int ledStepPosition = 0;
-    int phase595 = 0;
-    int ledData = 0;
-    int storedLedData = 0;
 
     // init samples (temporary, will be from SD card?)
     Sample samples[3];
@@ -156,7 +231,7 @@ int main()
     testBeat.addHit(2,24);
     testBeat.addHit(2,28);
 
-    // main loop
+    // main loop, runs forever
     while (true)
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
@@ -174,7 +249,7 @@ int main()
 
             // increment step if needed
             stepPosition ++;
-            if(stepPosition == 1000) {
+            if(stepPosition == 2000) {
                 stepPosition = 0;
                 step ++;
                 if(step == 32) {
@@ -182,45 +257,13 @@ int main()
                 }
                 for(int j=0; j<3; j++) {
                     if(testBeat.hits[j][step]) samples[j].position = 0.0;
-                    bitWrite(ledData, j, testBeat.hits[j][step]);
+                    //bitWrite(ledData, j, testBeat.hits[j][step]);
                 }
                 
             }
 
-            ledStepPosition ++;
-            if(ledStepPosition == 10) {
-                ledStepPosition = 0;
-
-                // update hardware states
-                if (phase595 < 24)
-                {
-                    if (phase595 == 0)
-                    {
-                        gpio_put(LATCH_595, 0);
-                        storedLedData = ledData;
-                    }
-                    if (phase595 % 3 == 0)
-                    {
-                        gpio_put(DATA_595, bitRead(storedLedData, phase595/3));
-                        gpio_put(CLOCK_595, 0);
-                    }
-                    else if (phase595 % 3 == 1)
-                    {
-                        gpio_put(CLOCK_595, 1);
-                    }
-                    else if (phase595 % 3 == 2)
-                    {
-                        gpio_put(CLOCK_595, 0);
-                    }
-                }
-                else
-                {
-                    gpio_put(LATCH_595, 1);
-                }
-                phase595++;
-                if (phase595 == 25)
-                    phase595 = 0;
-            }
+            updateButtons();
+            updateLeds();
             
         }
         buffer->sample_count = buffer->max_sample_count;
