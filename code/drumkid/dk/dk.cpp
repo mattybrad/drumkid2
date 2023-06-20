@@ -335,14 +335,17 @@ int main()
                 if(step == 32) {
                     step = 0;
                 }
-                /*printf("analog: ");
-                for(int j=0; j<16; j++) {
-                    printf("%d ", analogReadings[j]);
+                if(step % 4 == 0) {
+                    ledData = 0;
+                    bitWrite(ledData, step / 4, 1);
                 }
-                printf("\n");*/
                 for(int j=0; j<3; j++) {
                     if(beats[beatNum].hits[j][step]) samples[j].position = 0.0;
-                    //bitWrite(ledData, j, testBeat.hits[j][step]);
+                    // basic initial "chance" implementation":
+                    int randNum = rand() % 4096;
+                    if(analogReadings[8] > randNum) {
+                        samples[j].position = 0.0;
+                    }
                 }
                 
             }
