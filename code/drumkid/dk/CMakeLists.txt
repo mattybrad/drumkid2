@@ -10,6 +10,10 @@ if (TARGET pico_audio_i2s)
             hardware_adc
             )
 
+    # enable usb output, disable uart output
+    pico_enable_stdio_usb(dk_i2s 1)
+    pico_enable_stdio_uart(dk_i2s 0)
+
     target_compile_definitions(dk_i2s PRIVATE
             # compile time configuration of I2S
             PICO_AUDIO_I2S_MONO_INPUT=1

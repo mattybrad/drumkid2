@@ -565,6 +565,14 @@
     (uuid fb9b0326-252b-41f6-b7b7-e9eb1b60986f)
   )
 
+  (text_box "Mistake! Pin 6 should be pulled low to enable the mux!"
+    (at 116.84 67.31 0) (size 16.51 15.24)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid afedd123-c595-466a-817e-05aa7be79450)
+  )
+
   (global_label "4051_ADDRESS_B" (shape input) (at 134.62 59.69 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right))
     (uuid 342c6595-0f1a-4bc8-9e58-2f6db824c7f8)

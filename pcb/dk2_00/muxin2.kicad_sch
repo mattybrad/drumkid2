@@ -886,6 +886,13 @@
     (uuid f57f333f-7abd-47ab-9f1f-da80f57e1a53)
   )
 
+  (text_box "Mistake! Pin 6 should be pulled low to enable the mux!"
+    (at 142.24 102.87 0) (size 16.51 15.24)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid d4609592-0826-49f6-93eb-46e38dcc8e5d)
+  )
   (text_box "Mutable Clouds used similar circuit but with precise -10V negative voltage (perhaps because more precision was needed for pitch etc?). I'm attempting to just use the regular -12V, so have switched from a 200k resistor to a 240k resistor (based on a circuit simulator and a vague understanding of the theory!)."
     (at 111.125 19.685 0) (size 37.465 23.495)
     (stroke (width 0) (type default))

@@ -169,6 +169,32 @@ void updateButtons() {
     }
 }
 
+int analogStepPosition = 0;
+int phase4051 = 0;
+int analogReadings[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+void updateAnalog() {
+    analogStepPosition ++;
+    if(analogStepPosition == 10) {
+        analogStepPosition = 0;
+
+        if(phase4051 % 2 == 0) {
+            gpio_put(MUX_ADDR_A, bitRead(phase4051/2, 0));
+            gpio_put(MUX_ADDR_B, bitRead(phase4051/2, 1));
+            gpio_put(MUX_ADDR_C, bitRead(phase4051/2, 2));
+        } else {
+            adc_select_input(0);
+            analogReadings[(phase4051-1)/2] = adc_read();
+            adc_select_input(1);
+            analogReadings[(phase4051 - 1) / 2 + 8] = adc_read();
+        }
+
+        phase4051 ++;
+        if(phase4051 == 16) phase4051 = 0;
+
+    }
+}
+
 // main function, obviously
 int main()
 {
@@ -179,7 +205,6 @@ int main()
     adc_init();
     adc_gpio_init(MUX_READ_POTS);
     adc_gpio_init(MUX_READ_CV);
-    adc_select_input(0);
     gpio_init(MUX_ADDR_A);
     gpio_set_dir(MUX_ADDR_A, GPIO_OUT);
     gpio_init(MUX_ADDR_B);
@@ -255,6 +280,11 @@ int main()
                 if(step == 32) {
                     step = 0;
                 }
+                printf("analog: ");
+                for(int j=0; j<16; j++) {
+                    printf("%d ", analogReadings[j]);
+                }
+                printf("\n");
                 for(int j=0; j<3; j++) {
                     if(testBeat.hits[j][step]) samples[j].position = 0.0;
                     //bitWrite(ledData, j, testBeat.hits[j][step]);
@@ -264,12 +294,13 @@ int main()
 
             updateButtons();
             updateLeds();
+            updateAnalog();
             
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
 
-        samples[2].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
+        //samples[2].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
     }
     return 0;
 }
