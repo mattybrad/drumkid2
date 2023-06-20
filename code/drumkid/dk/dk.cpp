@@ -51,6 +51,11 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #define CLOCK_165 13
 #define DATA_165 14
 
+// button numbers
+#define BUTTON_INC 0
+#define BUTTON_DEC 1
+#define BUTTON_BEAT 7
+
 // Drumkid classes
 #include "Sample.h"
 #include "Beat.h"
@@ -95,6 +100,39 @@ struct audio_buffer_pool *init_audio()
     assert(ok);
     audio_i2s_set_enabled(true);
     return producer_pool;
+}
+
+int beatNum = 0;
+Beat beats[8];
+
+void handleButtonChange(int buttonNum, bool buttonState)
+{
+    if(buttonState) {
+        switch (buttonNum)
+        {
+        case BUTTON_BEAT:
+            printf("change beat...\n");
+            break;
+        case BUTTON_INC:
+            beatNum++;
+            if (beatNum == 8)
+            {
+                beatNum = 0;
+            }
+            printf("+\n");
+            break;
+        case BUTTON_DEC:
+            beatNum--;
+            if (beatNum == -1)
+            {
+                beatNum = 7;
+            }
+            printf("-\n");
+            break;
+        default:
+            printf("(button not assigned)\n");
+        }
+    }
 }
 
 // temporary (ish?) LED variables
@@ -143,10 +181,12 @@ void updateLeds() {
 
 int buttonStepPosition = 0;
 int phase165 = 0;
-int buttonStates = 0;
+int lastButtonChange = 0;
+bool buttonStableStates[8] = {0,0,0,0,0,0,0,0};
 
 void updateButtons() {
     buttonStepPosition ++;
+    lastButtonChange ++;
     if(buttonStepPosition == 10) {
         buttonStepPosition = 0;
 
@@ -156,7 +196,15 @@ void updateButtons() {
         } else if(phase165 == 1) {
             gpio_put(LOAD_165, 1);
         } else if(phase165 % 2 == 0) {
-            bitWrite(buttonStates, (phase165 - 2)/2, !gpio_get(DATA_165));
+            //bitWrite(buttonStates, (phase165 - 2)/2, !gpio_get(DATA_165));
+            bool buttonState = !gpio_get(DATA_165);
+            int buttonNum = (phase165 - 2) / 2;
+            if (buttonState != buttonStableStates[buttonNum] && lastButtonChange > 500) {
+                buttonStableStates[buttonNum] = buttonState;
+                lastButtonChange = 0;
+                printf("button %d: %d\n", buttonNum, buttonState?1:0);
+                handleButtonChange(buttonNum, buttonState);
+            }
             gpio_put(CLOCK_165, 0);
         } else if(phase165 % 2 == 1) {
             gpio_put(CLOCK_165, 1);
@@ -164,7 +212,6 @@ void updateButtons() {
         phase165 ++;
         if(phase165 == 18) {
             phase165 = 0;
-            ledData = buttonStates;
         }
     }
 }
@@ -241,20 +288,28 @@ int main()
     samples[2].sampleData = sampleClosedHat;
     samples[2].length = sampleClosedHatLength;
 
-    Beat testBeat;
-    testBeat.addHit(0,0);
-    testBeat.addHit(0,16);
-    testBeat.addHit(1,8);
-    testBeat.addHit(1,24);
-    testBeat.addHit(1,28);
-    testBeat.addHit(2,0);
-    testBeat.addHit(2,4);
-    testBeat.addHit(2,8);
-    testBeat.addHit(2,12);
-    testBeat.addHit(2,16);
-    testBeat.addHit(2,20);
-    testBeat.addHit(2,24);
-    testBeat.addHit(2,28);
+    beats[0].addHit(0,0);
+    beats[0].addHit(0,16);
+    beats[0].addHit(1,8);
+    beats[0].addHit(1,24);
+    beats[0].addHit(1,28);
+    beats[0].addHit(2,0);
+    beats[0].addHit(2,4);
+    beats[0].addHit(2,8);
+    beats[0].addHit(2,12);
+    beats[0].addHit(2,16);
+    beats[0].addHit(2,20);
+    beats[0].addHit(2,24);
+    beats[0].addHit(2,28);
+    beats[1].addHit(0, 0);
+    beats[1].addHit(0, 16);
+    beats[1].addHit(1, 8);
+    beats[1].addHit(1, 24);
+    beats[1].addHit(1, 28);
+    beats[2].addHit(0, 0);
+    beats[2].addHit(0, 8);
+    beats[2].addHit(0, 16);
+    beats[2].addHit(0, 24);
 
     // main loop, runs forever
     while (true)
@@ -280,13 +335,13 @@ int main()
                 if(step == 32) {
                     step = 0;
                 }
-                printf("analog: ");
+                /*printf("analog: ");
                 for(int j=0; j<16; j++) {
                     printf("%d ", analogReadings[j]);
                 }
-                printf("\n");
+                printf("\n");*/
                 for(int j=0; j<3; j++) {
-                    if(testBeat.hits[j][step]) samples[j].position = 0.0;
+                    if(beats[beatNum].hits[j][step]) samples[j].position = 0.0;
                     //bitWrite(ledData, j, testBeat.hits[j][step]);
                 }
                 
