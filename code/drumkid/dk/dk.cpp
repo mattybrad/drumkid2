@@ -50,6 +50,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #define LOAD_165 12
 #define CLOCK_165 13
 #define DATA_165 14
+#define SYNC_IN 16
+#define SYNC_OUT 17
 
 // button numbers
 #define BUTTON_INC 0
@@ -272,6 +274,10 @@ int main()
     gpio_set_dir(CLOCK_165, GPIO_OUT);
     gpio_init(DATA_165);
     gpio_set_dir(DATA_165, GPIO_IN);
+    gpio_init(SYNC_OUT);
+    gpio_set_dir(SYNC_OUT, GPIO_OUT);
+    gpio_init(SYNC_IN);
+    gpio_set_dir(SYNC_IN, GPIO_IN);
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -336,14 +342,19 @@ int main()
                     step = 0;
                 }
                 if(step % 4 == 0) {
+                    // TODO: shorter, constant pulse length
+                    gpio_put(SYNC_OUT, 1);
                     ledData = 0;
                     bitWrite(ledData, step / 4, 1);
+                } else {
+                    // TODO: shorter, constant pulse length
+                    gpio_put(SYNC_OUT, 0);
                 }
                 for(int j=0; j<3; j++) {
                     if(beats[beatNum].hits[j][step]) samples[j].position = 0.0;
                     // basic initial "chance" implementation":
                     int randNum = rand() % 4096;
-                    if(analogReadings[8] > randNum) {
+                    if(analogReadings[0] > randNum) {
                         samples[j].position = 0.0;
                     }
                 }
