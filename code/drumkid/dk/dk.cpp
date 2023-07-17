@@ -56,7 +56,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // button numbers
 #define BUTTON_INC 0
 #define BUTTON_DEC 1
-#define BUTTON_BEAT 7
+#define BUTTON_BEAT 6
+#define BUTTON_START_STOP 7
 
 // Drumkid classes
 #include "Sample.h"
@@ -67,12 +68,22 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "snare.h"
 #include "closedhat.h"
 
+// Beat variables
+int step = 0;         // e.g. 0 to 31 for a 4/4 pattern of 8th-notes
+int stepPosition = 0; // position within the step, measured in samples
+float tempo = 120.0;  // BPM
+int samplesPerStep;   // slower tempos give higher values
+float sampleRate = 44100.0;
+bool beatPlaying = false;
+int beatNum = 0;
+Beat beats[8];
+
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool *init_audio()
 {
 
     static audio_format_t audio_format = {
-        44100,
+        (int) sampleRate,
         AUDIO_BUFFER_FORMAT_PCM_S16,
         1,
     };
@@ -104,14 +115,18 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
-int beatNum = 0;
-Beat beats[8];
-
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if(buttonState) {
         switch (buttonNum)
         {
+        case BUTTON_START_STOP:
+            beatPlaying = !beatPlaying;
+            if(beatPlaying) {
+                step = 0;
+                stepPosition = 0;
+            }
+            break;
         case BUTTON_BEAT:
             printf("change beat...\n");
             break;
@@ -281,10 +296,6 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    int step = 0;
-    int stepPosition = 0;
-    int nextStepTime = 0;
-
     // init samples (temporary, will be from SD card?)
     Sample samples[3];
     samples[0].sampleData = sampleKick;
@@ -293,7 +304,11 @@ int main()
     samples[1].length = sampleSnareLength;
     samples[2].sampleData = sampleClosedHat;
     samples[2].length = sampleClosedHatLength;
+    for(int i=0; i<3; i++) {
+        samples[i].position = (float) samples[i].length;
+    }
 
+    // temporarily defining preset beats here
     beats[0].addHit(0,0);
     beats[0].addHit(0,16);
     beats[0].addHit(1,8);
@@ -320,22 +335,29 @@ int main()
     // main loop, runs forever
     while (true)
     {
+        // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
+
+        // update tempo (could put this somewhere else if using too much CPU)
+        tempo = 50.0 + (float)analogReadings[2] * 0.05;
+        samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count; i++)
         {
             // sample updates go here
-            samples[0].update();
-            samples[1].update();
-            samples[2].update();
-            float floatValue = 0.25 * ((float)samples[0].value+(float)samples[1].value+(float)samples[2].value);
+            float floatValue = 0.0;
+            for(int j=0; j<3; j++) {
+                samples[j].update();
+                floatValue += (float)samples[j].value;
+            }
+            floatValue *= 0.25;
             bufferSamples[i] = (int)floatValue;
 
             // increment step if needed
-            stepPosition ++;
-            if(stepPosition == 2000) {
+            if(beatPlaying) stepPosition ++;
+            if(stepPosition >= samplesPerStep) {
                 stepPosition = 0;
                 step ++;
                 if(step == 32) {
@@ -369,7 +391,7 @@ int main()
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
 
-        //samples[2].speed = 0.25 + 4.0 * ((float)adc_read()) / 4095.0;
+        samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[1]) / 4095.0;
     }
     return 0;
 }
