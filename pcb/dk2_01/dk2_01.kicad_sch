@@ -667,6 +667,7 @@
     )
   )
 
+
   (junction (at 114.3 60.96) (diameter 0) (color 0 0 0 0)
     (uuid 3187142f-09c9-4a36-8205-bf9004a7f737)
   )
@@ -678,6 +679,9 @@
   )
   (junction (at 193.04 86.36) (diameter 0) (color 0 0 0 0)
     (uuid 4da28a27-c9ee-4c54-8f49-bb42580c7fb7)
+  )
+  (junction (at 172.72 45.72) (diameter 0) (color 0 0 0 0)
+    (uuid 539f854a-c848-447c-87fd-6e05c5072e20)
   )
   (junction (at 151.13 99.06) (diameter 0) (color 0 0 0 0)
     (uuid 63fc37c4-1972-4fdc-a90d-3394324acb8f)
@@ -740,6 +744,10 @@
     (stroke (width 0) (type default))
     (uuid 57fe6b42-e996-42eb-8ee8-435fa78b073c)
   )
+  (wire (pts (xy 172.72 45.72) (xy 177.165 45.72))
+    (stroke (width 0) (type default))
+    (uuid 5ab4c3ae-0570-4227-acf6-d32a4c0d9f69)
+  )
   (wire (pts (xy 212.725 114.3) (xy 217.17 114.3))
     (stroke (width 0) (type default))
     (uuid 5f78b022-b60d-48dd-85b4-88f2f2bc4467)
@@ -751,6 +759,10 @@
   (wire (pts (xy 137.16 180.34) (xy 115.57 180.34))
     (stroke (width 0) (type default))
     (uuid 72bb89df-fef6-4aac-a8fd-a36a536a4070)
+  )
+  (wire (pts (xy 172.72 36.83) (xy 172.72 45.72))
+    (stroke (width 0) (type default))
+    (uuid 760478a3-7764-47ee-a71b-82aa8af0d7bf)
   )
   (wire (pts (xy 115.57 175.26) (xy 137.16 175.26))
     (stroke (width 0) (type default))
@@ -808,6 +820,10 @@
     (stroke (width 0) (type default))
     (uuid bdbb6d6c-091d-4659-9272-f64d78358bdf)
   )
+  (wire (pts (xy 167.005 36.83) (xy 172.72 36.83))
+    (stroke (width 0) (type default))
+    (uuid c5b34199-8e51-4594-8aa8-24465a12305a)
+  )
   (wire (pts (xy 151.13 99.06) (xy 114.3 99.06))
     (stroke (width 0) (type default))
     (uuid c6680df8-3971-44fa-aa14-054a16b5f7aa)
@@ -860,7 +876,7 @@
     (stroke (width 0) (type default))
     (uuid fc0984bd-43d3-4724-a0f9-abe0f356d81f)
   )
-  (wire (pts (xy 168.91 45.72) (xy 177.165 45.72))
+  (wire (pts (xy 168.91 45.72) (xy 172.72 45.72))
     (stroke (width 0) (type default))
     (uuid fe8a6802-a4c9-4b7f-894c-fa053f0f1764)
   )
@@ -1120,7 +1136,7 @@
   (symbol (lib_id "power:GND") (at 142.875 141.605 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2acfe2d9-ef93-4926-a8ec-f06239437982)
-    (property "Reference" "#PWR077" (at 142.875 147.955 0)
+    (property "Reference" "#PWR04" (at 142.875 147.955 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 142.875 145.7405 0)
@@ -1136,7 +1152,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR077") (unit 1)
+          (reference "#PWR04") (unit 1)
         )
       )
     )
@@ -1262,7 +1278,7 @@
   (symbol (lib_id "power:+3.3V") (at 185.42 36.83 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4ac5ef5c-b177-435e-99dc-7a81b55a8178)
-    (property "Reference" "#PWR07" (at 185.42 40.64 0)
+    (property "Reference" "#PWR08" (at 185.42 40.64 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 185.42 33.3281 0)
@@ -1278,7 +1294,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR07") (unit 1)
+          (reference "#PWR08") (unit 1)
         )
       )
     )
@@ -1287,7 +1303,7 @@
   (symbol (lib_id "power:GND") (at 212.725 77.47 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 62f2264e-8aa2-40d8-a561-bbf28bce67f6)
-    (property "Reference" "#PWR048" (at 212.725 83.82 0)
+    (property "Reference" "#PWR09" (at 212.725 83.82 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 212.725 81.6055 0)
@@ -1303,7 +1319,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR048") (unit 1)
+          (reference "#PWR09") (unit 1)
         )
       )
     )
@@ -1318,7 +1334,7 @@
     (property "Value" "SW_Push" (at 147.955 121.285 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "Button_Switch_THT:SW_PUSH_6mm" (at 147.955 121.285 0)
+    (property "Footprint" "Button_Switch_THT:SW_PUSH-12mm" (at 147.955 121.285 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 147.955 121.285 0)
@@ -1368,7 +1384,7 @@
   (symbol (lib_id "power:GND") (at 142.875 126.365 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 72c9ef62-e07f-4d5f-92d9-fa7536af1c8b)
-    (property "Reference" "#PWR058" (at 142.875 132.715 0)
+    (property "Reference" "#PWR03" (at 142.875 132.715 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 142.875 130.5005 0)
@@ -1384,7 +1400,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR058") (unit 1)
+          (reference "#PWR03") (unit 1)
         )
       )
     )
@@ -1424,7 +1440,7 @@
     (property "Value" "SW_Push" (at 147.955 136.525 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "Button_Switch_THT:SW_PUSH_6mm" (at 147.955 136.525 0)
+    (property "Footprint" "Button_Switch_THT:SW_PUSH-12mm" (at 147.955 136.525 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 147.955 136.525 0)
@@ -1441,7 +1457,32 @@
           (reference "SW10") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "SW18") (unit 1)
+          (reference "SW2") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "power:PWR_FLAG") (at 167.005 36.83 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 9a15ed59-ffa9-4aeb-a0db-5770aefc1874)
+    (property "Reference" "#FLG06" (at 167.005 34.925 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "PWR_FLAG" (at 167.005 33.3281 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 167.005 36.83 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 167.005 36.83 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid c821c6ca-59cf-4e99-977c-d8570897c951))
+    (instances
+      (project "dk2_01"
+        (path "/87a59a99-d509-467e-85da-26d34072acb7"
+          (reference "#FLG06") (unit 1)
         )
       )
     )
@@ -1522,7 +1563,7 @@
   (symbol (lib_id "power:GND") (at 151.13 100.33 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid cac727b1-a4d8-4558-ae14-7cbba424390e)
-    (property "Reference" "#PWR03" (at 151.13 106.68 0)
+    (property "Reference" "#PWR05" (at 151.13 106.68 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 151.13 104.4655 0)
@@ -1538,7 +1579,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR05") (unit 1)
         )
       )
     )
@@ -1572,7 +1613,7 @@
   (symbol (lib_id "power:GND") (at 180.34 190.5 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e78b8b3e-1856-4c81-9293-6e9cf1108709)
-    (property "Reference" "#PWR06" (at 180.34 196.85 0)
+    (property "Reference" "#PWR07" (at 180.34 196.85 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 180.34 195.58 0)
@@ -1588,7 +1629,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR07") (unit 1)
         )
       )
     )
@@ -1597,7 +1638,7 @@
   (symbol (lib_id "power:+5V") (at 177.165 36.83 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid edd55da8-2fc4-4451-aa4f-a6e8b2065e8d)
-    (property "Reference" "#PWR05" (at 177.165 40.64 0)
+    (property "Reference" "#PWR06" (at 177.165 40.64 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 177.165 33.3281 0)
@@ -1613,7 +1654,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "#PWR05") (unit 1)
+          (reference "#PWR06") (unit 1)
         )
       )
     )
@@ -1648,7 +1689,7 @@
   (symbol (lib_id "Connector:Micro_SD_Card") (at 160.02 175.26 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid f9d93965-396c-49f5-8ac6-8c86c9fd271c)
-    (property "Reference" "J3" (at 160.02 156.2131 0)
+    (property "Reference" "J1" (at 160.02 156.2131 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "Micro_SD_Card" (at 160.02 158.75 0)
@@ -1672,7 +1713,7 @@
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7"
-          (reference "J3") (unit 1)
+          (reference "J1") (unit 1)
         )
       )
     )
