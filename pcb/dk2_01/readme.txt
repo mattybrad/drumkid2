@@ -12,7 +12,7 @@ PCB dimensions 120 wide x 108 high
 4 analog CV inputs
 2 audio outputs
 SD card, vertical? Yamaichi PJS008U-3000-0?
-	Just using SPI not SDIO, doesn't need to be very fast
+	Just using SPI not SDIO, doesn't need to be very fast(?)
 Power, buck converter, more efficient
 Display: TBC
 

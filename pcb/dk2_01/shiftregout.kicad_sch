@@ -1077,6 +1077,13 @@
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 21cf9672-4c04-4746-b9b4-eac09fee078a)
   )
+  (text_box "Pinout matches SR410361N, which is cheap on LCSC"
+    (at 189.865 33.655 0) (size 31.115 6.35)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid dd5d55bb-dac0-423d-9465-d0cb6626dff3)
+  )
 
   (global_label "595_DATA" (shape input) (at 104.14 52.07 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right))
@@ -1215,7 +1222,7 @@
     (property "Value" "LED" (at 160.02 114.935 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "LED_SMD:LED_0805_2012Metric" (at 158.75 118.745 0)
+    (property "Footprint" "LED_THT:LED_D5.0mm" (at 158.75 118.745 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 158.75 118.745 0)

@@ -346,8 +346,6 @@
     (uuid de3eb04b-edf5-43ce-be83-b51aff06de7b)
   )
 
-  (no_connect (at 134.62 67.31) (uuid c2171b1c-eb2c-40e4-a094-350f6aa73a0c))
-
   (wire (pts (xy 171.45 72.39) (xy 172.72 72.39))
     (stroke (width 0) (type default))
     (uuid 00e48a22-77e3-4792-9ae0-06436297fd95)
@@ -460,6 +458,10 @@
     (stroke (width 0) (type default))
     (uuid 90a2977d-390f-47cd-ac0f-58dfbacd2793)
   )
+  (wire (pts (xy 134.62 74.93) (xy 142.24 74.93))
+    (stroke (width 0) (type default))
+    (uuid 93a8fd58-e881-4a8d-84bd-1eb32ca2372b)
+  )
   (wire (pts (xy 165.1 69.85) (xy 152.4 69.85))
     (stroke (width 0) (type default))
     (uuid 95b722a8-bc00-4893-82ea-a505cb32d06b)
@@ -495,6 +497,10 @@
   (wire (pts (xy 176.53 68.58) (xy 186.69 68.58))
     (stroke (width 0) (type default))
     (uuid c2386823-3fb5-4165-ab2c-17f69221afec)
+  )
+  (wire (pts (xy 134.62 67.31) (xy 134.62 74.93))
+    (stroke (width 0) (type default))
+    (uuid c424a795-2a61-4b62-8a43-04db68f9aa1f)
   )
   (wire (pts (xy 186.69 78.74) (xy 186.69 88.9))
     (stroke (width 0) (type default))
@@ -563,14 +569,6 @@
   (wire (pts (xy 184.15 96.52) (xy 184.15 86.36))
     (stroke (width 0) (type default))
     (uuid fb9b0326-252b-41f6-b7b7-e9eb1b60986f)
-  )
-
-  (text_box "Mistake! Pin 6 should be pulled low to enable the mux!"
-    (at 116.84 67.31 0) (size 16.51 15.24)
-    (stroke (width 0) (type default))
-    (fill (type none))
-    (effects (font (size 1.27 1.27)) (justify left top))
-    (uuid afedd123-c595-466a-817e-05aa7be79450)
   )
 
   (global_label "4051_ADDRESS_B" (shape input) (at 134.62 59.69 180) (fields_autoplaced)
