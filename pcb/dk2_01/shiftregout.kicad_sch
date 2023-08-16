@@ -1077,8 +1077,8 @@
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 21cf9672-4c04-4746-b9b4-eac09fee078a)
   )
-  (text_box "Pinout matches SR410361N, which is cheap on LCSC"
-    (at 189.865 33.655 0) (size 31.115 6.35)
+  (text_box "Pinout matches Shenzhen Zhihao Elec C10713, which is cheap on LCSC"
+    (at 189.865 33.655 0) (size 31.115 7.62)
     (stroke (width 0) (type default))
     (fill (type none))
     (effects (font (size 1.27 1.27)) (justify left top))

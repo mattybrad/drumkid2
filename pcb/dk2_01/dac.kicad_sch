@@ -765,7 +765,6 @@
     )
   )
 
-
   (junction (at 146.685 89.535) (diameter 0) (color 0 0 0 0)
     (uuid 02884906-ed99-4318-b4d2-2105e4c4e25d)
   )
@@ -2678,8 +2677,8 @@
       (effects (font (size 1.27 1.27)) hide)
     )
     (pin "1" (uuid e88cf9dc-7684-4928-8c38-8ffd96753a2d))
-    (pin "3" (uuid 33c0289d-4330-4d35-b191-6c9d4574f0ee))
     (pin "2" (uuid d17027f7-695b-4d7a-b5b4-7b6d89b8ed16))
+    (pin "3" (uuid 33c0289d-4330-4d35-b191-6c9d4574f0ee))
     (instances
       (project "dk2_01"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a3b4dd4a-c522-40f2-b825-f444d434bc45"
