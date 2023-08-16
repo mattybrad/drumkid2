@@ -1077,7 +1077,7 @@
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 21cf9672-4c04-4746-b9b4-eac09fee078a)
   )
-  (text_box "Pinout matches Shenzhen Zhihao Elec C10713, which is cheap on LCSC"
+  (text_box "Pinout matches SR410361N (smaller display), which is cheap on LCSC"
     (at 189.865 33.655 0) (size 31.115 7.62)
     (stroke (width 0) (type default))
     (fill (type none))
@@ -1393,7 +1393,7 @@
     (property "Value" "CA56-12EWA" (at 206.375 45.9011 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "Display_7Segment:CA56-12EWA" (at 206.375 74.93 0)
+    (property "Footprint" "Library:SR410361N" (at 206.375 74.93 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "http://www.kingbrightusa.com/images/catalog/SPEC/CA56-12EWA.pdf" (at 195.453 58.928 0)

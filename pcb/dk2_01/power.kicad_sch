@@ -849,6 +849,21 @@
     (uuid ff135f85-1863-4214-bd55-e9c686d8c7e4)
   )
 
+  (text_box "N.B. \"Keep feedback wiring away from inductor flux\" (per datasheet)"
+    (at 149.225 97.79 0) (size 24.13 10.795)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid 1ab6a557-2b13-42b0-a4de-7d772d30eac8)
+  )
+  (text_box "Datasheet called for 68uH/2A, but did some calculations and think I can get away with 47uH/1A, which is what I used in the first board."
+    (at 179.07 105.41 0) (size 34.29 12.7)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid f315f7dc-d308-4397-9967-3900ac09b26b)
+  )
+
   (text "Eurorack power input" (at 127.635 51.435 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 1958ba2c-0059-4301-a5f1-24dcc8f7c22a)
