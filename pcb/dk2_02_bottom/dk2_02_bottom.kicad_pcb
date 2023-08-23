@@ -294,7 +294,7 @@
 
   (footprint "MountingHole:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp 06b475ec-e3a9-42ab-a9f0-26652166b084)
-    (at 195 125)
+    (at 196 126)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
@@ -1771,7 +1771,7 @@
 
   (footprint "MountingHole:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp 627feaba-138f-4597-ad46-6b86f2aa680f)
-    (at 85 125)
+    (at 84 126)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
@@ -1963,7 +1963,7 @@
 
   (footprint "MountingHole:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp 6e7ecfe0-37e7-4cac-8bf0-2bca6be84e72)
-    (at 195 55)
+    (at 196 54)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
@@ -3475,7 +3475,7 @@
 
   (footprint "MountingHole:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp e1a79288-bfcb-471a-af91-7b92394caa0d)
-    (at 85 55)
+    (at 84 54)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
@@ -3505,7 +3505,7 @@
 
   (footprint "Connector_PinHeader_2.54mm:PinHeader_1x18_P2.54mm_Vertical" (layer "F.Cu")
     (tstamp e2e7f7d0-7ebe-415b-adff-944046cc8733)
-    (at 195 64)
+    (at 194.9 65)
     (descr "Through hole straight pin header, 1x18, 2.54mm pitch, single row")
     (tags "Through hole pin header THT 1x18 2.54mm single row")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
