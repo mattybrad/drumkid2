@@ -876,7 +876,7 @@
   (symbol (lib_id "power:PWR_FLAG") (at 158.75 114.3 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0316e7eb-a13d-4ea1-975c-680eee54cb29)
-    (property "Reference" "#FLG05" (at 158.75 112.395 0)
+    (property "Reference" "#FLG06" (at 158.75 112.395 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "PWR_FLAG" (at 158.75 110.7981 0)
@@ -892,7 +892,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#FLG05") (unit 1)
+          (reference "#FLG06") (unit 1)
         )
       )
     )
@@ -901,7 +901,7 @@
   (symbol (lib_id "Device:C_Polarized_US") (at 105.41 124.46 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 04d2cf56-5286-4665-acc1-653975ce9366)
-    (property "Reference" "C29" (at 97.155 123.825 0)
+    (property "Reference" "C25" (at 97.155 123.825 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "470uF 35V" (at 90.805 125.73 0)
@@ -918,7 +918,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "C29") (unit 1)
+          (reference "C25") (unit 1)
         )
       )
     )
@@ -927,7 +927,7 @@
   (symbol (lib_id "Device:C") (at 113.03 124.46 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0b143ec2-544e-4a8c-85de-305567e4d449)
-    (property "Reference" "C30" (at 115.951 123.8163 0)
+    (property "Reference" "C26" (at 115.951 123.8163 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "1uF" (at 115.951 125.7373 0)
@@ -944,7 +944,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "C30") (unit 1)
+          (reference "C26") (unit 1)
         )
       )
     )
@@ -953,7 +953,7 @@
   (symbol (lib_id "power:GND") (at 120.015 81.28 0) (mirror y) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 10e5ec68-7f0f-424e-a4a4-ff834252f85c)
-    (property "Reference" "#PWR075" (at 120.015 87.63 0)
+    (property "Reference" "#PWR044" (at 120.015 87.63 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 120.015 85.4155 0)
@@ -969,7 +969,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR075") (unit 1)
+          (reference "#PWR044") (unit 1)
         )
       )
     )
@@ -978,7 +978,7 @@
   (symbol (lib_id "power:+5V") (at 168.275 114.3 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2b664771-7a93-486f-87c3-97907b440418)
-    (property "Reference" "#PWR080" (at 168.275 118.11 0)
+    (property "Reference" "#PWR049" (at 168.275 118.11 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+5V" (at 168.275 110.7981 0)
@@ -994,7 +994,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR080") (unit 1)
+          (reference "#PWR049") (unit 1)
         )
       )
     )
@@ -1003,7 +1003,7 @@
   (symbol (lib_id "Connector_Generic:Conn_02x05_Odd_Even") (at 138.43 71.755 180) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 2e193fd4-b3a6-4ba3-8800-ce2c61162a96)
-    (property "Reference" "J14" (at 156.845 60.96 0)
+    (property "Reference" "J3" (at 156.845 60.96 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "Eurorack_Power" (at 157.48 63.5 0)
@@ -1028,7 +1028,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "J14") (unit 1)
+          (reference "J3") (unit 1)
         )
       )
     )
@@ -1037,7 +1037,7 @@
   (symbol (lib_id "power:GND") (at 154.305 81.28 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3799e88a-e554-4379-b474-7b148dd92d76)
-    (property "Reference" "#PWR079" (at 154.305 87.63 0)
+    (property "Reference" "#PWR048" (at 154.305 87.63 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 154.305 85.4155 0)
@@ -1053,7 +1053,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR079") (unit 1)
+          (reference "#PWR048") (unit 1)
         )
       )
     )
@@ -1088,7 +1088,7 @@
   (symbol (lib_id "power:PWR_FLAG") (at 130.81 83.82 0) (mirror x) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4b12b0d6-dc62-4b25-a0bd-05869f883ba4)
-    (property "Reference" "#FLG04" (at 130.81 85.725 0)
+    (property "Reference" "#FLG05" (at 130.81 85.725 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "PWR_FLAG" (at 132.08 87.63 0)
@@ -1104,7 +1104,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#FLG04") (unit 1)
+          (reference "#FLG05") (unit 1)
         )
       )
     )
@@ -1113,7 +1113,7 @@
   (symbol (lib_id "power:PWR_FLAG") (at 130.81 60.325 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4fed9b42-67f6-4eb7-9a84-1f12799bc1fa)
-    (property "Reference" "#FLG03" (at 130.81 58.42 0)
+    (property "Reference" "#FLG04" (at 130.81 58.42 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "PWR_FLAG" (at 124.46 58.42 0)
@@ -1129,7 +1129,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#FLG03") (unit 1)
+          (reference "#FLG04") (unit 1)
         )
       )
     )
@@ -1138,7 +1138,7 @@
   (symbol (lib_id "power:+12V") (at 105.41 120.65 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 59c5ea38-41ce-4c9c-b075-cf36f38fc4ee)
-    (property "Reference" "#PWR074" (at 105.41 124.46 0)
+    (property "Reference" "#PWR043" (at 105.41 124.46 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+12V" (at 105.41 117.1481 0)
@@ -1154,7 +1154,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR074") (unit 1)
+          (reference "#PWR043") (unit 1)
         )
       )
     )
@@ -1163,7 +1163,7 @@
   (symbol (lib_id "power:+12V") (at 137.16 60.325 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 5edf017d-7d38-4fcf-96c2-9b7c0cd5039d)
-    (property "Reference" "#PWR077" (at 137.16 64.135 0)
+    (property "Reference" "#PWR046" (at 137.16 64.135 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+12V" (at 137.16 56.8231 0)
@@ -1179,7 +1179,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR077") (unit 1)
+          (reference "#PWR046") (unit 1)
         )
       )
     )
@@ -1188,7 +1188,7 @@
   (symbol (lib_id "Device:C_Polarized_US") (at 168.275 124.46 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid b01c1c4a-e234-4a01-8601-6d9ff554f678)
-    (property "Reference" "C31" (at 171.196 123.1813 0)
+    (property "Reference" "C27" (at 171.196 123.1813 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "180uF 35V" (at 171.196 125.1023 0)
@@ -1205,7 +1205,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "C31") (unit 1)
+          (reference "C27") (unit 1)
         )
       )
     )
@@ -1214,7 +1214,7 @@
   (symbol (lib_id "power:GND") (at 133.35 130.81 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e61a0e64-b798-4b23-99e5-54b27aae5a1f)
-    (property "Reference" "#PWR076" (at 133.35 137.16 0)
+    (property "Reference" "#PWR045" (at 133.35 137.16 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 133.35 134.9455 0)
@@ -1230,7 +1230,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR076") (unit 1)
+          (reference "#PWR045") (unit 1)
         )
       )
     )
@@ -1239,7 +1239,7 @@
   (symbol (lib_id "Regulator_Switching:XL1509-5.0") (at 133.35 123.19 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid ecdd10f6-f3df-4a98-8bbc-d0c38f44a928)
-    (property "Reference" "U17" (at 133.35 115.1001 0)
+    (property "Reference" "U8" (at 133.35 115.1001 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "XL1509-5.0" (at 133.35 117.0211 0)
@@ -1262,7 +1262,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "U17") (unit 1)
+          (reference "U8") (unit 1)
         )
       )
     )
@@ -1271,7 +1271,7 @@
   (symbol (lib_id "Diode:1N5820") (at 153.67 124.46 270) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid ee6edfaa-4e36-48f9-9ea5-4eacccd05017)
-    (property "Reference" "D6" (at 155.702 123.4988 90)
+    (property "Reference" "D2" (at 155.702 123.4988 90)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "1N5820" (at 155.702 125.4198 90)
@@ -1288,7 +1288,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "D6") (unit 1)
+          (reference "D2") (unit 1)
         )
       )
     )
@@ -1297,7 +1297,7 @@
   (symbol (lib_id "power:-12V") (at 137.16 83.82 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid f057c77f-7ab8-4146-ae57-0028dba222de)
-    (property "Reference" "#PWR078" (at 137.16 81.28 0)
+    (property "Reference" "#PWR047" (at 137.16 81.28 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "-12V" (at 137.16 80.3181 0)
@@ -1313,7 +1313,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/be1ddc4d-f499-4b75-b4b5-b626a320d90d"
-          (reference "#PWR078") (unit 1)
+          (reference "#PWR047") (unit 1)
         )
       )
     )

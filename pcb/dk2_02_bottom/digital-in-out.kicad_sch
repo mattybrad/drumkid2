@@ -904,7 +904,7 @@
           (reference "#PWR053") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR071") (unit 1)
+          (reference "#PWR040") (unit 1)
         )
       )
     )
@@ -933,7 +933,7 @@
           (reference "C5") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "C27") (unit 1)
+          (reference "C23") (unit 1)
         )
       )
     )
@@ -962,7 +962,7 @@
           (reference "R45") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R68") (unit 1)
+          (reference "R28") (unit 1)
         )
       )
     )
@@ -991,7 +991,7 @@
           (reference "R45") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R57") (unit 1)
+          (reference "R17") (unit 1)
         )
       )
     )
@@ -1000,7 +1000,7 @@
   (symbol (lib_id "power:+12V") (at 105.41 135.255 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 182d7c42-406e-4387-a38b-1ea36d73d76d)
-    (property "Reference" "#PWR064" (at 105.41 139.065 0)
+    (property "Reference" "#PWR033" (at 105.41 139.065 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+12V" (at 105.41 131.7531 0)
@@ -1016,7 +1016,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR064") (unit 1)
+          (reference "#PWR033") (unit 1)
         )
       )
     )
@@ -1044,7 +1044,7 @@
           (reference "#PWR050") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR062") (unit 1)
+          (reference "#PWR031") (unit 1)
         )
       )
     )
@@ -1072,7 +1072,7 @@
           (reference "#PWR048") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR060") (unit 1)
+          (reference "#PWR029") (unit 1)
         )
       )
     )
@@ -1101,7 +1101,7 @@
           (reference "R53") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R67") (unit 1)
+          (reference "R27") (unit 1)
         )
       )
     )
@@ -1130,7 +1130,7 @@
           (reference "R53") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R61") (unit 1)
+          (reference "R21") (unit 1)
         )
       )
     )
@@ -1158,7 +1158,7 @@
           (reference "#PWR050") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR070") (unit 1)
+          (reference "#PWR039") (unit 1)
         )
       )
     )
@@ -1167,7 +1167,7 @@
   (symbol (lib_id "power:+12V") (at 170.815 135.255 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2edbff88-d57f-4de2-883e-897a06d2472e)
-    (property "Reference" "#PWR068" (at 170.815 139.065 0)
+    (property "Reference" "#PWR037" (at 170.815 139.065 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+12V" (at 170.815 131.7531 0)
@@ -1183,7 +1183,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR068") (unit 1)
+          (reference "#PWR037") (unit 1)
         )
       )
     )
@@ -1192,7 +1192,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 173.355 142.875 0) (unit 3)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 37221c94-5cb4-4d28-a96f-70ba49805bfe)
-    (property "Reference" "U15" (at 172.085 142.24 0)
+    (property "Reference" "U6" (at 172.085 142.24 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "TL072" (at 172.085 144.78 0)
@@ -1215,7 +1215,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U15") (unit 3)
+          (reference "U6") (unit 3)
         )
       )
     )
@@ -1244,7 +1244,7 @@
           (reference "R53") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R70") (unit 1)
+          (reference "R30") (unit 1)
         )
       )
     )
@@ -1253,7 +1253,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 242.57 142.875 0) (unit 3)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4519270a-4d3b-4873-912a-34bd221c3c1a)
-    (property "Reference" "U16" (at 241.3 142.24 0)
+    (property "Reference" "U7" (at 241.3 142.24 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "TL072" (at 241.3 144.78 0)
@@ -1276,7 +1276,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U16") (unit 3)
+          (reference "U7") (unit 3)
         )
       )
     )
@@ -1285,7 +1285,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 172.085 50.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4e84b5cd-390d-4a16-92a8-60774ac57fa1)
-    (property "Reference" "U15" (at 172.085 41.91 0)
+    (property "Reference" "U6" (at 172.085 41.91 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "TL072" (at 172.085 44.45 0)
@@ -1308,7 +1308,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U15") (unit 1)
+          (reference "U6") (unit 1)
         )
       )
     )
@@ -1337,7 +1337,7 @@
           (reference "R41") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R55") (unit 1)
+          (reference "R15") (unit 1)
         )
       )
     )
@@ -1365,7 +1365,7 @@
           (reference "#PWR061") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR065") (unit 1)
+          (reference "#PWR034") (unit 1)
         )
       )
     )
@@ -1393,7 +1393,7 @@
           (reference "#PWR053") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR067") (unit 1)
+          (reference "#PWR036") (unit 1)
         )
       )
     )
@@ -1422,7 +1422,7 @@
           (reference "R46") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R58") (unit 1)
+          (reference "R18") (unit 1)
         )
       )
     )
@@ -1451,7 +1451,7 @@
           (reference "R49") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R65") (unit 1)
+          (reference "R25") (unit 1)
         )
       )
     )
@@ -1480,7 +1480,7 @@
           (reference "R40") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R54") (unit 1)
+          (reference "R14") (unit 1)
         )
       )
     )
@@ -1489,7 +1489,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 107.95 142.875 0) (unit 3)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 787cbd74-cad4-4ddf-b3a9-4544cd9273fa)
-    (property "Reference" "U14" (at 106.68 142.24 0)
+    (property "Reference" "U5" (at 106.68 142.24 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "TL072" (at 106.68 144.78 0)
@@ -1512,7 +1512,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U14") (unit 3)
+          (reference "U5") (unit 3)
         )
       )
     )
@@ -1541,7 +1541,7 @@
           (reference "R49") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R69") (unit 1)
+          (reference "R29") (unit 1)
         )
       )
     )
@@ -1570,7 +1570,7 @@
           (reference "R50") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R66") (unit 1)
+          (reference "R26") (unit 1)
         )
       )
     )
@@ -1579,7 +1579,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 106.68 50.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 829fd483-bad9-437d-b627-71edbac2a7a9)
-    (property "Reference" "U14" (at 106.68 41.91 0)
+    (property "Reference" "U5" (at 106.68 41.91 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "TL072" (at 106.68 44.45 0)
@@ -1602,7 +1602,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U14") (unit 1)
+          (reference "U5") (unit 1)
         )
       )
     )
@@ -1631,7 +1631,7 @@
           (reference "C5") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "C26") (unit 1)
+          (reference "C22") (unit 1)
         )
       )
     )
@@ -1660,7 +1660,7 @@
           (reference "R45") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R63") (unit 1)
+          (reference "R23") (unit 1)
         )
       )
     )
@@ -1689,7 +1689,7 @@
           (reference "R49") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R59") (unit 1)
+          (reference "R19") (unit 1)
         )
       )
     )
@@ -1718,7 +1718,7 @@
           (reference "C5") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "C28") (unit 1)
+          (reference "C24") (unit 1)
         )
       )
     )
@@ -1747,7 +1747,7 @@
           (reference "R42") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R56") (unit 1)
+          (reference "R16") (unit 1)
         )
       )
     )
@@ -1756,7 +1756,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 169.545 101.6 0) (unit 2)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid a9324f58-e5d5-44e0-b7e6-78cfd0d93e7b)
-    (property "Reference" "U15" (at 169.545 92.71 0)
+    (property "Reference" "U6" (at 169.545 92.71 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "TL072" (at 169.545 95.25 0)
@@ -1779,7 +1779,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U15") (unit 2)
+          (reference "U6") (unit 2)
         )
       )
     )
@@ -1808,7 +1808,7 @@
           (reference "R42") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R62") (unit 1)
+          (reference "R22") (unit 1)
         )
       )
     )
@@ -1817,7 +1817,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 104.14 101.6 0) (unit 2)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid b1ed19c4-ce9c-4400-99e9-adac4921a254)
-    (property "Reference" "U14" (at 104.14 92.71 0)
+    (property "Reference" "U5" (at 104.14 92.71 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "TL072" (at 104.14 95.25 0)
@@ -1840,7 +1840,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U14") (unit 2)
+          (reference "U5") (unit 2)
         )
       )
     )
@@ -1849,7 +1849,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 238.76 101.6 0) (unit 2)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid b4f81a60-6ca0-4741-a8fc-067698176462)
-    (property "Reference" "U16" (at 238.76 92.71 0)
+    (property "Reference" "U7" (at 238.76 92.71 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "TL072" (at 238.76 95.25 0)
@@ -1872,7 +1872,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U16") (unit 2)
+          (reference "U7") (unit 2)
         )
       )
     )
@@ -1881,7 +1881,7 @@
   (symbol (lib_id "power:+12V") (at 240.03 135.255 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid b7161363-7bdf-4872-bb7d-0fb825d720e8)
-    (property "Reference" "#PWR072" (at 240.03 139.065 0)
+    (property "Reference" "#PWR041" (at 240.03 139.065 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+12V" (at 240.03 131.7531 0)
@@ -1897,7 +1897,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR072") (unit 1)
+          (reference "#PWR041") (unit 1)
         )
       )
     )
@@ -1926,7 +1926,7 @@
           (reference "R46") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R64") (unit 1)
+          (reference "R24") (unit 1)
         )
       )
     )
@@ -1954,7 +1954,7 @@
           (reference "#PWR061") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR073") (unit 1)
+          (reference "#PWR042") (unit 1)
         )
       )
     )
@@ -2012,7 +2012,7 @@
           (reference "#PWR053") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR063") (unit 1)
+          (reference "#PWR032") (unit 1)
         )
       )
     )
@@ -2040,7 +2040,7 @@
           (reference "#PWR050") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR066") (unit 1)
+          (reference "#PWR035") (unit 1)
         )
       )
     )
@@ -2068,7 +2068,7 @@
           (reference "#PWR049") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR061") (unit 1)
+          (reference "#PWR030") (unit 1)
         )
       )
     )
@@ -2077,7 +2077,7 @@
   (symbol (lib_id "Amplifier_Operational:TL072") (at 241.3 50.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid eb4adc3b-3b0e-465f-8d15-683fe0dabb28)
-    (property "Reference" "U16" (at 241.3 41.91 0)
+    (property "Reference" "U7" (at 241.3 41.91 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "TL072" (at 241.3 44.45 0)
@@ -2100,7 +2100,7 @@
     (instances
       (project "dk2_02_bottom"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "U16") (unit 1)
+          (reference "U7") (unit 1)
         )
       )
     )
@@ -2128,7 +2128,7 @@
           (reference "#PWR061") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "#PWR069") (unit 1)
+          (reference "#PWR038") (unit 1)
         )
       )
     )
@@ -2157,7 +2157,7 @@
           (reference "R50") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/a1783777-3c7d-4cc4-9255-28fca529e5f7"
-          (reference "R60") (unit 1)
+          (reference "R20") (unit 1)
         )
       )
     )
