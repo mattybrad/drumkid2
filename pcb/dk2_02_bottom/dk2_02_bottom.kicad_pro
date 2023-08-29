@@ -453,23 +453,23 @@
     "netclass_assignments": null,
     "netclass_patterns": [
       {
-        "netclass": "Default",
+        "netclass": "Chunky",
         "pattern": "+3.3V"
       },
       {
-        "netclass": "Default",
+        "netclass": "Chunky",
         "pattern": "+3.3VDAC"
       },
       {
-        "netclass": "Default",
+        "netclass": "Chunky",
         "pattern": "+5V"
       },
       {
-        "netclass": "Default",
+        "netclass": "Chunky",
         "pattern": "+12V"
       },
       {
-        "netclass": "Default",
+        "netclass": "Chunky",
         "pattern": "-12V"
       }
     ]
