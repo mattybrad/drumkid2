@@ -2443,7 +2443,7 @@
 
   (footprint "Connector_PinHeader_2.54mm:PinHeader_1x18_P2.54mm_Vertical" (layer "F.Cu")
     (tstamp 91f0d80d-8594-4a57-93e9-85f472af0292)
-    (at 85 71.82)
+    (at 84 75.82)
     (descr "Through hole straight pin header, 1x18, 2.54mm pitch, single row")
     (tags "Through hole pin header THT 1x18 2.54mm single row")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
@@ -3505,7 +3505,7 @@
 
   (footprint "Connector_PinHeader_2.54mm:PinHeader_1x18_P2.54mm_Vertical" (layer "F.Cu")
     (tstamp e2e7f7d0-7ebe-415b-adff-944046cc8733)
-    (at 194.9 65)
+    (at 196 76.82)
     (descr "Through hole straight pin header, 1x18, 2.54mm pitch, single row")
     (tags "Through hole pin header THT 1x18 2.54mm single row")
     (property "Sheetfile" "dk2_02_bottom.kicad_sch")
