@@ -7480,6 +7480,9 @@
 
   (gr_rect (start 70 40) (end 190 148)
     (stroke (width 0.1) (type default)) (fill none) (layer "Edge.Cuts") (tstamp 677e15aa-c569-41ed-b9ee-82a45f736576))
+  (gr_text "Drumkid 2.02 (Eurorack)" (at 84 59) (layer "F.SilkS") (tstamp cbdbba00-98eb-4f05-9ba7-bc452950daba)
+    (effects (font (size 3 3) (thickness 0.15)) (justify left bottom))
+  )
 
   (segment (start 176.175 139.125) (end 175.45 138.4) (width 0.25) (layer "B.Cu") (net 1) (tstamp 07b1c833-840f-447a-800b-66aa6df2825f))
   (segment (start 176.175 143.325) (end 176.175 139.125) (width 0.25) (layer "B.Cu") (net 1) (tstamp 0fcf2fc9-37de-41b7-887b-1eaac9769185))
