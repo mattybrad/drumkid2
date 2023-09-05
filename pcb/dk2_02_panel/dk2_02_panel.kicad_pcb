@@ -79,7 +79,7 @@
 
   (footprint "Panel:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp 0232f3b6-2a10-4983-8b8e-ac9fa8449554)
-    (at 133 149.5)
+    (at 133.45 147.25)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_panel.kicad_sch")
@@ -619,7 +619,7 @@
 
   (footprint "Panel:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp 4b939697-5016-4de1-9cba-8a1a686d763a)
-    (at 27 149.5)
+    (at 26.55 147.25)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_panel.kicad_sch")
@@ -1009,7 +1009,7 @@
 
   (footprint "Panel:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp b5ab7ba5-5267-4c69-8d92-6385f878760c)
-    (at 133 22.5)
+    (at 133.45 24.75)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_panel.kicad_sch")
@@ -1429,7 +1429,7 @@
 
   (footprint "Panel:MountingHole_3.2mm_M3" (layer "F.Cu")
     (tstamp e68d700a-3f78-4ce6-b948-39c49bdb6255)
-    (at 27 22.5)
+    (at 26.55 24.75)
     (descr "Mounting Hole 3.2mm, no annular, M3")
     (tags "mounting hole 3.2mm no annular m3")
     (property "Sheetfile" "dk2_02_panel.kicad_sch")
@@ -1675,7 +1675,7 @@
     (stroke (width 0.1) (type default)) (layer "Edge.Cuts") (tstamp c5532510-6d7e-48d5-b49a-dfd9dd6ef6db))
   (gr_arc (start 94.35 72.919998) (mid 94.642893 72.212892) (end 95.35 71.919998)
     (stroke (width 0.15) (type default)) (layer "Edge.Cuts") (tstamp d24434ba-0ef5-48f9-9950-67d750dcff25))
-  (gr_rect (start 19.5 19.5) (end 140.5 152.5)
+  (gr_rect (start 19.05 21.75) (end 140.95 150.25)
     (stroke (width 0.1) (type default)) (fill none) (layer "Edge.Cuts") (tstamp d305c8c6-017a-4fda-b78c-9807a64f0bf5))
   (gr_arc (start 131.7 87.2) (mid 131.346447 87.053553) (end 131.2 86.7)
     (stroke (width 0.1) (type default)) (layer "Edge.Cuts") (tstamp eaa1cfdd-47d1-48f9-a3a1-14d939c8994a))
