@@ -16,3 +16,8 @@ SD card, vertical? Yamaichi PJS008U-3000-0?
 Power, buck converter, more efficient
 Display: TBC
 
+PCB assembly notes, 11/10/23
+- Dimensions appear correct, the boards line up with each other and fit within a Eurorack case.
+- Some difficulty with getting pots and tactile buttons up to sufficient/correct height - should maybe be using Thonk 11mm standoffs rather than 10mm to match pots and sockets, but then hard to get buttons high enough (especially the 12mm/large ones)
+- Somehow screwed up the 3.3V LDO again - no magic smoke but only 0.2V output instead of 3.3V, assumed SOT23 (as specified by JLCPCB) but component is actually SOT23R (only a small difference in footprint but AP7333 has versions for both SOT23 and SOT23R with incompatible pinouts). Just need to make sure I'm using SOT23R footprint and SOT23R pinout (1=GND, 2=OUT, 3=IN) next time. Or give up and use dirty 3.3V supply from Pico.
+- For now I'm going to remove the AP7333 and run a jumper to the Pico 3.3V to power the DAC.

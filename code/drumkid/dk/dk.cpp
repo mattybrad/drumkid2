@@ -37,7 +37,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 #define SAMPLES_PER_BUFFER 256
 
-// pins
+// pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
 #define MUX_ADDR_B 20
 #define MUX_ADDR_C 21
