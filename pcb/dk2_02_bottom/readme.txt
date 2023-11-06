@@ -27,3 +27,6 @@ PCB assembly notes, 11/10/23
 - 3mm LEDs seem to work
 - Euro audio out works
 - Sync out works
+
+Notes continued, 6/11/23
+- 7-seg display works but struggling with flicker (code issue very likely)
