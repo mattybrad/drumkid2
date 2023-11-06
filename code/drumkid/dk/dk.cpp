@@ -35,7 +35,7 @@ Aleatoric drum machine
 bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_CLOCK_PIN_BASE, "I2S BCK", PICO_AUDIO_I2S_CLOCK_PIN_BASE + 1, "I2S LRCK"));
 #endif
 
-#define SAMPLES_PER_BUFFER 256
+#define SAMPLES_PER_BUFFER 32 // 256 works well
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
@@ -154,18 +154,25 @@ void handleButtonChange(int buttonNum, bool buttonState)
 
 // temporary (ish?) LED variables
 int ledStepPosition = 0;
-int phase595 = 0; // 25 "phases" of the 595 shift register
+int phase595 = 0; // 25 "phases" of the 595 shift register, or 49 for 2 registers (2n+1)
 int ledData = 0;
 int storedLedData = 0;
+int test7SegChar = 0;
+bool test7SegData[4][16] = {
+    {1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0},
+    {1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1},
+    {1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1},
+    {1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0},
+};
 
 void updateLeds() {
     ledStepPosition++;
-    if (ledStepPosition == 10)
+    if (ledStepPosition == 1)
     {
         ledStepPosition = 0;
 
         // update shift register
-        if (phase595 < 24)
+        if (phase595 < 48)
         {
             if (phase595 == 0)
             {
@@ -174,7 +181,8 @@ void updateLeds() {
             }
             if (phase595 % 3 == 0)
             {
-                gpio_put(DATA_595, bitRead(storedLedData, phase595 / 3));
+                //gpio_put(DATA_595, bitRead(storedLedData, (phase595 / 3) % 8));
+                gpio_put(DATA_595, test7SegData[test7SegChar][phase595/3]);
                 gpio_put(CLOCK_595, 0);
             }
             else if (phase595 % 3 == 1)
@@ -191,8 +199,12 @@ void updateLeds() {
             gpio_put(LATCH_595, 1);
         }
         phase595++;
-        if (phase595 == 25)
+        if (phase595 == 49) {
             phase595 = 0;
+            test7SegChar++;
+            if (test7SegChar == 4) test7SegChar = 0;
+        }
+            
     }
 }
 
@@ -384,12 +396,16 @@ int main()
             }
 
             updateButtons();
-            updateLeds();
             updateAnalog();
             
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
+
+        for (uint i = 0; i <= 49; i++)
+        {
+            updateLeds();
+        }
 
         samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[1]) / 4095.0;
     }
