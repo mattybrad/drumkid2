@@ -85,6 +85,10 @@ int beatNum = 0;
 Beat beats[8];
 Sample samples[3];
 
+// temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
+uint16_t ledData[4] = {0b0110000001111101, 0b1101101010111101, 0b1111001011011101, 0b0110011011101101};
+uint16_t storedLedData[4] = {0, 0, 0, 0};
+
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool *init_audio()
 {
@@ -122,6 +126,18 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
+uint8_t characters[] = {
+    0b01010101,
+    0b10101010
+};
+void update_led_display(int num)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        ledData[i] = characters[i % 2];
+    }
+}
+
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if(buttonState) {
@@ -153,65 +169,12 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             printf("-\n");
             break;
+        case 2:
+            //update_led_display(3141);
+            break;
         default:
             printf("(button not assigned)\n");
         }
-    }
-}
-
-// temporary (ish?) LED variables
-int ledStepPosition = 0;
-int phase595 = 0; // 25 "phases" of the 595 shift register, or 49 for 2 registers (2n+1)
-int ledData = 0;
-int storedLedData = 0;
-int test7SegChar = 0;
-bool test7SegData[4][16] = {
-    {1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0},
-    {1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1},
-    {1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1},
-    {1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0},
-};
-
-void updateLeds() {
-    ledStepPosition++;
-    if (ledStepPosition == 1)
-    {
-        ledStepPosition = 0;
-
-        // update shift register
-        if (phase595 < 48)
-        {
-            if (phase595 == 0)
-            {
-                gpio_put(LATCH_595, 0);
-                storedLedData = ledData;
-            }
-            if (phase595 % 3 == 0)
-            {
-                //gpio_put(DATA_595, bitRead(storedLedData, (phase595 / 3) % 8));
-                gpio_put(DATA_595, test7SegData[test7SegChar][phase595/3]);
-                gpio_put(CLOCK_595, 0);
-            }
-            else if (phase595 % 3 == 1)
-            {
-                gpio_put(CLOCK_595, 1);
-            }
-            else if (phase595 % 3 == 2)
-            {
-                gpio_put(CLOCK_595, 0);
-            }
-        }
-        else
-        {
-            gpio_put(LATCH_595, 1);
-        }
-        phase595++;
-        if (phase595 == 49) {
-            phase595 = 0;
-            test7SegChar++;
-            if (test7SegChar == 4) test7SegChar = 0;
-        }
-            
     }
 }
 
@@ -340,13 +303,60 @@ void loadSamples() {
     f_unmount(pSD->pcName);
 }
 
+// new LED variables
+uint shiftRegLoopNum = 0; // 0 to 15
+uint shiftRegPhase = 0; // 0, 1, or 2
+uint sevenSegCharNum = 0;
+
+bool updateLedsNew(repeating_timer_t *rt)
+{
+    if(shiftRegLoopNum == 0 && shiftRegPhase == 0) {
+        // copy LED data so it doesn't change during serial transfer
+        for (int i = 0; i < 4; i++)
+        {
+            storedLedData[i] = ledData[i];
+        }
+        gpio_put(LATCH_595, 0);
+    }
+    if(shiftRegLoopNum < 16) {
+        switch(shiftRegPhase) {
+            case 0:
+                gpio_put(
+                    DATA_595,
+                    bitRead(ledData[sevenSegCharNum], shiftRegLoopNum)
+                );
+                gpio_put(CLOCK_595, 0);
+                break;
+
+            case 1:
+                gpio_put(CLOCK_595, 1);
+                break;
+
+            case 2:
+                gpio_put(CLOCK_595, 0);
+                break;
+        }
+        shiftRegPhase ++;
+        if(shiftRegPhase == 3) {
+            shiftRegPhase = 0;
+            shiftRegLoopNum ++;
+        }
+    } else {
+        gpio_put(LATCH_595, 1);
+        shiftRegLoopNum = 0;
+        shiftRegPhase = 0;
+        sevenSegCharNum = (sevenSegCharNum + 1) % 4;
+    }
+    return true;
+}
+
 // main function, obviously
 int main()
 {
     stdio_init_all();
     time_init();
 
-    sleep_ms(2000); // hacky, allows serial monitor to connect, remove later
+    sleep_ms(1000); // hacky, allows serial monitor to connect, remove later
     puts("Drumkid V2");
 
     // init GPIO
@@ -391,7 +401,8 @@ int main()
         samples[i].position = (float) samples[i].length;
     }
 
-    loadSamples();
+    // skipping this for now because the SD card often timed out, which was annoying while trying to code other stuff. investigate later
+    //loadSamples();
 
     // temporarily defining preset beats here
     beats[0].addHit(0,0);
@@ -416,6 +427,9 @@ int main()
     beats[2].addHit(0, 8);
     beats[2].addHit(0, 16);
     beats[2].addHit(0, 24);
+
+    repeating_timer_t ledTimer;
+    add_repeating_timer_us(100, updateLedsNew, NULL, &ledTimer);
 
     // main loop, runs forever
     while (true)
@@ -451,8 +465,8 @@ int main()
                 if(step % 4 == 0) {
                     // TODO: shorter, constant pulse length
                     gpio_put(SYNC_OUT, 1);
-                    ledData = 0;
-                    bitWrite(ledData, step / 4, 1);
+                    //ledData = 0;
+                    //bitWrite(ledData, step / 4, 1);
                 } else {
                     // TODO: shorter, constant pulse length
                     gpio_put(SYNC_OUT, 0);
@@ -477,7 +491,7 @@ int main()
 
         for (uint i = 0; i <= 49; i++)
         {
-            updateLeds();
+            //updateLeds();
         }
 
         samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[1]) / 4095.0;
