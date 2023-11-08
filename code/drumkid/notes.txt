@@ -1,0 +1,12 @@
+Most hardware stuff seems to be working now at least in theory. SD card works in MicroPython but not yet C++, LED display is a bit flickery but I think that's a code timing issue. Next step is a full test program which does the following:
+- Loads WAV files from SD card
+- Pressing buttons displays button number
+- Holding button shows relevant pot/CV value
+- Start/stop works
+- Sync out works
+- Trigger outs work
+- Sync in flashes LED
+
+Steps before this is possible:
+- Test program to run LED display without flicker
+- Test program to read/write SD card
