@@ -7,6 +7,4 @@ Most hardware stuff seems to be working now at least in theory. SD card works in
 - Trigger outs work
 - Sync in flashes LED
 
-Steps before this is possible:
-- Test program to run LED display without flicker
-- Test program to read/write SD card
+Thing I just thought of that is probably quite annoying: the characteristic sound of Drumkid is reliant on modulating the velocity of the hits, but this won't really be possible for the trigger outputs. Maybe it's okay. Or maybe the next version needs envelope outputs. Or velocity outputs plus triggers, but that's a lot of sockets.

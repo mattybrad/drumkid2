@@ -32,6 +32,28 @@ int main() {
     if (FR_OK != fr) {
         printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
     }
+    
+    FIL fil2;
+    const char* const filename2 = "dk1test.txt";
+    fr = f_open(&fil2, filename2, FA_READ);
+    printf("%s\n", (FR_OK != fr ? "Fail :(" : "OK"));
+    if (FR_OK != fr)
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+    fflush(stdout);
+
+    printf("dk1test.txt:\n");
+    while (!f_eof(&fil2))
+    {
+        // int c = f_getc(f);
+        char c;
+        UINT br;
+        fr = f_read(&fil2, &c, sizeof c, &br);
+        if (FR_OK != fr)
+            printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+        else
+            printf("%c", c);
+    }
+
     f_unmount(pSD->pcName);
 
     puts("Goodbye, world!");

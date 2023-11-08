@@ -16,11 +16,11 @@ Aleatoric drum machine
 #include <stdio.h>
 #include <math.h>
 
-// Borrowing some useful Arduino macros
-#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
-#define bitSet(value, bit) ((value) |= (1UL << (bit)))
-#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
-#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
+// Include some stuff for reading/writing SD cards
+#include "f_util.h"
+#include "ff.h"
+#include "rtc.h"
+#include "hw_config.h"
 
 // Include Pico-specific stuff and set up audio
 #if PICO_ON_DEVICE
@@ -34,6 +34,12 @@ Aleatoric drum machine
 #include "pico/binary_info.h"
 bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_CLOCK_PIN_BASE, "I2S BCK", PICO_AUDIO_I2S_CLOCK_PIN_BASE + 1, "I2S LRCK"));
 #endif
+
+// Borrowing some useful Arduino macros
+#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
+#define bitSet(value, bit) ((value) |= (1UL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 32 // 256 works well
 
@@ -77,13 +83,14 @@ float sampleRate = 44100.0;
 bool beatPlaying = false;
 int beatNum = 0;
 Beat beats[8];
+Sample samples[3];
 
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool *init_audio()
 {
 
     static audio_format_t audio_format = {
-        (int) sampleRate,
+        (uint32_t) sampleRate,
         AUDIO_BUFFER_FORMAT_PCM_S16,
         1,
     };
@@ -271,11 +278,76 @@ void updateAnalog() {
     }
 }
 
+void loadSamples() {
+    sd_card_t *pSD = sd_get_by_num(0);
+    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+    if (FR_OK != fr)
+        panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+
+    FIL fil;
+    const char *const filename = "clap.wav";
+    fr = f_open(&fil, filename, FA_READ);
+    printf("%s\n", (FR_OK != fr ? "Fail :(" : "OK"));
+    if (FR_OK != fr)
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+    fflush(stdout);
+
+    int sampleLength = 10000;
+    int sampleData[sampleLength];
+
+    printf("reading audio file...\n");
+    int pos = 0;
+    while (!f_eof(&fil) && pos<44)
+    {
+        char c;
+        UINT br;
+        fr = f_read(&fil, &c, sizeof c, &br);
+        if (FR_OK != fr)
+            printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+        else {
+            printf("%c %d\n", c, c);
+        }
+        pos ++;
+    }
+
+    pos = 0;
+
+    puts("audio data: ");
+
+    while (!f_eof(&fil) && pos<sampleLength)
+    {
+        // int c = f_getc(f);
+        int16_t d;
+        UINT br;
+        fr = f_read(&fil, &d, sizeof d, &br);
+        printf("%d ", d);
+        if (FR_OK != fr)
+            printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
+        else
+        {
+            sampleData[pos] = d;
+        }
+        pos++;
+    }
+
+    sampleLength = pos;
+
+    samples[1].sampleData = sampleData;
+    samples[1].length = sampleLength;
+
+    printf("audio length: %d\n", pos);
+
+    f_unmount(pSD->pcName);
+}
+
 // main function, obviously
 int main()
 {
-
     stdio_init_all();
+    time_init();
+
+    sleep_ms(2000); // hacky, allows serial monitor to connect, remove later
+    puts("Drumkid V2");
 
     // init GPIO
     adc_init();
@@ -309,7 +381,6 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     // init samples (temporary, will be from SD card?)
-    Sample samples[3];
     samples[0].sampleData = sampleKick;
     samples[0].length = sampleKickLength;
     samples[1].sampleData = sampleSnare;
@@ -319,6 +390,8 @@ int main()
     for(int i=0; i<3; i++) {
         samples[i].position = (float) samples[i].length;
     }
+
+    loadSamples();
 
     // temporarily defining preset beats here
     beats[0].addHit(0,0);
