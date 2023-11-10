@@ -86,8 +86,21 @@ Beat beats[8];
 Sample samples[3];
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
-uint16_t ledData[4] = {0b0110000001111101, 0b1101101010111101, 0b1111001011011101, 0b0110011011101101};
+uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
+uint8_t singleLedData = 0b0010; // 4 x 3mm LEDs
 uint16_t storedLedData[4] = {0, 0, 0, 0};
+uint8_t characters[] = {
+    0b11111100,
+    0b01100000,
+    0b11011010,
+    0b11110010,
+    0b01100110,
+    0b10110110,
+    0b10111110,
+    0b11100000,
+    0b11111110,
+    0b11110110
+};
 
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool *init_audio()
@@ -126,15 +139,20 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
-uint8_t characters[] = {
-    0b01010101,
-    0b10101010
-};
-void update_led_display(int num)
+char getNthDigit(int x, int n)
+{
+    while (n--)
+    {
+        x /= 10;
+    }
+    return x % 10;
+}
+
+void updateLedDisplay(int num)
 {
     for (int i = 0; i < 4; i++)
     {
-        ledData[i] = characters[i % 2];
+        sevenSegData[i] = characters[getNthDigit(num, i)];
     }
 }
 
@@ -175,15 +193,17 @@ void handleButtonChange(int buttonNum, bool buttonState)
         default:
             printf("(button not assigned)\n");
         }
+        updateLedDisplay(buttonNum);
     }
 }
 
 int buttonStepPosition = 0;
 int phase165 = 0;
 int lastButtonChange = 0;
-bool buttonStableStates[8] = {0,0,0,0,0,0,0,0};
+bool buttonStableStates[16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,};
 
-void updateButtons() {
+bool updateButtons(repeating_timer_t *rt)
+{
     buttonStepPosition ++;
     lastButtonChange ++;
     if(buttonStepPosition == 10) {
@@ -195,7 +215,6 @@ void updateButtons() {
         } else if(phase165 == 1) {
             gpio_put(LOAD_165, 1);
         } else if(phase165 % 2 == 0) {
-            //bitWrite(buttonStates, (phase165 - 2)/2, !gpio_get(DATA_165));
             bool buttonState = !gpio_get(DATA_165);
             int buttonNum = (phase165 - 2) / 2;
             if (buttonState != buttonStableStates[buttonNum] && lastButtonChange > 500) {
@@ -209,17 +228,19 @@ void updateButtons() {
             gpio_put(CLOCK_165, 1);
         }
         phase165 ++;
-        if(phase165 == 18) {
+        if(phase165 == 34) {
             phase165 = 0;
         }
     }
+    return true;
 }
 
 int analogStepPosition = 0;
 int phase4051 = 0;
 int analogReadings[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
-void updateAnalog() {
+bool updateAnalog(repeating_timer_t *rt)
+{
     analogStepPosition ++;
     if(analogStepPosition == 10) {
         analogStepPosition = 0;
@@ -239,6 +260,7 @@ void updateAnalog() {
         if(phase4051 == 16) phase4051 = 0;
 
     }
+    return true;
 }
 
 void loadSamples() {
@@ -308,13 +330,14 @@ uint shiftRegLoopNum = 0; // 0 to 15
 uint shiftRegPhase = 0; // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
-bool updateLedsNew(repeating_timer_t *rt)
+bool updateLeds(repeating_timer_t *rt)
 {
     if(shiftRegLoopNum == 0 && shiftRegPhase == 0) {
         // copy LED data so it doesn't change during serial transfer
         for (int i = 0; i < 4; i++)
         {
-            storedLedData[i] = ledData[i];
+            storedLedData[i] = (sevenSegData[i] << 8) + 0b11110000 + singleLedData;
+            bitWrite(storedLedData[i], 4+i, 0);
         }
         gpio_put(LATCH_595, 0);
     }
@@ -323,7 +346,7 @@ bool updateLedsNew(repeating_timer_t *rt)
             case 0:
                 gpio_put(
                     DATA_595,
-                    bitRead(ledData[sevenSegCharNum], shiftRegLoopNum)
+                    bitRead(storedLedData[sevenSegCharNum], shiftRegLoopNum)
                 );
                 gpio_put(CLOCK_595, 0);
                 break;
@@ -428,8 +451,13 @@ int main()
     beats[2].addHit(0, 16);
     beats[2].addHit(0, 24);
 
+    updateLedDisplay(9999);
     repeating_timer_t ledTimer;
-    add_repeating_timer_us(100, updateLedsNew, NULL, &ledTimer);
+    add_repeating_timer_us(100, updateLeds, NULL, &ledTimer);
+    repeating_timer_t buttonTimer;
+    add_repeating_timer_us(100, updateButtons, NULL, &buttonTimer);
+    repeating_timer_t analogTimer;
+    add_repeating_timer_us(100, updateAnalog, NULL, &analogTimer);
 
     // main loop, runs forever
     while (true)
@@ -479,21 +507,12 @@ int main()
                         samples[j].position = 0.0;
                     }
                 }
-                
             }
-
-            updateButtons();
-            updateAnalog();
-            
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
 
-        for (uint i = 0; i <= 49; i++)
-        {
-            //updateLeds();
-        }
-
+        // move this to a timer
         samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[1]) / 4095.0;
     }
     return 0;
