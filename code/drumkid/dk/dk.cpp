@@ -89,7 +89,7 @@ Sample samples[3];
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
 uint8_t singleLedData = 0b0010; // 4 x 3mm LEDs
 uint16_t storedLedData[4] = {0, 0, 0, 0};
-uint8_t characters[] = {
+uint8_t sevenSegCharacters[10] = {
     0b11111100,
     0b01100000,
     0b11011010,
@@ -152,9 +152,10 @@ void updateLedDisplay(int num)
 {
     for (int i = 0; i < 4; i++)
     {
-        sevenSegData[i] = characters[getNthDigit(num, i)];
+        sevenSegData[i] = sevenSegCharacters[getNthDigit(num, i)];
     }
 }
+
 
 void handleButtonChange(int buttonNum, bool buttonState)
 {
@@ -188,78 +189,89 @@ void handleButtonChange(int buttonNum, bool buttonState)
             printf("-\n");
             break;
         case 2:
-            //update_led_display(3141);
             break;
         default:
             printf("(button not assigned)\n");
         }
+    } else if(!buttonState) {
+        // temp, show button num on release
         updateLedDisplay(buttonNum);
     }
 }
 
-int buttonStepPosition = 0;
-int phase165 = 0;
-int lastButtonChange = 0;
-bool buttonStableStates[16] = {1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,};
+// new button variables
+int lastButtonChange = 0; // measured in number of loops of updateButtons function, i.e. a bit janky
+bool buttonStableStates[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,}; // array of bools not good use of space, change
+uint shiftRegInLoopNum = 0; // 0 to 15
+uint shiftRegInPhase = 0;   // 0 or 1
 
 bool updateButtons(repeating_timer_t *rt)
 {
-    buttonStepPosition ++;
     lastButtonChange ++;
-    if(buttonStepPosition == 10) {
-        buttonStepPosition = 0;
 
-        // update shift register
-        if(phase165 == 0) {
-            gpio_put(LOAD_165, 0);
-        } else if(phase165 == 1) {
-            gpio_put(LOAD_165, 1);
-        } else if(phase165 % 2 == 0) {
-            bool buttonState = !gpio_get(DATA_165);
-            int buttonNum = (phase165 - 2) / 2;
-            if (buttonState != buttonStableStates[buttonNum] && lastButtonChange > 500) {
-                buttonStableStates[buttonNum] = buttonState;
-                lastButtonChange = 0;
-                printf("button %d: %d\n", buttonNum, buttonState?1:0);
-                handleButtonChange(buttonNum, buttonState);
-            }
-            gpio_put(CLOCK_165, 0);
-        } else if(phase165 % 2 == 1) {
-            gpio_put(CLOCK_165, 1);
+    // update shift register
+    if(shiftRegInPhase == 0) {
+        gpio_put(LOAD_165, 0);
+    } else if(shiftRegInPhase == 1) {
+        gpio_put(LOAD_165, 1);
+    } else if(shiftRegInPhase == 2) {
+        bool buttonState = gpio_get(DATA_165);
+        if (buttonState != buttonStableStates[shiftRegInLoopNum] && lastButtonChange > 500) {
+            buttonStableStates[shiftRegInLoopNum] = buttonState;
+            lastButtonChange = 0;
+            printf("button %d: %d\n", shiftRegInLoopNum, buttonState?1:0);
+            handleButtonChange(shiftRegInLoopNum, buttonState);
         }
-        phase165 ++;
-        if(phase165 == 34) {
-            phase165 = 0;
+        gpio_put(CLOCK_165, 0);
+    } else if(shiftRegInPhase == 3) {
+        gpio_put(CLOCK_165, 1);
+    }
+    shiftRegInPhase ++;
+    if (shiftRegInPhase == 4) {
+        shiftRegInLoopNum ++;
+        if(shiftRegInLoopNum < 16) {
+            shiftRegInPhase = 2;
+        } else {
+            shiftRegInPhase = 0;
+            shiftRegInLoopNum = 0;
         }
     }
     return true;
 }
 
-int analogStepPosition = 0;
-int phase4051 = 0;
-int analogReadings[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+uint analogLoopNum = 0; // 0 to 7
+uint analogPhase = 0; // 0 or 1
+uint analogReadings[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 bool updateAnalog(repeating_timer_t *rt)
 {
-    analogStepPosition ++;
-    if(analogStepPosition == 10) {
-        analogStepPosition = 0;
-
-        if(phase4051 % 2 == 0) {
-            gpio_put(MUX_ADDR_A, bitRead(phase4051/2, 0));
-            gpio_put(MUX_ADDR_B, bitRead(phase4051/2, 1));
-            gpio_put(MUX_ADDR_C, bitRead(phase4051/2, 2));
-        } else {
-            adc_select_input(0);
-            analogReadings[(phase4051-1)/2] = adc_read();
-            adc_select_input(1);
-            analogReadings[(phase4051 - 1) / 2 + 8] = adc_read();
-        }
-
-        phase4051 ++;
-        if(phase4051 == 16) phase4051 = 0;
-
+    if(analogPhase == 0) {
+        gpio_put(MUX_ADDR_A, bitRead(analogLoopNum, 0));
+        gpio_put(MUX_ADDR_B, bitRead(analogLoopNum, 1));
+        gpio_put(MUX_ADDR_C, bitRead(analogLoopNum, 2));
+    } else if(analogPhase == 1) {
+        adc_select_input(0);
+        analogReadings[analogLoopNum] = adc_read();
+        adc_select_input(1);
+        analogReadings[analogLoopNum + 8] = adc_read();
     }
+
+    analogPhase ++;
+    if(analogPhase == 2) {
+        analogPhase = 0;
+        analogLoopNum ++;
+        if(analogLoopNum == 8) {
+            analogLoopNum = 0;
+
+            // temp
+            for(int i=0; i<16; i++) {
+                if(buttonStableStates[i]) {
+                    updateLedDisplay(analogReadings[i]);
+                }
+            }
+        }
+    }
+
     return true;
 }
 
@@ -326,13 +338,14 @@ void loadSamples() {
 }
 
 // new LED variables
-uint shiftRegLoopNum = 0; // 0 to 15
-uint shiftRegPhase = 0; // 0, 1, or 2
+uint shiftRegOutLoopNum = 0; // 0 to 15
+uint shiftRegOutPhase = 0;   // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
 bool updateLeds(repeating_timer_t *rt)
 {
-    if(shiftRegLoopNum == 0 && shiftRegPhase == 0) {
+    if (shiftRegOutLoopNum == 0 && shiftRegOutPhase == 0)
+    {
         // copy LED data so it doesn't change during serial transfer
         for (int i = 0; i < 4; i++)
         {
@@ -341,33 +354,36 @@ bool updateLeds(repeating_timer_t *rt)
         }
         gpio_put(LATCH_595, 0);
     }
-    if(shiftRegLoopNum < 16) {
-        switch(shiftRegPhase) {
-            case 0:
-                gpio_put(
-                    DATA_595,
-                    bitRead(storedLedData[sevenSegCharNum], shiftRegLoopNum)
-                );
-                gpio_put(CLOCK_595, 0);
-                break;
+    if (shiftRegOutLoopNum < 16)
+    {
+        switch (shiftRegOutPhase)
+        {
+        case 0:
+            gpio_put(
+                DATA_595,
+                bitRead(storedLedData[sevenSegCharNum], shiftRegOutLoopNum));
+            gpio_put(CLOCK_595, 0);
+            break;
 
-            case 1:
-                gpio_put(CLOCK_595, 1);
-                break;
+        case 1:
+            gpio_put(CLOCK_595, 1);
+            break;
 
-            case 2:
-                gpio_put(CLOCK_595, 0);
-                break;
+        case 2:
+            gpio_put(CLOCK_595, 0);
+            break;
         }
-        shiftRegPhase ++;
-        if(shiftRegPhase == 3) {
-            shiftRegPhase = 0;
-            shiftRegLoopNum ++;
+        shiftRegOutPhase++;
+        if(shiftRegOutPhase == 3) {
+            shiftRegOutPhase = 0;
+            shiftRegOutLoopNum ++;
         }
-    } else {
+    }
+    else
+    {
         gpio_put(LATCH_595, 1);
-        shiftRegLoopNum = 0;
-        shiftRegPhase = 0;
+        shiftRegOutLoopNum = 0;
+        shiftRegOutPhase = 0;
         sevenSegCharNum = (sevenSegCharNum + 1) % 4;
     }
     return true;
