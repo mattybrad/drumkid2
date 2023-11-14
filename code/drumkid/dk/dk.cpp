@@ -23,84 +23,195 @@ Aleatoric drum machine
 #include "hw_config.h"
 
 // Include Pico-specific stuff and set up audio
-#if PICO_ON_DEVICE
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
 #include "hardware/adc.h"
-#endif
 #include "pico/stdlib.h"
 #include "pico/audio_i2s.h"
-#if PICO_ON_DEVICE
 #include "pico/binary_info.h"
 bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_CLOCK_PIN_BASE, "I2S BCK", PICO_AUDIO_I2S_CLOCK_PIN_BASE + 1, "I2S LRCK"));
-#endif
-
-// Borrowing some useful Arduino macros
-#define bitRead(value, bit) (((value) >> (bit)) & 0x01)
-#define bitSet(value, bit) ((value) |= (1UL << (bit)))
-#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
-#define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
-
-#define SAMPLES_PER_BUFFER 32 // 256 works well
-
-// pins (updated for PCB 2.02)
-#define MUX_ADDR_A 19
-#define MUX_ADDR_B 20
-#define MUX_ADDR_C 21
-#define MUX_READ_POTS 26
-#define MUX_READ_CV 27
-#define LED_PIN 25
-#define DATA_595 6
-#define CLOCK_595 7
-#define LATCH_595 8
-#define LOAD_165 12
-#define CLOCK_165 13
-#define DATA_165 14
-#define SYNC_IN 16
-#define SYNC_OUT 17
-
-// button numbers
-#define BUTTON_INC 0
-#define BUTTON_DEC 1
-#define BUTTON_BEAT 6
-#define BUTTON_START_STOP 7
 
 // Drumkid classes
 #include "Sample.h"
 #include "Beat.h"
+#include "dk.h"
 
-// Audio data (temporary, will be loaded from SD card?)
+// Audio data (temporary, will be loaded from flash)
 #include "kick.h"
 #include "snare.h"
 #include "closedhat.h"
 
-// Beat variables
-int step = 0;         // e.g. 0 to 31 for a 4/4 pattern of 8th-notes
-int stepPosition = 0; // position within the step, measured in samples
-float tempo = 120.0;  // BPM
-int samplesPerStep;   // slower tempos give higher values
-float sampleRate = 44100.0;
-bool beatPlaying = false;
-int beatNum = 0;
-Beat beats[8];
-Sample samples[3];
+// main function, obviously
+int main()
+{
+    stdio_init_all();
+    time_init();
 
-// temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
-uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
-uint8_t singleLedData = 0b0010; // 4 x 3mm LEDs
-uint16_t storedLedData[4] = {0, 0, 0, 0};
-uint8_t sevenSegCharacters[10] = {
-    0b11111100,
-    0b01100000,
-    0b11011010,
-    0b11110010,
-    0b01100110,
-    0b10110110,
-    0b10111110,
-    0b11100000,
-    0b11111110,
-    0b11110110
-};
+    sleep_ms(1000); // hacky, allows serial monitor to connect, remove later
+    puts("Drumkid V2");
+
+    struct audio_buffer_pool *ap = init_audio();
+
+    initGpio();
+    initSamples();
+    initBeats();
+    updateLedDisplay(9999);
+
+    add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
+
+    // main loop, runs forever
+    while (true)
+    {
+        // something to do with audio that i don't fully understand
+        struct audio_buffer *buffer = take_audio_buffer(ap, true);
+        int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
+
+        // update tempo (could put this somewhere else if using too much CPU)
+        tempo = 50.0 + (float)analogReadings[2] * 0.05;
+        samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
+
+        // update audio output
+        for (uint i = 0; i < buffer->max_sample_count; i++)
+        {
+            // sample updates go here
+            float floatValue = 0.0;
+            for (int j = 0; j < 3; j++)
+            {
+                samples[j].update();
+                floatValue += (float)samples[j].value;
+            }
+            floatValue *= 0.25;
+            bufferSamples[i] = (int)floatValue;
+
+            // increment step if needed
+            if (beatPlaying)
+                stepPosition++;
+            if (stepPosition >= samplesPerStep)
+            {
+                stepPosition = 0;
+                step++;
+                if (step == 32)
+                {
+                    step = 0;
+                }
+                if (step % 4 == 0)
+                {
+                    // TODO: shorter, constant pulse length
+                    gpio_put(SYNC_OUT, 1);
+                    // ledData = 0;
+                    // bitWrite(ledData, step / 4, 1);
+                }
+                else
+                {
+                    // TODO: shorter, constant pulse length
+                    gpio_put(SYNC_OUT, 0);
+                }
+                for (int j = 0; j < 3; j++)
+                {
+                    if (beats[beatNum].hits[j][step])
+                        samples[j].position = 0.0;
+                    // basic initial "chance" implementation":
+                    int randNum = rand() % 4096;
+                    if (analogReadings[0] > randNum)
+                    {
+                        samples[j].position = 0.0;
+                    }
+                }
+            }
+        }
+        buffer->sample_count = buffer->max_sample_count;
+        give_audio_buffer(ap, buffer);
+
+        // move this to a timer
+        samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[12]) / 4095.0;
+    }
+    return 0;
+}
+
+void initGpio() {
+    adc_init();
+    adc_gpio_init(MUX_READ_POTS);
+    adc_gpio_init(MUX_READ_CV);
+    gpio_init(MUX_ADDR_A);
+    gpio_set_dir(MUX_ADDR_A, GPIO_OUT);
+    gpio_init(MUX_ADDR_B);
+    gpio_set_dir(MUX_ADDR_B, GPIO_OUT);
+    gpio_init(MUX_ADDR_C);
+    gpio_set_dir(MUX_ADDR_C, GPIO_OUT);
+    gpio_init(LED_PIN);
+    gpio_set_dir(LED_PIN, GPIO_OUT);
+    gpio_init(DATA_595);
+    gpio_set_dir(DATA_595, GPIO_OUT);
+    gpio_init(CLOCK_595);
+    gpio_set_dir(CLOCK_595, GPIO_OUT);
+    gpio_init(LATCH_595);
+    gpio_set_dir(LATCH_595, GPIO_OUT);
+    gpio_init(LOAD_165);
+    gpio_set_dir(LOAD_165, GPIO_OUT);
+    gpio_init(CLOCK_165);
+    gpio_set_dir(CLOCK_165, GPIO_OUT);
+    gpio_init(DATA_165);
+    gpio_set_dir(DATA_165, GPIO_IN);
+    gpio_init(SYNC_OUT);
+    gpio_set_dir(SYNC_OUT, GPIO_OUT);
+    gpio_init(SYNC_IN);
+    gpio_set_dir(SYNC_IN, GPIO_IN);
+    gpio_init(BUTTON_PIN_START_STOP);
+    gpio_set_dir(BUTTON_PIN_START_STOP, GPIO_IN);
+    gpio_pull_up(BUTTON_PIN_START_STOP);
+    gpio_init(BUTTON_PIN_TAP_TEMPO);
+    gpio_set_dir(BUTTON_PIN_TAP_TEMPO, GPIO_IN);
+    gpio_pull_up(BUTTON_PIN_TAP_TEMPO);
+}
+
+void initBeats() {
+    // temporarily defining preset beats here
+    beats[0].addHit(0, 0);
+    beats[0].addHit(0, 16);
+    beats[0].addHit(1, 8);
+    beats[0].addHit(1, 24);
+    beats[0].addHit(1, 28);
+    beats[0].addHit(2, 0);
+    beats[0].addHit(2, 4);
+    beats[0].addHit(2, 8);
+    beats[0].addHit(2, 12);
+    beats[0].addHit(2, 16);
+    beats[0].addHit(2, 20);
+    beats[0].addHit(2, 24);
+    beats[0].addHit(2, 28);
+    beats[1].addHit(0, 0);
+    beats[1].addHit(0, 16);
+    beats[1].addHit(1, 8);
+    beats[1].addHit(1, 24);
+    beats[1].addHit(1, 28);
+    beats[2].addHit(0, 0);
+    beats[2].addHit(0, 8);
+    beats[2].addHit(0, 16);
+    beats[2].addHit(0, 24);
+}
+
+void initSamples() {
+    // init samples (temporary, will be from flash)
+    samples[0].sampleData = sampleKick;
+    samples[0].length = sampleKickLength;
+    samples[1].sampleData = sampleSnare;
+    samples[1].length = sampleSnareLength;
+    samples[2].sampleData = sampleClosedHat;
+    samples[2].length = sampleClosedHatLength;
+    for (int i = 0; i < 3; i++)
+    {
+        samples[i].position = (float)samples[i].length;
+    }
+}
+
+bool mainTimerLogic(repeating_timer_t *rt) {
+    updateLeds();
+    updateShiftRegButtons();
+    updateStandardButtons();
+    updateAnalog();
+    puts("test");
+    return true;
+}
 
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool *init_audio()
@@ -139,6 +250,7 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
+// Borrowerd from StackOverflow
 char getNthDigit(int x, int n)
 {
     while (n--)
@@ -156,7 +268,6 @@ void updateLedDisplay(int num)
     }
 }
 
-
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if(buttonState) {
@@ -165,6 +276,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_START_STOP:
             beatPlaying = !beatPlaying;
             if(beatPlaying) {
+                for (int j = 0; j < 3; j++)
+                {
+                    samples[j].position = 0.0; // temp
+                }
                 step = 0;
                 stepPosition = 0;
             }
@@ -199,14 +314,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
     }
 }
 
-// new button variables
-int lastButtonChange = 0; // measured in number of loops of updateButtons function, i.e. a bit janky
-bool buttonStableStates[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,}; // array of bools not good use of space, change
-uint16_t millisSinceChange[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,}; // microseconds since state change
-uint shiftRegInLoopNum = 0; // 0 to 15
-uint shiftRegInPhase = 0;   // 0 or 1
-
-bool updateButtons(repeating_timer_t *rt)
+void updateShiftRegButtons()
 {
     // update shift register
     if(shiftRegInPhase == 0) {
@@ -240,14 +348,30 @@ bool updateButtons(repeating_timer_t *rt)
             shiftRegInLoopNum = 0;
         }
     }
-    return true;
 }
 
-uint analogLoopNum = 0; // 0 to 7
-uint analogPhase = 0; // 0 or 1
-uint analogReadings[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+void updateStandardButtons()
+{
+    for(int i=16; i<18; i++) {
+        if (millisSinceChange[i] > 50)
+        {
+            bool buttonState = !gpio_get(i-16); // standard buttons on pins 0 and 1
+            if (buttonState != buttonStableStates[i])
+            {
+                buttonStableStates[i] = buttonState;
+                millisSinceChange[i] = 0;
+                printf("button %d: %d\n", i, buttonState ? 1 : 0);
+                handleButtonChange(i, buttonState);
+            }
+        }
+        else
+        {
+            millisSinceChange[i] += 1; // total guess at ms value for a full shift reg cycle, temporary
+        }
+    }
+}
 
-bool updateAnalog(repeating_timer_t *rt)
+void updateAnalog()
 {
     if(analogPhase == 0) {
         gpio_put(MUX_ADDR_A, bitRead(analogLoopNum, 0));
@@ -275,8 +399,6 @@ bool updateAnalog(repeating_timer_t *rt)
             }
         }
     }
-
-    return true;
 }
 
 void loadSamples() {
@@ -341,12 +463,7 @@ void loadSamples() {
     f_unmount(pSD->pcName);
 }
 
-// new LED variables
-uint shiftRegOutLoopNum = 0; // 0 to 15
-uint shiftRegOutPhase = 0;   // 0, 1, or 2
-uint sevenSegCharNum = 0;
-
-bool updateLeds(repeating_timer_t *rt)
+void updateLeds()
 {
     if (shiftRegOutLoopNum == 0 && shiftRegOutPhase == 0)
     {
@@ -390,150 +507,14 @@ bool updateLeds(repeating_timer_t *rt)
         shiftRegOutPhase = 0;
         sevenSegCharNum = (sevenSegCharNum + 1) % 4;
     }
-    return true;
 }
 
-// main function, obviously
-int main()
-{
-    stdio_init_all();
-    time_init();
+bool syncInLedOff(repeating_timer_t *rt) {
+    bitWrite(singleLedData, 0, 0);
+    return false;
+}
 
-    sleep_ms(1000); // hacky, allows serial monitor to connect, remove later
-    puts("Drumkid V2");
-
-    // init GPIO
-    adc_init();
-    adc_gpio_init(MUX_READ_POTS);
-    adc_gpio_init(MUX_READ_CV);
-    gpio_init(MUX_ADDR_A);
-    gpio_set_dir(MUX_ADDR_A, GPIO_OUT);
-    gpio_init(MUX_ADDR_B);
-    gpio_set_dir(MUX_ADDR_B, GPIO_OUT);
-    gpio_init(MUX_ADDR_C);
-    gpio_set_dir(MUX_ADDR_C, GPIO_OUT);
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    gpio_init(DATA_595);
-    gpio_set_dir(DATA_595, GPIO_OUT);
-    gpio_init(CLOCK_595);
-    gpio_set_dir(CLOCK_595, GPIO_OUT);
-    gpio_init(LATCH_595);
-    gpio_set_dir(LATCH_595, GPIO_OUT);
-    gpio_init(LOAD_165);
-    gpio_set_dir(LOAD_165, GPIO_OUT);
-    gpio_init(CLOCK_165);
-    gpio_set_dir(CLOCK_165, GPIO_OUT);
-    gpio_init(DATA_165);
-    gpio_set_dir(DATA_165, GPIO_IN);
-    gpio_init(SYNC_OUT);
-    gpio_set_dir(SYNC_OUT, GPIO_OUT);
-    gpio_init(SYNC_IN);
-    gpio_set_dir(SYNC_IN, GPIO_IN);
-
-    struct audio_buffer_pool *ap = init_audio();
-
-    // init samples (temporary, will be from SD card?)
-    samples[0].sampleData = sampleKick;
-    samples[0].length = sampleKickLength;
-    samples[1].sampleData = sampleSnare;
-    samples[1].length = sampleSnareLength;
-    samples[2].sampleData = sampleClosedHat;
-    samples[2].length = sampleClosedHatLength;
-    for(int i=0; i<3; i++) {
-        samples[i].position = (float) samples[i].length;
-    }
-
-    // skipping this for now because the SD card often timed out, which was annoying while trying to code other stuff. investigate later
-    //loadSamples();
-
-    // temporarily defining preset beats here
-    beats[0].addHit(0,0);
-    beats[0].addHit(0,16);
-    beats[0].addHit(1,8);
-    beats[0].addHit(1,24);
-    beats[0].addHit(1,28);
-    beats[0].addHit(2,0);
-    beats[0].addHit(2,4);
-    beats[0].addHit(2,8);
-    beats[0].addHit(2,12);
-    beats[0].addHit(2,16);
-    beats[0].addHit(2,20);
-    beats[0].addHit(2,24);
-    beats[0].addHit(2,28);
-    beats[1].addHit(0, 0);
-    beats[1].addHit(0, 16);
-    beats[1].addHit(1, 8);
-    beats[1].addHit(1, 24);
-    beats[1].addHit(1, 28);
-    beats[2].addHit(0, 0);
-    beats[2].addHit(0, 8);
-    beats[2].addHit(0, 16);
-    beats[2].addHit(0, 24);
-
-    updateLedDisplay(9999);
-    repeating_timer_t ledTimer;
-    add_repeating_timer_us(100, updateLeds, NULL, &ledTimer);
-    repeating_timer_t buttonTimer;
-    add_repeating_timer_us(100, updateButtons, NULL, &buttonTimer);
-    repeating_timer_t analogTimer;
-    add_repeating_timer_us(100, updateAnalog, NULL, &analogTimer);
-
-    // main loop, runs forever
-    while (true)
-    {
-        // something to do with audio that i don't fully understand
-        struct audio_buffer *buffer = take_audio_buffer(ap, true);
-        int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
-
-        // update tempo (could put this somewhere else if using too much CPU)
-        tempo = 50.0 + (float)analogReadings[2] * 0.05;
-        samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
-
-        // update audio output
-        for (uint i = 0; i < buffer->max_sample_count; i++)
-        {
-            // sample updates go here
-            float floatValue = 0.0;
-            for(int j=0; j<3; j++) {
-                samples[j].update();
-                floatValue += (float)samples[j].value;
-            }
-            floatValue *= 0.25;
-            bufferSamples[i] = (int)floatValue;
-
-            // increment step if needed
-            if(beatPlaying) stepPosition ++;
-            if(stepPosition >= samplesPerStep) {
-                stepPosition = 0;
-                step ++;
-                if(step == 32) {
-                    step = 0;
-                }
-                if(step % 4 == 0) {
-                    // TODO: shorter, constant pulse length
-                    gpio_put(SYNC_OUT, 1);
-                    //ledData = 0;
-                    //bitWrite(ledData, step / 4, 1);
-                } else {
-                    // TODO: shorter, constant pulse length
-                    gpio_put(SYNC_OUT, 0);
-                }
-                for(int j=0; j<3; j++) {
-                    if(beats[beatNum].hits[j][step]) samples[j].position = 0.0;
-                    // basic initial "chance" implementation":
-                    int randNum = rand() % 4096;
-                    if(analogReadings[0] > randNum) {
-                        samples[j].position = 0.0;
-                    }
-                }
-            }
-        }
-        buffer->sample_count = buffer->max_sample_count;
-        give_audio_buffer(ap, buffer);
-
-        // move this to a timer
-        samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[1]) / 4095.0;
-    }
-    return 0;
+void flashSyncInLed() {
+    bitWrite(singleLedData, 0, 1);
+    add_repeating_timer_ms(500, syncInLedOff, NULL, &syncLedTimer);
 }
