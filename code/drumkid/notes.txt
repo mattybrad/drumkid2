@@ -3,9 +3,9 @@ Most hardware stuff seems to be working now at least in theory. SD card works in
 - Loads WAV files from SD card when needed
 - Pressing buttons displays button number DONE
 - Holding button shows relevant pot/CV value DONE
-- Start/stop works (almost, sync out misses the first hit)
-- Sync out works (use non-repeating timer for constant pulse length)
-- Trigger outs work
+- Start/stop works DONE
+- Sync out works DONE (but not sure what final PPQN value will be)
+- Trigger outs work DONE
 - Sync in flashes LED (another non-repeating timer, maybe with some debouncing)
 
 Current issue (8/11/23), SD card errors often stop the whole program booting.
