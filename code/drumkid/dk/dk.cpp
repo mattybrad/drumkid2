@@ -202,25 +202,29 @@ void handleButtonChange(int buttonNum, bool buttonState)
 // new button variables
 int lastButtonChange = 0; // measured in number of loops of updateButtons function, i.e. a bit janky
 bool buttonStableStates[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,}; // array of bools not good use of space, change
+uint16_t millisSinceChange[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,}; // microseconds since state change
 uint shiftRegInLoopNum = 0; // 0 to 15
 uint shiftRegInPhase = 0;   // 0 or 1
 
 bool updateButtons(repeating_timer_t *rt)
 {
-    lastButtonChange ++;
-
     // update shift register
     if(shiftRegInPhase == 0) {
         gpio_put(LOAD_165, 0);
     } else if(shiftRegInPhase == 1) {
         gpio_put(LOAD_165, 1);
     } else if(shiftRegInPhase == 2) {
-        bool buttonState = gpio_get(DATA_165);
-        if (buttonState != buttonStableStates[shiftRegInLoopNum] && lastButtonChange > 500) {
-            buttonStableStates[shiftRegInLoopNum] = buttonState;
-            lastButtonChange = 0;
-            printf("button %d: %d\n", shiftRegInLoopNum, buttonState?1:0);
-            handleButtonChange(shiftRegInLoopNum, buttonState);
+        if(millisSinceChange[shiftRegInLoopNum] > 50) {
+            bool buttonState = gpio_get(DATA_165);
+            if (buttonState != buttonStableStates[shiftRegInLoopNum])
+            {
+                buttonStableStates[shiftRegInLoopNum] = buttonState;
+                millisSinceChange[shiftRegInLoopNum] = 0;
+                printf("button %d: %d\n", shiftRegInLoopNum, buttonState?1:0);
+                handleButtonChange(shiftRegInLoopNum, buttonState);
+            }
+        } else {
+            millisSinceChange[shiftRegInLoopNum] += 2; // total guess at ms value for a full shift reg cycle, temporary
         }
         gpio_put(CLOCK_165, 0);
     } else if(shiftRegInPhase == 3) {
