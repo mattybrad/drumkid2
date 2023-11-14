@@ -97,16 +97,20 @@ int main()
                 if (step % 4 == 0)
                 {
                     pulseGpio(SYNC_OUT, 20000);
+                    pulseLed(0, 50000);
                 }
                 for (int j = 0; j < 3; j++)
                 {
-                    if (beats[beatNum].hits[j][step])
+                    if (beats[beatNum].hits[j][step]) {
                         samples[j].position = 0.0;
+                        pulseGpio(TRIGGER_OUT_PINS[j], 20000);
+                    }
                     // basic initial "chance" implementation":
                     int randNum = rand() % 4096;
                     if (analogReadings[0] > randNum)
                     {
                         samples[j].position = 0.0;
+                        pulseGpio(TRIGGER_OUT_PINS[j], 20000);
                     }
                 }
             }
@@ -123,24 +127,33 @@ int main()
 uint pulseTimerNum = 0;
 const uint maxPulseTimers = 10;
 repeating_timer_t pulseTimers[maxPulseTimers];
-struct TimerData {
-    uint myInt;
-};
 
-bool onPulseTimeout(repeating_timer_t *rt) {
-    TimerData *timerData = static_cast<TimerData *>(rt->user_data);
-    printf("pulse off %d\n", timerData->myInt);
-    gpio_put((uint)rt->user_data, 0);
+bool onGpioPulseTimeout(repeating_timer_t *rt)
+{
+    uint gpioNum = (uint)(rt->user_data);
+    gpio_put(gpioNum, 0);
     return false;
 }
 
-void pulseGpio(uint8_t gpioNum, uint16_t pulseLengthMicros)
+void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros)
 {
-    printf("pulse on %d\n", gpioNum);
     gpio_put(gpioNum, 1);
-    TimerData timerData;
-    timerData.myInt = gpioNum;
-    add_repeating_timer_us(pulseLengthMicros, onPulseTimeout, &timerData, &pulseTimers[pulseTimerNum]);
+    add_repeating_timer_us(pulseLengthMicros, onGpioPulseTimeout, (void *)gpioNum, &pulseTimers[pulseTimerNum]);
+    pulseTimerNum = (pulseTimerNum + 1) % maxPulseTimers;
+}
+
+bool onLedPulseTimeout(repeating_timer_t *rt)
+{
+    uint ledNum = (uint)(rt->user_data);
+    bitWrite(singleLedData, ledNum, 0);
+    return false;
+}
+
+void pulseLed(uint ledNum, uint16_t pulseLengthMicros)
+{
+    bitWrite(singleLedData, ledNum, 1);
+    add_repeating_timer_us(pulseLengthMicros, onLedPulseTimeout, (void *)ledNum, &pulseTimers[pulseTimerNum]);
+    pulseTimerNum = (pulseTimerNum + 1) % maxPulseTimers;
 }
 
 void initGpio() {
@@ -177,6 +190,10 @@ void initGpio() {
     gpio_init(BUTTON_PIN_TAP_TEMPO);
     gpio_set_dir(BUTTON_PIN_TAP_TEMPO, GPIO_IN);
     gpio_pull_up(BUTTON_PIN_TAP_TEMPO);
+    for(int i=0; i<4; i++) {
+        gpio_init(TRIGGER_OUT_PINS[i]);
+        gpio_set_dir(TRIGGER_OUT_PINS[i], GPIO_OUT);
+    };
 }
 
 void initBeats() {
@@ -349,7 +366,7 @@ void updateShiftRegButtons()
                 handleButtonChange(shiftRegInLoopNum, buttonState);
             }
         } else {
-            microsSinceChange[shiftRegInLoopNum] += 2000; // total guess at ms value for a full shift reg cycle, temporary
+            microsSinceChange[shiftRegInLoopNum] += 2000; // total guess at us value for a full shift reg cycle, temporary
         }
         gpio_put(CLOCK_165, 0);
     } else if(shiftRegInPhase == 3) {
@@ -383,7 +400,7 @@ void updateStandardButtons()
         }
         else
         {
-            microsSinceChange[i] += 1; // total guess at ms value for a full shift reg cycle, temporary
+            microsSinceChange[i] += 100; // temp, should be set globally
         }
     }
 }

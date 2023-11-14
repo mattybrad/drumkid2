@@ -26,6 +26,7 @@
 #define SYNC_OUT 17
 #define BUTTON_PIN_START_STOP 0
 #define BUTTON_PIN_TAP_TEMPO 1
+const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 
 // button numbers
 #define BUTTON_INC 0
@@ -46,7 +47,7 @@ Sample samples[3];
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
-uint8_t singleLedData = 0b0010; // 4 x 3mm LEDs
+uint8_t singleLedData = 0b0000; // 4 x 3mm LEDs
 uint16_t storedLedData[4] = {0, 0, 0, 0};
 uint8_t sevenSegCharacters[10] = {
     0b11111100,
@@ -74,7 +75,7 @@ uint shiftRegOutPhase = 0;   // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
 bool buttonStableStates[18] = {false}; // array of bools not good use of space, change
-uint16_t microsSinceChange[18] = {0};                          // milliseconds since state change
+uint32_t microsSinceChange[18] = {0};                          // milliseconds since state change
 uint shiftRegInLoopNum = 0; // 0 to 15
 uint shiftRegInPhase = 0;   // 0 or 1
 
@@ -91,6 +92,7 @@ void updateStandardButtons();
 void updateAnalog();
 void loadSamples();
 void updateLeds();
-void pulseGpio(uint8_t gpioNum, uint16_t pulseLengthMicros);
+void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
+void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
 
 #endif
