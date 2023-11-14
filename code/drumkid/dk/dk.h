@@ -62,52 +62,19 @@ uint8_t sevenSegCharacters[10] = {
 
 // timers and alarms
 repeating_timer_t mainTimer;
-repeating_timer_t syncLedTimer; // temp, wait and see what other LEDs are used for, maybe make a class
+repeating_timer_t syncInTimer; // temp, wait and see what other LEDs are used for, maybe make a class
+repeating_timer_t syncOutTimer; // temp again probably
 
 uint analogLoopNum = 0; // 0 to 7
 uint analogPhase = 0;   // 0 or 1
-uint analogReadings[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint analogReadings[16] = {0};
 
 uint shiftRegOutLoopNum = 0; // 0 to 15
 uint shiftRegOutPhase = 0;   // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
-bool buttonStableStates[16] = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-}; // array of bools not good use of space, change
-uint16_t millisSinceChange[16] = {
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-};                          // milliseconds since state change
+bool buttonStableStates[18] = {false}; // array of bools not good use of space, change
+uint16_t microsSinceChange[18] = {0};                          // milliseconds since state change
 uint shiftRegInLoopNum = 0; // 0 to 15
 uint shiftRegInPhase = 0;   // 0 or 1
 
@@ -124,7 +91,6 @@ void updateStandardButtons();
 void updateAnalog();
 void loadSamples();
 void updateLeds();
-bool syncInLedOff(repeating_timer_t *rt);
-void flashSyncInLed();
+void pulseGpio(uint8_t gpioNum, uint16_t pulseLengthMicros);
 
 #endif

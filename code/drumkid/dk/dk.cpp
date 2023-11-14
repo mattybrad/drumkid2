@@ -96,15 +96,7 @@ int main()
                 }
                 if (step % 4 == 0)
                 {
-                    // TODO: shorter, constant pulse length
-                    gpio_put(SYNC_OUT, 1);
-                    // ledData = 0;
-                    // bitWrite(ledData, step / 4, 1);
-                }
-                else
-                {
-                    // TODO: shorter, constant pulse length
-                    gpio_put(SYNC_OUT, 0);
+                    pulseGpio(SYNC_OUT, 20000);
                 }
                 for (int j = 0; j < 3; j++)
                 {
@@ -126,6 +118,29 @@ int main()
         samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[12]) / 4095.0;
     }
     return 0;
+}
+
+uint pulseTimerNum = 0;
+const uint maxPulseTimers = 10;
+repeating_timer_t pulseTimers[maxPulseTimers];
+struct TimerData {
+    uint myInt;
+};
+
+bool onPulseTimeout(repeating_timer_t *rt) {
+    TimerData *timerData = static_cast<TimerData *>(rt->user_data);
+    printf("pulse off %d\n", timerData->myInt);
+    gpio_put((uint)rt->user_data, 0);
+    return false;
+}
+
+void pulseGpio(uint8_t gpioNum, uint16_t pulseLengthMicros)
+{
+    printf("pulse on %d\n", gpioNum);
+    gpio_put(gpioNum, 1);
+    TimerData timerData;
+    timerData.myInt = gpioNum;
+    add_repeating_timer_us(pulseLengthMicros, onPulseTimeout, &timerData, &pulseTimers[pulseTimerNum]);
 }
 
 void initGpio() {
@@ -204,12 +219,14 @@ void initSamples() {
     }
 }
 
+uint16_t microsSinceSyncIn = 0;
+
 bool mainTimerLogic(repeating_timer_t *rt) {
     updateLeds();
     updateShiftRegButtons();
     updateStandardButtons();
     updateAnalog();
-    puts("test");
+
     return true;
 }
 
@@ -322,17 +339,17 @@ void updateShiftRegButtons()
     } else if(shiftRegInPhase == 1) {
         gpio_put(LOAD_165, 1);
     } else if(shiftRegInPhase == 2) {
-        if(millisSinceChange[shiftRegInLoopNum] > 50) {
+        if(microsSinceChange[shiftRegInLoopNum] > 50000) {
             bool buttonState = gpio_get(DATA_165);
             if (buttonState != buttonStableStates[shiftRegInLoopNum])
             {
                 buttonStableStates[shiftRegInLoopNum] = buttonState;
-                millisSinceChange[shiftRegInLoopNum] = 0;
+                microsSinceChange[shiftRegInLoopNum] = 0;
                 printf("button %d: %d\n", shiftRegInLoopNum, buttonState?1:0);
                 handleButtonChange(shiftRegInLoopNum, buttonState);
             }
         } else {
-            millisSinceChange[shiftRegInLoopNum] += 2; // total guess at ms value for a full shift reg cycle, temporary
+            microsSinceChange[shiftRegInLoopNum] += 2000; // total guess at ms value for a full shift reg cycle, temporary
         }
         gpio_put(CLOCK_165, 0);
     } else if(shiftRegInPhase == 3) {
@@ -353,20 +370,20 @@ void updateShiftRegButtons()
 void updateStandardButtons()
 {
     for(int i=16; i<18; i++) {
-        if (millisSinceChange[i] > 50)
+        if (microsSinceChange[i] > 50000)
         {
             bool buttonState = !gpio_get(i-16); // standard buttons on pins 0 and 1
             if (buttonState != buttonStableStates[i])
             {
                 buttonStableStates[i] = buttonState;
-                millisSinceChange[i] = 0;
+                microsSinceChange[i] = 0;
                 printf("button %d: %d\n", i, buttonState ? 1 : 0);
                 handleButtonChange(i, buttonState);
             }
         }
         else
         {
-            millisSinceChange[i] += 1; // total guess at ms value for a full shift reg cycle, temporary
+            microsSinceChange[i] += 1; // total guess at ms value for a full shift reg cycle, temporary
         }
     }
 }
@@ -507,14 +524,4 @@ void updateLeds()
         shiftRegOutPhase = 0;
         sevenSegCharNum = (sevenSegCharNum + 1) % 4;
     }
-}
-
-bool syncInLedOff(repeating_timer_t *rt) {
-    bitWrite(singleLedData, 0, 0);
-    return false;
-}
-
-void flashSyncInLed() {
-    bitWrite(singleLedData, 0, 1);
-    add_repeating_timer_ms(500, syncInLedOff, NULL, &syncLedTimer);
 }
