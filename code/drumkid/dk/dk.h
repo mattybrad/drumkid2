@@ -8,6 +8,7 @@
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 32 // 256 works well
+#define FLASH_TARGET_OFFSET (1024 * 1024) // start point for using flash memory
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19

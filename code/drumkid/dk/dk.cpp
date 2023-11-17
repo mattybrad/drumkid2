@@ -26,6 +26,7 @@ Aleatoric drum machine
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
 #include "hardware/adc.h"
+#include "hardware/flash.h"
 #include "pico/stdlib.h"
 #include "pico/audio_i2s.h"
 #include "pico/binary_info.h"
@@ -41,14 +42,58 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "snare.h"
 #include "closedhat.h"
 
+void print_buf(const uint8_t *buf, size_t len)
+{
+    for (size_t i = 0; i < len; ++i)
+    {
+        printf("%02x", buf[i]);
+        if (i % 16 == 15)
+            printf("\n");
+        else
+            printf(" ");
+    }
+}
+
+const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
 // main function, obviously
 int main()
 {
     stdio_init_all();
     time_init();
 
-    sleep_ms(1000); // hacky, allows serial monitor to connect, remove later
+    sleep_ms(2000); // hacky, allows serial monitor to connect, remove later
     puts("Drumkid V2");
+
+    // temp flash test
+    uint8_t random_data[FLASH_PAGE_SIZE];
+    for (int i = 0; i < FLASH_PAGE_SIZE; ++i)
+        random_data[i] = rand() >> 16;
+
+    printf("Generated random data:\n");
+    print_buf(random_data, FLASH_PAGE_SIZE);
+
+    // Note that a whole number of sectors must be erased at a time.
+    printf("\nErasing target region...\n");
+    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+    printf("Done. Read back target region:\n");
+    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+
+    printf("\nProgramming target region...\n");
+    flash_range_program(FLASH_TARGET_OFFSET, random_data, FLASH_PAGE_SIZE);
+    printf("Done. Read back target region:\n");
+    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+
+    bool mismatch = false;
+    for (int i = 0; i < FLASH_PAGE_SIZE; ++i)
+    {
+        if (random_data[i] != flash_target_contents[i])
+            mismatch = true;
+    }
+    if (mismatch)
+        printf("Programming failed!\n");
+    else
+        printf("Programming successful!\n");
+    // end temp flash test
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -386,6 +431,7 @@ void updateShiftRegButtons()
 
 void updateStandardButtons()
 {
+    // There are two buttons which run straight into dedicated GPIO pins rather than through a shift register. The code below is slightly hacky, in that it treats these buttons as extra buttons in the same array as the shift reg buttons. I would write dedicated code for them, but I suspect that the next version of the prototype will use only shift reg buttons, because the read speed is sufficient anyway, which was my only reason for adding extra, non-shift-reg buttons in the first place
     for(int i=16; i<18; i++) {
         if (microsSinceChange[i] > 50000)
         {

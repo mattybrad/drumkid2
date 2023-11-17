@@ -9,6 +9,7 @@ target_link_libraries(dk PRIVATE
         pico_stdlib
         pico_audio_i2s
         hardware_adc
+        hardware_flash
         FatFs_SPI
         )
 

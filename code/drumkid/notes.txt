@@ -13,3 +13,5 @@ Current issue (8/11/23), SD card errors often stop the whole program booting.
 Thing I just thought of that is probably quite annoying: the characteristic sound of Drumkid is reliant on modulating the velocity of the hits, but this won't really be possible for the trigger outputs. Maybe it's okay. Or maybe the next version needs envelope outputs. Or velocity outputs plus triggers, but that's a lot of sockets.
 
 A thought about how storage should work: there's 2MB flash on the Pico, and not much of that will be needed for anything except audio. Additionally, we shouldn't rely on the SD card for anything mission-critical - it should only be for saving/loading, not reading samples every time you power up the module. Need to figure out how to move audio files from SD to Pico flash memory. Should be able to fit maybe 20s of audio in the flash.
+
+Currently trying to get flash read/write code working, running into issues which may be related to this: https://github.com/raspberrypi/pico-examples/issues/34 (USB serial conflict?)
