@@ -15,3 +15,5 @@ Thing I just thought of that is probably quite annoying: the characteristic soun
 A thought about how storage should work: there's 2MB flash on the Pico, and not much of that will be needed for anything except audio. Additionally, we shouldn't rely on the SD card for anything mission-critical - it should only be for saving/loading, not reading samples every time you power up the module. Need to figure out how to move audio files from SD to Pico flash memory. Should be able to fit maybe 20s of audio in the flash.
 
 Currently trying to get flash read/write code working, running into issues which may be related to this: https://github.com/raspberrypi/pico-examples/issues/34 (USB serial conflict?)
+
+Okay, progress (18/11/23): flash read/write works with code from the official example, as long as you disable interrupts before calling flash functions then restore them after, as shown here: https://www.makermatrix.com/blog/read-and-write-data-with-the-pi-pico-onboard-flash/

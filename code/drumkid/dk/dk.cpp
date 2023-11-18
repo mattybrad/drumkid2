@@ -67,19 +67,23 @@ int main()
     // temp flash test
     uint8_t random_data[FLASH_PAGE_SIZE];
     for (int i = 0; i < FLASH_PAGE_SIZE; ++i)
-        random_data[i] = rand() >> 16;
+        random_data[i] = 234;
 
     printf("Generated random data:\n");
     print_buf(random_data, FLASH_PAGE_SIZE);
 
     // Note that a whole number of sectors must be erased at a time.
     printf("\nErasing target region...\n");
+    uint32_t ints1 = save_and_disable_interrupts();
     flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+    restore_interrupts (ints1);
     printf("Done. Read back target region:\n");
     print_buf(flash_target_contents, FLASH_PAGE_SIZE);
 
     printf("\nProgramming target region...\n");
+    uint32_t ints2 = save_and_disable_interrupts();
     flash_range_program(FLASH_TARGET_OFFSET, random_data, FLASH_PAGE_SIZE);
+    restore_interrupts (ints2);
     printf("Done. Read back target region:\n");
     print_buf(flash_target_contents, FLASH_PAGE_SIZE);
 
@@ -100,7 +104,7 @@ int main()
     initGpio();
     initSamples();
     initBeats();
-    updateLedDisplay(9999);
+    updateLedDisplay(flash_target_contents[0]);
 
     add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
 
