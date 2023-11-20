@@ -7,7 +7,7 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-#define SAMPLES_PER_BUFFER 32 // 256 works well
+#define SAMPLES_PER_BUFFER 256 // 256 works well
 #define FLASH_TARGET_OFFSET (1024 * 1024) // start point for using flash memory
 
 // pins (updated for PCB 2.02)
@@ -32,6 +32,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 // button numbers
 #define BUTTON_INC 0
 #define BUTTON_DEC 1
+#define BUTTON_LOAD_SD 2
 #define BUTTON_BEAT 17
 #define BUTTON_START_STOP 16
 
@@ -91,7 +92,7 @@ void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateStandardButtons();
 void updateAnalog();
-void loadSamples();
+void loadSamplesFromSD();
 void updateLeds();
 void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);

@@ -55,6 +55,7 @@ void print_buf(const uint8_t *buf, size_t len)
 }
 
 const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
+
 // main function, obviously
 int main()
 {
@@ -64,48 +65,13 @@ int main()
     sleep_ms(2000); // hacky, allows serial monitor to connect, remove later
     puts("Drumkid V2");
 
-    // temp flash test
-    uint8_t random_data[FLASH_PAGE_SIZE];
-    for (int i = 0; i < FLASH_PAGE_SIZE; ++i)
-        random_data[i] = 234;
-
-    printf("Generated random data:\n");
-    print_buf(random_data, FLASH_PAGE_SIZE);
-
-    // Note that a whole number of sectors must be erased at a time.
-    printf("\nErasing target region...\n");
-    uint32_t ints1 = save_and_disable_interrupts();
-    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
-    restore_interrupts (ints1);
-    printf("Done. Read back target region:\n");
-    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
-
-    printf("\nProgramming target region...\n");
-    uint32_t ints2 = save_and_disable_interrupts();
-    flash_range_program(FLASH_TARGET_OFFSET, random_data, FLASH_PAGE_SIZE);
-    restore_interrupts (ints2);
-    printf("Done. Read back target region:\n");
-    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
-
-    bool mismatch = false;
-    for (int i = 0; i < FLASH_PAGE_SIZE; ++i)
-    {
-        if (random_data[i] != flash_target_contents[i])
-            mismatch = true;
-    }
-    if (mismatch)
-        printf("Programming failed!\n");
-    else
-        printf("Programming successful!\n");
-    // end temp flash test
-
-    struct audio_buffer_pool *ap = init_audio();
-
     initGpio();
     initSamples();
     initBeats();
-    updateLedDisplay(flash_target_contents[0]);
 
+    struct audio_buffer_pool *ap = init_audio();
+
+    updateLedDisplay(123);
     add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
 
     // main loop, runs forever
@@ -370,6 +336,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_BEAT:
             printf("change beat...\n");
             break;
+        case BUTTON_LOAD_SD:
+            printf("load from sd (switch)...\n");
+            loadSamplesFromSD();
+            break;
         case BUTTON_INC:
             beatNum++;
             if (beatNum == 8)
@@ -385,8 +355,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 beatNum = 7;
             }
             printf("-\n");
-            break;
-        case 2:
             break;
         default:
             printf("(button not assigned)\n");
@@ -485,66 +453,31 @@ void updateAnalog()
     }
 }
 
-void loadSamples() {
+void loadSamplesFromSD() {
+    puts("load from SD...");
+    // See FatFs - Generic FAT Filesystem Module, "Application Interface",
+    // http://elm-chan.org/fsw/ff/00index_e.html
     sd_card_t *pSD = sd_get_by_num(0);
     FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-
     FIL fil;
-    const char *const filename = "clap.wav";
-    fr = f_open(&fil, filename, FA_READ);
-    printf("%s\n", (FR_OK != fr ? "Fail :(" : "OK"));
+    const char *const filename = "filename.txt";
+    fr = f_open(&fil, filename, FA_OPEN_APPEND | FA_WRITE);
+    if (FR_OK != fr && FR_EXIST != fr)
+        panic("f_open(%s) error: %s (%d)\n", filename, FRESULT_str(fr), fr);
+    if (f_printf(&fil, "Hello, world!\n") < 0)
+    {
+        printf("f_printf failed\n");
+    }
+    fr = f_close(&fil);
     if (FR_OK != fr)
-        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-    fflush(stdout);
-
-    int sampleLength = 10000;
-    int sampleData[sampleLength];
-
-    printf("reading audio file...\n");
-    int pos = 0;
-    while (!f_eof(&fil) && pos<44)
     {
-        char c;
-        UINT br;
-        fr = f_read(&fil, &c, sizeof c, &br);
-        if (FR_OK != fr)
-            printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
-        else {
-            printf("%c %d\n", c, c);
-        }
-        pos ++;
+        printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
     }
-
-    pos = 0;
-
-    puts("audio data: ");
-
-    while (!f_eof(&fil) && pos<sampleLength)
-    {
-        // int c = f_getc(f);
-        int16_t d;
-        UINT br;
-        fr = f_read(&fil, &d, sizeof d, &br);
-        printf("%d ", d);
-        if (FR_OK != fr)
-            printf("f_read error: %s (%d)\n", FRESULT_str(fr), fr);
-        else
-        {
-            sampleData[pos] = d;
-        }
-        pos++;
-    }
-
-    sampleLength = pos;
-
-    samples[1].sampleData = sampleData;
-    samples[1].length = sampleLength;
-
-    printf("audio length: %d\n", pos);
-
     f_unmount(pSD->pcName);
+
+    puts("Goodbye, world!");
 }
 
 void updateLeds()

@@ -3,7 +3,7 @@ add_executable(dk
         hw_config.c
         )
 
-add_subdirectory(lib/no-OS-FatFS-SD-SPI-RPi-Pico/FatFs_SPI build)
+add_subdirectory(lib/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src build)
 
 target_link_libraries(dk PRIVATE
         pico_stdlib
