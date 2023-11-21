@@ -8,7 +8,6 @@
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 256 // 256 works well
-#define FLASH_TARGET_OFFSET (1024 * 1024) // start point for using flash memory
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
@@ -30,11 +29,36 @@
 const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 
 // button numbers
-#define BUTTON_INC 0
-#define BUTTON_DEC 1
-#define BUTTON_LOAD_SD 2
-#define BUTTON_BEAT 17
+#define BUTTON_CANCEL 0
+#define BUTTON_CONFIRM 1
+#define BUTTON_DEC 2
+#define BUTTON_INC 3
+#define BUTTON_RIDE 4
+#define BUTTON_HAT 5
+#define BUTTON_SNARE 6
+#define BUTTON_KICK 7
+#define BUTTON_TAP_TEMPO 17
 #define BUTTON_START_STOP 16
+
+// pot numbers
+#define POT_CHANCE 0
+#define POT_ZOOM 1
+#define POT_RANGE 2
+#define POT_MIDPOINT 3
+#define POT_SWING 4
+#define POT_SLOP 5
+#define POT_DROP 6
+#define POT_PITCH 7
+#define POT_CRUSH 8
+#define POT_CROP 9
+#define POT_TBC 10
+#define POT_VOLUME 11
+
+// CV input numbers
+#define CV_CHANCE 12
+#define CV_ZOOM 13
+#define CV_MIDPOINT 14
+#define CV_TBC 15
 
 // Beat variables
 int step = 0;         // e.g. 0 to 31 for a 4/4 pattern of 8th-notes

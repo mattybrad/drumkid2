@@ -54,8 +54,6 @@ void print_buf(const uint8_t *buf, size_t len)
     }
 }
 
-const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
-
 // main function, obviously
 int main()
 {
@@ -71,7 +69,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    updateLedDisplay(4321);
+    //updateLedDisplay(4321);
     add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
 
     // main loop, runs forever
@@ -332,13 +330,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 step = 0;
                 stepPosition = 0;
             }
-            break;
-        case BUTTON_BEAT:
-            printf("change beat...\n");
-            break;
-        case BUTTON_LOAD_SD:
-            printf("load from sd (switch)...\n");
-            loadSamplesFromSD();
             break;
         case BUTTON_INC:
             beatNum++;
