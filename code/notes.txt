@@ -19,3 +19,5 @@ Currently trying to get flash read/write code working, running into issues which
 Okay, progress (18/11/23): flash read/write works with code from the official example, as long as you disable interrupts before calling flash functions then restore them after, as shown here: https://www.makermatrix.com/blog/read-and-write-data-with-the-pi-pico-onboard-flash/
 
 Right, 20/11/23, the time has come to get a proper SWD debug setup working. Pressing bootsel and reconnecting USB every time is a faff, and I'm starting to get weird errors that probably need a proper debugger, so I've ordered a Pico debug probe. Until then I'm going to stop trying to use the SD card, as this seems to be the buggiest part of the code. Probably should leave GPIO pins 0 and 1 free in the next version for UART, but that's no problem because I was going to move those buttons to shift registers anyway.
+
+21/11/23, updated toolchain to use latest windows installer instead of previous cobbled-together setup.

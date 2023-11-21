@@ -35,7 +35,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // Drumkid classes
 #include "Sample.h"
 #include "Beat.h"
-#include "dk.h"
+#include "drumkid.h"
 
 // Audio data (temporary, will be loaded from flash)
 #include "kick.h"
@@ -71,7 +71,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    updateLedDisplay(123);
+    updateLedDisplay(4321);
     add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
 
     // main loop, runs forever

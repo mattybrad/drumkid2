@@ -26,37 +26,34 @@ if (NOT PICO_EXTRAS_PATH)
             get_filename_component(FETCHCONTENT_BASE_DIR "${PICO_EXTRAS_FETCH_FROM_GIT_PATH}" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
         endif ()
         FetchContent_Declare(
-                PICO_EXTRAS
+                pico_extras
                 GIT_REPOSITORY https://github.com/raspberrypi/pico-extras
                 GIT_TAG master
         )
-        if (NOT PICO_EXTRAS)
-            message("Downloading PICO EXTRAS")
-            FetchContent_Populate(PICO_EXTRAS)
-            set(PICO_EXTRAS_PATH ${PICO_EXTRAS_SOURCE_DIR})
+        if (NOT pico_extras)
+            message("Downloading Raspberry Pi Pico Extras")
+            FetchContent_Populate(pico_extras)
+            set(PICO_EXTRAS_PATH ${pico_extras_SOURCE_DIR})
         endif ()
         set(FETCHCONTENT_BASE_DIR ${FETCHCONTENT_BASE_DIR_SAVE})
     else ()
         if (PICO_SDK_PATH AND EXISTS "${PICO_SDK_PATH}/../pico-extras")
             set(PICO_EXTRAS_PATH ${PICO_SDK_PATH}/../pico-extras)
             message("Defaulting PICO_EXTRAS_PATH as sibling of PICO_SDK_PATH: ${PICO_EXTRAS_PATH}")
-        else()
-            message(FATAL_ERROR
-                    "PICO EXTRAS location was not specified. Please set PICO_EXTRAS_PATH or set PICO_EXTRAS_FETCH_FROM_GIT to on to fetch from git."
-                    )
         endif()
     endif ()
 endif ()
 
-set(PICO_EXTRAS_PATH "${PICO_EXTRAS_PATH}" CACHE PATH "Path to the PICO EXTRAS")
-set(PICO_EXTRAS_FETCH_FROM_GIT "${PICO_EXTRAS_FETCH_FROM_GIT}" CACHE BOOL "Set to ON to fetch copy of PICO EXTRAS from git if not otherwise locatable")
-set(PICO_EXTRAS_FETCH_FROM_GIT_PATH "${PICO_EXTRAS_FETCH_FROM_GIT_PATH}" CACHE FILEPATH "location to download EXTRAS")
+if (PICO_EXTRAS_PATH)
+    set(PICO_EXTRAS_PATH "${PICO_EXTRAS_PATH}" CACHE PATH "Path to the PICO EXTRAS")
+    set(PICO_EXTRAS_FETCH_FROM_GIT "${PICO_EXTRAS_FETCH_FROM_GIT}" CACHE BOOL "Set to ON to fetch copy of PICO EXTRAS from git if not otherwise locatable")
+    set(PICO_EXTRAS_FETCH_FROM_GIT_PATH "${PICO_EXTRAS_FETCH_FROM_GIT_PATH}" CACHE FILEPATH "location to download EXTRAS")
 
-get_filename_component(PICO_EXTRAS_PATH "${PICO_EXTRAS_PATH}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
-if (NOT EXISTS ${PICO_EXTRAS_PATH})
-    message(FATAL_ERROR "Directory '${PICO_EXTRAS_PATH}' not found")
-endif ()
+    get_filename_component(PICO_EXTRAS_PATH "${PICO_EXTRAS_PATH}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+    if (NOT EXISTS ${PICO_EXTRAS_PATH})
+        message(FATAL_ERROR "Directory '${PICO_EXTRAS_PATH}' not found")
+    endif ()
 
-set(PICO_EXTRAS_PATH ${PICO_EXTRAS_PATH} CACHE PATH "Path to the PICO EXTRAS" FORCE)
-
-add_subdirectory(${PICO_EXTRAS_PATH} pico_extras)
+    set(PICO_EXTRAS_PATH ${PICO_EXTRAS_PATH} CACHE PATH "Path to the PICO EXTRAS" FORCE)
+    add_subdirectory(${PICO_EXTRAS_PATH} pico_extras)
+endif()

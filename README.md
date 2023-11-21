@@ -1,4 +1,5 @@
 # Drumkid 2
-Aleatoric drum machine, uses random numbers to generate/alter drumbeats. This project is the successor to the original Drumkid, which was released in 2020.
+Aleatoric drum machine, uses random numbers to generate/alter drumbeats. This project is the successor to the original Drumkid, which was released in 2020. Drumkid 2 runs on a Raspberry Pi Pico. This repo contains both code for the Pico and PCB files.
 
-Drumkid 2 will use a Raspberry Pi Pico with a DAC for high-quality audio (as opposed to the Arduino clone with lo-fi PWM audio in Drumkid 1). Aiming to keep most of the core features from DK1, but adding CV/sync functionality. Likely to release both a standalone (metal case) and Eurorack module version, both of which will probably be available as kits at some point. More details to come.
+## Pico setup
+I used the official Raspberry Pi Pico installer for Windows to set up the Pico toolchain for Visual Studio Code. You may need to copy the .vscode files from https://github.com/raspberrypi/pico-setup-windows/blob/master/docs/tutorial.md#creating-a-new-project to use the correct kit.

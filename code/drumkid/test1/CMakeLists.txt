@@ -1,7 +1,0 @@
-#add_subdirectory(sine_wave)
-#add_subdirectory(noise)
-#add_subdirectory(sample)
-#add_subdirectory(leds)
-#add_subdirectory(inputs)
-#add_subdirectory(everything)
-add_subdirectory(sd)
