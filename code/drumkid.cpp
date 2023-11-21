@@ -69,7 +69,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    //updateLedDisplay(4321);
+    updateLedDisplay(4321);
     add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
 
     // main loop, runs forever
@@ -84,17 +84,27 @@ int main()
         samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
 
         // update audio output
-        for (uint i = 0; i < buffer->max_sample_count; i++)
+        for (uint i = 0; i < buffer->max_sample_count*2; i+=2)
         {
             // sample updates go here
-            float floatValue = 0.0;
+            float floatValue1 = 0.0;
+            float floatValue2 = 0.0;
             for (int j = 0; j < 3; j++)
             {
                 samples[j].update();
-                floatValue += (float)samples[j].value;
+                if(j==0)
+                {
+                    floatValue1 += (float)samples[j].value;
+                }
+                else
+                {
+                    floatValue2 += (float)samples[j].value;
+                }
             }
-            floatValue *= 0.25;
-            bufferSamples[i] = (int)floatValue;
+            floatValue1 *= 0.25; // temp?
+            floatValue2 *= 0.25; // temp?
+            bufferSamples[i] = (int)floatValue1;
+            bufferSamples[i+1] = (int)floatValue2;
 
             // increment step if needed
             if (beatPlaying)
@@ -267,12 +277,12 @@ struct audio_buffer_pool *init_audio()
     static audio_format_t audio_format = {
         (uint32_t) sampleRate,
         AUDIO_BUFFER_FORMAT_PCM_S16,
-        1,
+        2,
     };
 
     static struct audio_buffer_format producer_format = {
         .format = &audio_format,
-        .sample_stride = 2};
+        .sample_stride = 4};
 
     struct audio_buffer_pool *producer_pool = audio_new_producer_pool(&producer_format, 3,
                                                                       SAMPLES_PER_BUFFER); // todo correct size

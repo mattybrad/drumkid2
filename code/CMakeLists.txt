@@ -28,7 +28,8 @@ pico_enable_stdio_uart(drumkid 0)
 
 target_compile_definitions(drumkid PRIVATE
         # compile time configuration of I2S
-        PICO_AUDIO_I2S_MONO_INPUT=1
+        PICO_AUDIO_I2S_MONO_INPUT=0
+        PICO_AUDIO_I2S_MONO_OUTPUT=0
         USE_AUDIO_I2S=1
         )
 # create map/bin/hex file etc.
