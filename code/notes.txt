@@ -36,3 +36,5 @@ A new, scattershot list of things that would be good/essential, in rough ascendi
 - Save patch
 - Load sample from SD
 - Back up all data to SD
+
+25/11/23, debugging works with debug probe, no more pressing stupid button and reconnecting USB cable.

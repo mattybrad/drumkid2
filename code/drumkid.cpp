@@ -69,7 +69,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    updateLedDisplay(4321);
+    updateLedDisplay(1234);
     add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
 
     // main loop, runs forever
