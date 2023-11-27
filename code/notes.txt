@@ -38,3 +38,5 @@ A new, scattershot list of things that would be good/essential, in rough ascendi
 - Back up all data to SD
 
 25/11/23, debugging works with debug probe, no more pressing stupid button and reconnecting USB cable.
+
+27/11/23, had some success debugging the issue where SD card and DAC don't play well together. Can now do some test SD card stuff (mount, open/append/close file, unmount), then do audio stuff as normal. Had to set audio DMA channel to 2, because 0 and 1 didn't work (pretty sure that SD library claims 2 DMA channels). Can't currently figure out how to tell SD library how to specify exactly which DMA channels to use, which I think is the reason I can only do SD stuff at start of code, not after audio code has begun.

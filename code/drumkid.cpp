@@ -60,9 +60,9 @@ int main()
     stdio_init_all();
     time_init();
 
-    sleep_ms(2000); // hacky, allows serial monitor to connect, remove later
-    puts("Drumkid V2");
+    printf("Drumkid V2\n");
 
+    loadSamplesFromSD();
     initGpio();
     initSamples();
     initBeats();
@@ -207,12 +207,6 @@ void initGpio() {
     gpio_set_dir(SYNC_OUT, GPIO_OUT);
     gpio_init(SYNC_IN);
     gpio_set_dir(SYNC_IN, GPIO_IN);
-    gpio_init(BUTTON_PIN_START_STOP);
-    gpio_set_dir(BUTTON_PIN_START_STOP, GPIO_IN);
-    gpio_pull_up(BUTTON_PIN_START_STOP);
-    gpio_init(BUTTON_PIN_TAP_TEMPO);
-    gpio_set_dir(BUTTON_PIN_TAP_TEMPO, GPIO_IN);
-    gpio_pull_up(BUTTON_PIN_TAP_TEMPO);
     for(int i=0; i<4; i++) {
         gpio_init(TRIGGER_OUT_PINS[i]);
         gpio_set_dir(TRIGGER_OUT_PINS[i], GPIO_OUT);
@@ -264,7 +258,6 @@ uint16_t microsSinceSyncIn = 0;
 bool mainTimerLogic(repeating_timer_t *rt) {
     updateLeds();
     updateShiftRegButtons();
-    updateStandardButtons();
     updateAnalog();
 
     return true;
@@ -291,7 +284,7 @@ struct audio_buffer_pool *init_audio()
     struct audio_i2s_config config = {
         .data_pin = 9,
         .clock_pin_base = 10,
-        .dma_channel = 0,
+        .dma_channel = 2, // was 0, trying to avoid SD conflict
         .pio_sm = 0,
     };
 
@@ -357,6 +350,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             printf("-\n");
             break;
+        case BUTTON_SD_TEMP:
+            //loadSamplesFromSD();
+            break;
         default:
             printf("(button not assigned)\n");
         }
@@ -398,28 +394,6 @@ void updateShiftRegButtons()
         } else {
             shiftRegInPhase = 0;
             shiftRegInLoopNum = 0;
-        }
-    }
-}
-
-void updateStandardButtons()
-{
-    // There are two buttons which run straight into dedicated GPIO pins rather than through a shift register. The code below is slightly hacky, in that it treats these buttons as extra buttons in the same array as the shift reg buttons. I would write dedicated code for them, but I suspect that the next version of the prototype will use only shift reg buttons, because the read speed is sufficient anyway, which was my only reason for adding extra, non-shift-reg buttons in the first place
-    for(int i=16; i<18; i++) {
-        if (microsSinceChange[i] > 50000)
-        {
-            bool buttonState = !gpio_get(i-16); // standard buttons on pins 0 and 1
-            if (buttonState != buttonStableStates[i])
-            {
-                buttonStableStates[i] = buttonState;
-                microsSinceChange[i] = 0;
-                printf("button %d: %d\n", i, buttonState ? 1 : 0);
-                handleButtonChange(i, buttonState);
-            }
-        }
-        else
-        {
-            microsSinceChange[i] += 100; // temp, should be set globally
         }
     }
 }

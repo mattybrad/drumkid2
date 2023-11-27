@@ -22,9 +22,9 @@ target_link_libraries(drumkid PRIVATE
         FatFs_SPI
         )
 
-# enable usb output, disable uart output
-pico_enable_stdio_usb(drumkid 1)
-pico_enable_stdio_uart(drumkid 0)
+# disable usb output, enable uart output
+pico_enable_stdio_usb(drumkid 0)
+pico_enable_stdio_uart(drumkid 1)
 
 target_compile_definitions(drumkid PRIVATE
         # compile time configuration of I2S

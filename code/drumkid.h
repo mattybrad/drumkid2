@@ -37,8 +37,9 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define BUTTON_HAT 5
 #define BUTTON_SNARE 6
 #define BUTTON_KICK 7
-#define BUTTON_TAP_TEMPO 17
-#define BUTTON_START_STOP 16
+#define BUTTON_SD_TEMP 8
+#define BUTTON_TAP_TEMPO 14
+#define BUTTON_START_STOP 15
 
 // pot numbers
 #define POT_CHANCE 0
