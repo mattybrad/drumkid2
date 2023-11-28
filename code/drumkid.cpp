@@ -95,22 +95,15 @@ int main()
             for (int j = 0; j < 3; j++)
             {
                 samples[j].update();
-                if(j!=1) {
-                    if(j==0)
-                    {
-                        floatValue1 += (float)samples[j].value;
-                    }
-                    else
-                    {
-                        floatValue2 += (float)samples[j].value;
-                    }
+                if(j==0)
+                {
+                    floatValue1 += (float)samples[j].value;
+                }
+                else
+                {
+                    floatValue2 += (float)samples[j].value;
                 }
             }
-
-            // temp, reading snare from flash
-            int snarePosition = (int)samples[1].position;
-            int16_t thisSample = flash_target_contents[snarePosition * 2 + 1 + 44] << 8 | flash_target_contents[snarePosition * 2 + 44];
-            floatValue2 += (float)thisSample;
 
             floatValue1 *= 0.25; // temp?
             floatValue2 *= 0.25; // temp?
@@ -444,62 +437,50 @@ void updateAnalog()
     }
 }
 
-void eraseFlash() {
-    // Note that a whole number of sectors must be erased at a time.
-    printf("\nErasing target region...\n");
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
-    restore_interrupts(ints);
-    printf("Done. Read back target region:\n");
-    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+void previewFlashAudio() {
+    printf("\npreview flash audio data:\n");
+    for(int i=0; i<32; i+=2) {
+        int16_t thisSample = flash_target_contents[i+1] << 8 | flash_target_contents[i];
+        printf("%d ", thisSample);
+    }
+    printf("\n");
 }
 
 void loadSamplesFromSD() {
-    //eraseFlash();
-
     sd_card_t *pSD = sd_get_by_num(0);
     FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
     FIL fil;
-    const char *const filename = "clap.wav";
+    const char *const filename = "snare.wav";
     fr = f_open(&fil, filename, FA_READ);
     if (FR_OK != fr)
     {
         printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
         return;
     }
-    uint8_t buf[FLASH_PAGE_SIZE];
+    uint8_t wavHeaderBuffer[44];
+    uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
     int chunkNum=0;
-    uint br; // ??
+    uint br; // bytes read
+    fr = f_read(&fil, wavHeaderBuffer, sizeof wavHeaderBuffer, &br);
     for(;;)
     {
-        fr = f_read(&fil, buf, sizeof buf, &br);
+        fr = f_read(&fil, sampleDataBuffer, sizeof sampleDataBuffer, &br);
         if(br==0) break;
-        int n;
-        for (int i = 0; i < FLASH_PAGE_SIZE; i += 2)
-        {
-            n = chunkNum * 256 + i;
-            if(n >= 44) {
-                int16_t thisSample = buf[i + 1] << 8 | buf[i];
-                if(n-44 < samples[1].length) {
-                    //samples[1].sampleData[(n-44)/2] = thisSample;
-                }
-            }
-        }
 
-        print_buf(buf, FLASH_PAGE_SIZE);
+        //print_buf(sampleDataBuffer, FLASH_PAGE_SIZE);
 
         printf("\nErasing target region...\n");
         uint32_t ints = save_and_disable_interrupts();
-        flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+        //flash_range_erase(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * chunkNum, FLASH_SECTOR_SIZE);
         restore_interrupts(ints);
         printf("Done. Read back target region:\n");
         print_buf(flash_target_contents, FLASH_PAGE_SIZE);
 
         printf("\nProgramming target region...\n");
         uint32_t ints2 = save_and_disable_interrupts();
-        flash_range_program(FLASH_TARGET_OFFSET+FLASH_PAGE_SIZE*chunkNum, buf, FLASH_PAGE_SIZE);
+        flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * chunkNum, sampleDataBuffer, FLASH_PAGE_SIZE);
         restore_interrupts(ints2);
         printf("Done. Read back target region:\n");
         print_buf(flash_target_contents, FLASH_PAGE_SIZE);
@@ -514,7 +495,7 @@ void loadSamplesFromSD() {
     }
     f_unmount(pSD->pcName);
 
-    puts("Goodbye, world!");
+    previewFlashAudio();
 }
 
 void updateLeds()

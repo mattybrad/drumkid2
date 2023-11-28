@@ -59,3 +59,12 @@ Okay... maybe the problem is the timers I'm using to update buttons, LEDs, etc. 
 Aaaaah that was satisfying. Was struggling to read the wav files properly because there were random bytes missing (spoiler: not actually random). Turns out I was using f_gets, which interpreted some characters as terminators or something. Switched to f_read and everything is good.
 
 Can now load a wav sample from SD card into a variable. Next step, loading into flash?
+
+Ugh, clap.wav has a non-44-byte header. Good to see one in the wild, though. Can use it for testing.
+
+End of day summary because everything is slightly broken:
+- Using snare.wav because it has a nice normal 44-byte header
+- Trying to read 44-byte header first (for validation etc at some point)
+- Then trying to read 256-byte chunks straight from SD to flash
+- Trying to preview the audio data that should be in the flash but it's not right at the moment (when compared with snare.h integers)
+- Next sesh, try to make this preview be correct, maybe having issues with the flash_range_program function's arguments?
