@@ -440,7 +440,7 @@ void loadSamplesFromSD() {
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
     FIL fil;
-    const char *const filename = "snare.wav";
+    const char *const filename = "clap.wav";
     fr = f_open(&fil, filename, FA_READ);
     if (FR_OK != fr)
     {
@@ -454,7 +454,7 @@ void loadSamplesFromSD() {
     {
         fr = f_read(&fil, buf, sizeof buf, &br);
         if(br==0) break;
-        for (int i = 0; i < 256; i++)
+        /*for (int i = 0; i < 256; i++)
         {
             if(chunkNum == 0 && i<64) {
                 printf("%d\t%d\t%02x\t%c", i, buf[i], buf[i], buf[i]);
@@ -463,6 +463,17 @@ void loadSamplesFromSD() {
                     printf("\t%d", thisSample);
                 }
                 printf("\n");
+            }
+        }*/
+        int n;
+        for (int i = 0; i < 256; i+=2)
+        {
+            n = chunkNum * 256 + i;
+            if(n >= 44) {
+                int16_t thisSample = buf[i + 1] << 8 | buf[i];
+                if(n-44 < samples[1].length) {
+                    samples[1].sampleData[(n-44)/2] = thisSample;
+                }
             }
         }
         chunkNum++;
