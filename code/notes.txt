@@ -40,3 +40,18 @@ A new, scattershot list of things that would be good/essential, in rough ascendi
 25/11/23, debugging works with debug probe, no more pressing stupid button and reconnecting USB cable.
 
 27/11/23, had some success debugging the issue where SD card and DAC don't play well together. Can now do some test SD card stuff (mount, open/append/close file, unmount), then do audio stuff as normal. Had to set audio DMA channel to 2, because 0 and 1 didn't work (pretty sure that SD library claims 2 DMA channels). Can't currently figure out how to tell SD library how to specify exactly which DMA channels to use, which I think is the reason I can only do SD stuff at start of code, not after audio code has begun.
+
+28/11/23, here's the current serial output when trying to run loadSamplesFromSD() via a button:
+
+load from SD...
+Notification wait timed out in spi_transfer_wait_complete
+DMA CTRL_TRIG: 0b00000000000010001000100000100001
+SPI SSPCR0: 0b00000000000000000000010100000111
+SPI SSPCR1: 0b00000000000000000000000000000010
+
+*** PANIC ***
+
+f_mount error: A hard error occurred in the low level disk I/O layer (1)
+
+Basically fmount fails.
+Okay... maybe the problem is the timers I'm using to update buttons, LEDs, etc. If I remove those timers and do everything in the main loop, SD card and audio work together. For now, I've got it working by setting a flag in the timer callback and running the SD mount function in the main loop when the flag is true.

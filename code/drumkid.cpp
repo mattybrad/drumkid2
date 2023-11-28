@@ -54,6 +54,8 @@ void print_buf(const uint8_t *buf, size_t len)
     }
 }
 
+bool sdSafeLoadTemp = false;
+
 // main function, obviously
 int main()
 {
@@ -62,7 +64,6 @@ int main()
 
     printf("Drumkid V2\n");
 
-    loadSamplesFromSD();
     initGpio();
     initSamples();
     initBeats();
@@ -143,6 +144,11 @@ int main()
 
         // move this to a timer
         samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[12]) / 4095.0;
+
+        if(sdSafeLoadTemp) {
+            sdSafeLoadTemp = false;
+            loadSamplesFromSD();
+        }
     }
     return 0;
 }
@@ -351,7 +357,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             printf("-\n");
             break;
         case BUTTON_SD_TEMP:
-            //loadSamplesFromSD();
+            sdSafeLoadTemp = true;
             break;
         default:
             printf("(button not assigned)\n");
