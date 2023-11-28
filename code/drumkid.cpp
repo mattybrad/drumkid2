@@ -435,22 +435,39 @@ void updateAnalog()
 }
 
 void loadSamplesFromSD() {
-    puts("load from SD...");
-    // See FatFs - Generic FAT Filesystem Module, "Application Interface",
-    // http://elm-chan.org/fsw/ff/00index_e.html
     sd_card_t *pSD = sd_get_by_num(0);
     FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
     FIL fil;
-    const char *const filename = "filename.txt";
-    fr = f_open(&fil, filename, FA_OPEN_APPEND | FA_WRITE);
-    if (FR_OK != fr && FR_EXIST != fr)
-        panic("f_open(%s) error: %s (%d)\n", filename, FRESULT_str(fr), fr);
-    if (f_printf(&fil, "Hello, world!\n") < 0)
+    const char *const filename = "snare.wav";
+    fr = f_open(&fil, filename, FA_READ);
+    if (FR_OK != fr)
     {
-        printf("f_printf failed\n");
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        return;
     }
+    char buf[256];
+    int chunkNum=0;
+    uint br; // ??
+    for(;;)
+    {
+        fr = f_read(&fil, buf, sizeof buf, &br);
+        if(br==0) break;
+        for (int i = 0; i < 256; i++)
+        {
+            if(chunkNum == 0 && i<64) {
+                printf("%d\t%d\t%02x\t%c", i, buf[i], buf[i], buf[i]);
+                if(i%2==0) {
+                    int16_t thisSample = buf[i+1]<<8|buf[i];
+                    printf("\t%d", thisSample);
+                }
+                printf("\n");
+            }
+        }
+        chunkNum++;
+    }
+    printf("\n");
     fr = f_close(&fil);
     if (FR_OK != fr)
     {

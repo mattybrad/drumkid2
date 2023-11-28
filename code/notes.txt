@@ -55,3 +55,5 @@ f_mount error: A hard error occurred in the low level disk I/O layer (1)
 
 Basically fmount fails.
 Okay... maybe the problem is the timers I'm using to update buttons, LEDs, etc. If I remove those timers and do everything in the main loop, SD card and audio work together. For now, I've got it working by setting a flag in the timer callback and running the SD mount function in the main loop when the flag is true.
+
+Aaaaah that was satisfying. Was struggling to read the wav files properly because there were random bytes missing (spoiler: not actually random). Turns out I was using f_gets, which interpreted some characters as terminators or something. Switched to f_read and everything is good.
