@@ -68,3 +68,5 @@ End of day summary because everything is slightly broken:
 - Then trying to read 256-byte chunks straight from SD to flash
 - Trying to preview the audio data that should be in the flash but it's not right at the moment (when compared with snare.h integers)
 - Next sesh, try to make this preview be correct, maybe having issues with the flash_range_program function's arguments?
+
+29/11/23, 

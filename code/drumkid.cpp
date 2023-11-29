@@ -99,11 +99,16 @@ int main()
                 {
                     floatValue1 += (float)samples[j].value;
                 }
-                else
+                else if(j!=1)
                 {
                     floatValue2 += (float)samples[j].value;
                 }
             }
+
+            // temp, playing snare from flash
+            uint flashSamplePos = (uint) samples[1].position;
+            int16_t flashSample = flash_target_contents[flashSamplePos*2 + 1] << 8 | flash_target_contents[flashSamplePos*2];
+            floatValue2 += (float)flashSample;
 
             floatValue1 *= 0.25; // temp?
             floatValue2 *= 0.25; // temp?
@@ -439,9 +444,9 @@ void updateAnalog()
 
 void previewFlashAudio() {
     printf("\npreview flash audio data:\n");
-    for(int i=0; i<32; i+=2) {
+    for(int i=0; i<1024; i+=2) {
         int16_t thisSample = flash_target_contents[i+1] << 8 | flash_target_contents[i];
-        printf("%d ", thisSample);
+        printf("%d\t%d\n", i/2, thisSample);
     }
     printf("\n");
 }
@@ -470,20 +475,21 @@ void loadSamplesFromSD() {
         if(br==0) break;
 
         //print_buf(sampleDataBuffer, FLASH_PAGE_SIZE);
-
-        printf("\nErasing target region...\n");
-        uint32_t ints = save_and_disable_interrupts();
-        //flash_range_erase(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * chunkNum, FLASH_SECTOR_SIZE);
-        restore_interrupts(ints);
-        printf("Done. Read back target region:\n");
-        print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+        if(chunkNum==0) {
+            printf("\nErasing target region...\n");
+            uint32_t ints = save_and_disable_interrupts();
+            flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+            restore_interrupts(ints);
+            printf("Done. Read back target region:\n");
+            //print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+        }
 
         printf("\nProgramming target region...\n");
         uint32_t ints2 = save_and_disable_interrupts();
         flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * chunkNum, sampleDataBuffer, FLASH_PAGE_SIZE);
         restore_interrupts(ints2);
         printf("Done. Read back target region:\n");
-        print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+        //print_buf(flash_target_contents, FLASH_PAGE_SIZE);
 
         chunkNum++;
     }
