@@ -53,6 +53,7 @@ void print_buf(const uint8_t *buf, size_t len)
             printf(" ");
     }
 }
+void initSamplesFromFlashTemp();
 
 bool sdSafeLoadTemp = false;
 #define FLASH_TARGET_OFFSET (1536 * 1024) // start point for using flash memory
@@ -68,6 +69,7 @@ int main()
 
     initGpio();
     initSamples();
+    initSamplesFromFlashTemp();
     initBeats();
 
     struct audio_buffer_pool *ap = init_audio();
@@ -99,16 +101,11 @@ int main()
                 {
                     floatValue1 += (float)samples[j].value;
                 }
-                else if(j!=1)
+                else
                 {
                     floatValue2 += (float)samples[j].value;
                 }
             }
-
-            // temp, playing snare from flash
-            uint flashSamplePos = (uint) samples[1].position;
-            int16_t flashSample = flash_target_contents[flashSamplePos*2 + 1] << 8 | flash_target_contents[flashSamplePos*2];
-            floatValue2 += (float)flashSample;
 
             floatValue1 *= 0.25; // temp?
             floatValue2 *= 0.25; // temp?
@@ -457,7 +454,7 @@ void loadSamplesFromSD() {
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
     FIL fil;
-    const char *const filename = "snare.wav";
+    const char *const filename = "tom.wav";
     fr = f_open(&fil, filename, FA_READ);
     if (FR_OK != fr)
     {
@@ -475,10 +472,10 @@ void loadSamplesFromSD() {
         if(br==0) break;
 
         //print_buf(sampleDataBuffer, FLASH_PAGE_SIZE);
-        if(chunkNum==0) {
+        if(chunkNum%(FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE)==0) {
             printf("\nErasing target region...\n");
             uint32_t ints = save_and_disable_interrupts();
-            flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+            flash_range_erase(FLASH_TARGET_OFFSET + FLASH_SECTOR_SIZE * chunkNum / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), FLASH_SECTOR_SIZE);
             restore_interrupts(ints);
             printf("Done. Read back target region:\n");
             //print_buf(flash_target_contents, FLASH_PAGE_SIZE);
@@ -500,8 +497,16 @@ void loadSamplesFromSD() {
         printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
     }
     f_unmount(pSD->pcName);
+    initSamplesFromFlashTemp();
+}
 
-    previewFlashAudio();
+void initSamplesFromFlashTemp() {
+    // only snare for now
+    for(int i=0; i<samples[1].length; i++) {
+        int16_t thisSample = flash_target_contents[i*2 + 1] << 8 | flash_target_contents[i*2];
+        samples[1].sampleData[i] = thisSample;
+        //printf("%d\t%d\n", i, thisSample);
+    }
 }
 
 void updateLeds()

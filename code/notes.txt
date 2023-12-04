@@ -69,4 +69,7 @@ End of day summary because everything is slightly broken:
 - Trying to preview the audio data that should be in the flash but it's not right at the moment (when compared with snare.h integers)
 - Next sesh, try to make this preview be correct, maybe having issues with the flash_range_program function's arguments?
 
-29/11/23, 
+29/11/23, a few useful discoveries:
+- I can successfully copy samples from SD to flash
+- I don't think the flash is fast enough to load samples directly (although not certain about this), so am thinking about just loading them into RAM (copying them to a buffer?)
+- I've figured out the WAV header issue, although haven't code it yet. They can basically be any size, and there can even be stuff at the end of a file. This explains it well: https://stackoverflow.com/questions/19991405/how-can-i-detect-whether-a-wav-file-has-a-44-or-46-byte-header
