@@ -1,6 +1,8 @@
 #ifndef DK_H
 #define DK_H
 
+#include "constants.h"
+
 // Borrowing some useful Arduino macros
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define bitSet(value, bit) ((value) |= (1UL << (bit)))
@@ -38,6 +40,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define BUTTON_SNARE 6
 #define BUTTON_KICK 7
 #define BUTTON_SD_TEMP 8
+#define BUTTON_MANUAL_TEMPO 9
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_START_STOP 15
 
@@ -70,7 +73,7 @@ float sampleRate = 44100.0;
 bool beatPlaying = false;
 int beatNum = 0;
 Beat beats[8];
-Sample samples[3];
+Sample samples[NUM_SAMPLES];
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
@@ -113,9 +116,10 @@ bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
+void handleIncDec(bool isInc);
+void displayTempo();
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
-void updateStandardButtons();
 void updateAnalog();
 void loadSamplesFromSD();
 void updateLeds();

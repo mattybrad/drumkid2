@@ -1,10 +1,12 @@
+#include "constants.h"
+
 class Sample {
     public:
         float speed = 1.0;
         float position = 0.0;
-        int length = 0;
+        int length = MAX_SAMPLE_LENGTH;
         int value = 0;
-        int* sampleData;
+        int16_t sampleData[MAX_SAMPLE_LENGTH];
         void update() {
             int intPosition = (int) position; // naiive function, no lerping, temporary
             if(intPosition < length) {

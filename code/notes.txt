@@ -76,3 +76,11 @@ End of day summary because everything is slightly broken:
 4/12/23, thoughts:
 - bit crush is maybe not needed on this version of drumkid, it just makes the interface more cluttered?
 - if i'm going to have a volume knob, it needs to be a real one, not software (low volumes sound horrible because you're basically just bitcrushing)
+
+Am now successfully copying four samples from SD and storing them consecutively in flash.
+
+A bit like with DK1, I'm going to have to do some checks on boot to see whether the flash has valid variables, specifically the metadata in the first page.
+
+Currently all samples are stored back to back in flash, which is efficient, but when loaded into RAM they are just put into fixed arrays, regardless of size. Should also store samples in a single block of RAM, to maximise possible cumulative sample size.
+
+Also store other stuff in flash like tempo, current patch/beat, etc.

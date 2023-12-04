@@ -37,15 +37,11 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "Beat.h"
 #include "drumkid.h"
 
-// Audio data (temporary, will be loaded from flash)
-#include "kick.h"
-#include "snare.h"
-#include "closedhat.h"
-
 // move to header file at some point
 uint chance = 0;
 float crush = 0;
 float volume = 0;
+int activeButton = -1;
 
 void print_buf(const uint8_t *buf, size_t len)
 {
@@ -95,7 +91,7 @@ int main()
             // sample updates go here
             float floatValue1 = 0.0;
             float floatValue2 = 0.0;
-            for (int j = 0; j < 3; j++)
+            for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 samples[j].update();
                 if(j==0)
@@ -127,7 +123,7 @@ int main()
                     pulseGpio(SYNC_OUT, 20000);
                     pulseLed(0, 50000);
                 }
-                for (int j = 0; j < 3; j++)
+                for (int j = 0; j < NUM_SAMPLES; j++)
                 {
                     if (beats[beatNum].hits[j][step]) {
                         samples[j].position = 0.0;
@@ -247,14 +243,8 @@ void initBeats() {
 }
 
 void initSamples() {
-    // init samples (temporary, will be from flash)
-    samples[0].sampleData = sampleKick;
-    samples[0].length = sampleKickLength;
-    samples[1].sampleData = sampleSnare;
-    samples[1].length = sampleSnareLength;
-    samples[2].sampleData = sampleClosedHat;
-    samples[2].length = sampleClosedHatLength;
-    for (int i = 0; i < 3; i++)
+    // I don't fully know why this is happening... maybe to stop the samples playing immediately when the machine is booted?
+    for (int i = 0; i < NUM_SAMPLES; i++)
     {
         samples[i].position = (float)samples[i].length;
     }
@@ -277,7 +267,7 @@ bool mainTimerLogic(repeating_timer_t *rt) {
 
 
     // CV
-    samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
+    //samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
 
     return true;
 }
@@ -345,7 +335,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_START_STOP:
             beatPlaying = !beatPlaying;
             if(beatPlaying) {
-                for (int j = 0; j < 3; j++)
+                for (int j = 0; j < NUM_SAMPLES; j++)
                 {
                     samples[j].position = 0.0; // temp
                 }
@@ -354,31 +344,41 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             break;
         case BUTTON_INC:
-            beatNum++;
-            if (beatNum == 8)
-            {
-                beatNum = 0;
-            }
+            handleIncDec(true);
             printf("+\n");
             break;
         case BUTTON_DEC:
-            beatNum--;
-            if (beatNum == -1)
-            {
-                beatNum = 7;
-            }
+            handleIncDec(false);
             printf("-\n");
             break;
         case BUTTON_SD_TEMP:
             sdSafeLoadTemp = true;
             break;
+        case BUTTON_MANUAL_TEMPO:
+            activeButton = BUTTON_MANUAL_TEMPO;
+            displayTempo();
         default:
             printf("(button not assigned)\n");
         }
     } else if(!buttonState) {
-        // temp, show button num on release
-        updateLedDisplay(buttonNum);
+        
     }
+}
+
+void handleIncDec(bool isInc) {
+    switch(activeButton) {
+        case BUTTON_MANUAL_TEMPO:
+        tempo += isInc ? 1 : -1;
+        if(tempo>9999) tempo = 9999;
+        else if(tempo<10) tempo = 10;
+        // todo: press and hold function
+        displayTempo();
+        break;
+    }
+}
+
+void displayTempo() {
+    updateLedDisplay((int)tempo);
 }
 
 void updateShiftRegButtons()
@@ -389,7 +389,7 @@ void updateShiftRegButtons()
     } else if(shiftRegInPhase == 1) {
         gpio_put(LOAD_165, 1);
     } else if(shiftRegInPhase == 2) {
-        if(microsSinceChange[shiftRegInLoopNum] > 50000) {
+        if(microsSinceChange[shiftRegInLoopNum] > 20000) {
             bool buttonState = gpio_get(DATA_165);
             if (buttonState != buttonStableStates[shiftRegInLoopNum])
             {
@@ -440,7 +440,7 @@ void updateAnalog()
             // temp
             for(int i=0; i<16; i++) {
                 if(buttonStableStates[i]) {
-                    updateLedDisplay(analogReadings[i]);
+                    //updateLedDisplay(analogReadings[i]);
                 }
             }
         }
@@ -456,91 +456,135 @@ void previewFlashAudio() {
     printf("\n");
 }
 
+
+
 void loadSamplesFromSD() {
-    sd_card_t *pSD = sd_get_by_num(0);
-    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
-    if (FR_OK != fr)
-        panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-    FIL fil;
-    const char *const filename = "snare.wav";
-    fr = f_open(&fil, filename, FA_READ);
-    if (FR_OK != fr)
-    {
-        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-        return;
-    }
+    int pageNum = 0;
+    const char* filenames[NUM_SAMPLES] = {"samples/kick.wav","samples/snare.wav","samples/closedhat.wav","samples/tom.wav"};
+    uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
+    uint32_t sampleLengths[NUM_SAMPLES] = {0};
 
-    // below is my first proper stab at a WAV file parser. it's messy but it works as long as you supply a mono, 16-bit, 44.1kHz file. need to make it handle more edge cases in future
-
-    // read WAV file header before reading data
-    uint br; // bytes read
-    bool foundDataChunk = false;
-    char descriptorBuffer[4];
-    uint8_t sizeBuffer[4];
-    uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
-
-    // first 3 4-byte sections should be "RIFF", file size, "WAVE"
-    for(int i=0; i<3; i++) {
-        fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
-        if(i==0||i==2) printf("check... %s\n", descriptorBuffer);
-    }
-
-    while(!foundDataChunk) {
-        fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
-        printf("descriptor=%s, ", descriptorBuffer);
-        fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
-        uint32_t chunkSize = sizeBuffer[0] | sizeBuffer[1] << 8 | sizeBuffer[2] << 16 | sizeBuffer[3] << 24;
-        printf("size=%d bytes\n", chunkSize);
-        int pageNum=0;
-        uint brTotal = 0;
-        for (;;)
+    for(int n=0; n<NUM_SAMPLES; n++) {
+        sd_card_t *pSD = sd_get_by_num(0);
+        FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+        if (FR_OK != fr)
+            panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+        FIL fil;
+        //const char *const filename = "samples/kick.wav";
+        fr = f_open(&fil, filenames[n], FA_READ);
+        if (FR_OK != fr)
         {
-            uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint) chunkSize);
-            fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
-            if (br == 0)
-                break;
+            printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+            return;
+        }
 
-            if (strncmp(descriptorBuffer, "data", 4) == 0) {
-                foundDataChunk = true;
+        // below is my first proper stab at a WAV file parser. it's messy but it works as long as you supply a mono, 16-bit, 44.1kHz file. need to make it handle more edge cases in future
 
-                // flash has to be erased before being written, and can only be erased in 4096-byte "sectors", while data is written in 256-byte "pages", so a sector must be erased before writing every 8 pages
-                if (pageNum % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) == 0)
-                {
-                    uint32_t ints = save_and_disable_interrupts();
-                    flash_range_erase(FLASH_TARGET_OFFSET + FLASH_SECTOR_SIZE * pageNum / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), FLASH_SECTOR_SIZE);
-                    restore_interrupts(ints);
+        // read WAV file header before reading data
+        uint br; // bytes read
+        bool foundDataChunk = false;
+        char descriptorBuffer[4];
+        uint8_t sizeBuffer[4];
+        uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
+
+        // first 3 4-byte sections should be "RIFF", file size, "WAVE"
+        for(int i=0; i<3; i++) {
+            fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
+            if(i==0||i==2) printf("check... %s\n", descriptorBuffer);
+        }
+
+        while(!foundDataChunk) {
+            fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
+            printf("descriptor=%s, ", descriptorBuffer);
+            fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
+            uint32_t chunkSize = sizeBuffer[0] | sizeBuffer[1] << 8 | sizeBuffer[2] << 16 | sizeBuffer[3] << 24;
+            printf("size=%d bytes\n", chunkSize);
+            uint brTotal = 0;
+            for (;;)
+            {
+                uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint) chunkSize);
+                fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
+                if (br == 0)
+                    break;
+
+                if (strncmp(descriptorBuffer, "data", 4) == 0) {
+                    // flash has to be erased before being written, and can only be erased in 4096-byte "sectors", while data is written in 256-byte "pages", so a sector must be erased before writing every 8 pages
+                    if (pageNum % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) == 0)
+                    {
+                        uint32_t ints = save_and_disable_interrupts();
+                        flash_range_erase(FLASH_TARGET_OFFSET + FLASH_SECTOR_SIZE * pageNum / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), FLASH_SECTOR_SIZE);
+                        restore_interrupts(ints);
+                    }
+
+                    if(pageNum == 0) pageNum = 1; // reserve page 0 for metadata
+
+                    if (!foundDataChunk)
+                    {
+                        sampleStartPoints[n] = pageNum*FLASH_PAGE_SIZE;
+                        sampleLengths[n] = chunkSize;
+                        printf("sample %d, start on page %d, length %d\n", n, sampleStartPoints[n], sampleLengths[n]);
+                    }
+                    foundDataChunk = true;
+
+                    uint32_t ints2 = save_and_disable_interrupts();
+                    flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * pageNum, sampleDataBuffer, FLASH_PAGE_SIZE);
+                    restore_interrupts(ints2);
+
+                    pageNum++;
                 }
 
-                uint32_t ints2 = save_and_disable_interrupts();
-                flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * pageNum, sampleDataBuffer, FLASH_PAGE_SIZE);
-                restore_interrupts(ints2);
+                brTotal += br;
+                if(brTotal == chunkSize) {
+                    break;
+                }
             }
-
-            brTotal += br;
-            if(brTotal == chunkSize) {
-                break;
-            }
-
-            pageNum++;
         }
+        
+        printf("\n");
+        fr = f_close(&fil);
+        if (FR_OK != fr)
+        {
+            printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+        }
+        f_unmount(pSD->pcName);
     }
-    
-    printf("\n");
-    fr = f_close(&fil);
-    if (FR_OK != fr)
-    {
-        printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+
+    // write metadata at start
+    uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
+    print_buf(metadataBuffer, FLASH_PAGE_SIZE);
+    printf("\n\n");
+    for(int n=0;n<NUM_SAMPLES;n++) {
+        std::memcpy(metadataBuffer + n*4, &sampleStartPoints[n], 4);
+        std::memcpy(metadataBuffer + n*4 + 16, &sampleLengths[n], 4);
     }
-    f_unmount(pSD->pcName);
+    print_buf(metadataBuffer, FLASH_PAGE_SIZE);
+    printf("\n\n");
+    uint32_t ints3 = save_and_disable_interrupts();
+    flash_range_program(FLASH_TARGET_OFFSET, metadataBuffer, FLASH_PAGE_SIZE);
+    restore_interrupts(ints3);
+    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+    printf("\n\n");
+
     initSamplesFromFlashTemp();
 }
 
 void initSamplesFromFlashTemp() {
-    // only snare for now
-    for(int i=0; i<samples[1].length; i++) {
+    /*for(int i=0; i<samples[1].length; i++) {
         int16_t thisSample = flash_target_contents[i*2 + 1] << 8 | flash_target_contents[i*2];
         samples[1].sampleData[i] = thisSample;
         //printf("%d\t%d\n", i, thisSample);
+    }*/
+    for(int n=0; n<NUM_SAMPLES; n++) {
+        uint sampleStart = flash_target_contents[n * 4] | flash_target_contents[n * 4 + 1] << 8 | flash_target_contents[n * 4 + 2] << 16 | flash_target_contents[n * 4 + 3] << 24;
+        uint sampleLength = flash_target_contents[n * 4 + 16] | flash_target_contents[n * 4 + 17] << 8 | flash_target_contents[n * 4 + 18] << 16 | flash_target_contents[n * 4 + 19] << 24;
+        printf("start %d, length %d\n",sampleStart,sampleLength);
+        
+        for (int i = 0; i < samples[n].length && i < sampleLength/2; i++)
+        {
+            int16_t thisSample = flash_target_contents[i * 2 + 1 + sampleStart] << 8 | flash_target_contents[i * 2 + sampleStart];
+            samples[n].sampleData[i] = thisSample;
+            samples[n].length = sampleLength/2;
+        }
     }
 }
 
