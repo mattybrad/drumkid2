@@ -23,8 +23,7 @@ Right, 20/11/23, the time has come to get a proper SWD debug setup working. Pres
 21/11/23, updated toolchain to use latest windows installer instead of previous cobbled-together setup.
 
 A new, scattershot list of things that would be good/essential, in rough ascending order of difficulty:
-- Volume knob
-- Pitch knob (right way round)
+- Pitch knob
 - Manual tempo adjust
 - Output channel toggle
 - Crush effect
@@ -34,7 +33,7 @@ A new, scattershot list of things that would be good/essential, in rough ascendi
 - Save beat
 - Load patch
 - Save patch
-- Load sample from SD
+- Load sample from SD DONE
 - Back up all data to SD
 
 25/11/23, debugging works with debug probe, no more pressing stupid button and reconnecting USB cable.
@@ -73,3 +72,7 @@ End of day summary because everything is slightly broken:
 - I can successfully copy samples from SD to flash
 - I don't think the flash is fast enough to load samples directly (although not certain about this), so am thinking about just loading them into RAM (copying them to a buffer?)
 - I've figured out the WAV header issue, although haven't code it yet. They can basically be any size, and there can even be stuff at the end of a file. This explains it well: https://stackoverflow.com/questions/19991405/how-can-i-detect-whether-a-wav-file-has-a-44-or-46-byte-header
+
+4/12/23, thoughts:
+- bit crush is maybe not needed on this version of drumkid, it just makes the interface more cluttered?
+- if i'm going to have a volume knob, it needs to be a real one, not software (low volumes sound horrible because you're basically just bitcrushing)

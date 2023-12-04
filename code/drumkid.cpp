@@ -42,6 +42,11 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "snare.h"
 #include "closedhat.h"
 
+// move to header file at some point
+uint chance = 0;
+float crush = 0;
+float volume = 0;
+
 void print_buf(const uint8_t *buf, size_t len)
 {
     for (size_t i = 0; i < len; ++i)
@@ -84,10 +89,6 @@ int main()
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
-        // update tempo (could put this somewhere else if using too much CPU)
-        tempo = 50.0 + (float)analogReadings[2] * 0.05;
-        samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
-
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count*2; i+=2)
         {
@@ -101,16 +102,14 @@ int main()
                 {
                     floatValue1 += (float)samples[j].value;
                 }
-                else
-                {
-                    floatValue2 += (float)samples[j].value;
-                }
+                floatValue2 += (float)samples[j].value;
             }
 
-            floatValue1 *= 0.25; // temp?
-            floatValue2 *= 0.25; // temp?
+            floatValue1 *= 0.25 * volume; // temp?
+            floatValue2 *= 0.25 * volume; // temp?
+
             bufferSamples[i] = (int)floatValue1;
-            bufferSamples[i+1] = (int)floatValue2;
+            bufferSamples[i + 1] = (int)floatValue2;
 
             // increment step if needed
             if (beatPlaying)
@@ -136,7 +135,7 @@ int main()
                     }
                     // basic initial "chance" implementation":
                     int randNum = rand() % 4096;
-                    if (analogReadings[0] > randNum)
+                    if (chance > randNum)
                     {
                         samples[j].position = 0.0;
                         pulseGpio(TRIGGER_OUT_PINS[j], 20000);
@@ -146,9 +145,6 @@ int main()
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
-
-        // move this to a timer
-        samples[2].speed = 0.25 + 4.0 * ((float)analogReadings[12]) / 4095.0;
 
         if(sdSafeLoadTemp) {
             sdSafeLoadTemp = false;
@@ -270,6 +266,18 @@ bool mainTimerLogic(repeating_timer_t *rt) {
     updateLeds();
     updateShiftRegButtons();
     updateAnalog();
+
+    // update effects etc
+    samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
+    
+    // knobs
+    chance = analogReadings[0];
+    crush = ((float)analogReadings[10]) / 4095.0;
+    volume = ((float)analogReadings[11]) / 4095.0;
+
+
+    // CV
+    samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
 
     return true;
 }
@@ -417,9 +425,9 @@ void updateAnalog()
         gpio_put(MUX_ADDR_C, bitRead(analogLoopNum, 2));
     } else if(analogPhase == 1) {
         adc_select_input(0);
-        analogReadings[analogLoopNum] = adc_read();
+        analogReadings[analogLoopNum] = 4095 - adc_read();
         adc_select_input(1);
-        analogReadings[analogLoopNum + 8] = adc_read();
+        analogReadings[analogLoopNum + 8] = 4095 - adc_read();
     }
 
     analogPhase ++;
@@ -454,13 +462,15 @@ void loadSamplesFromSD() {
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
     FIL fil;
-    const char *const filename = "rim.wav";
+    const char *const filename = "snare.wav";
     fr = f_open(&fil, filename, FA_READ);
     if (FR_OK != fr)
     {
         printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
         return;
     }
+
+    // below is my first proper stab at a WAV file parser. it's messy but it works as long as you supply a mono, 16-bit, 44.1kHz file. need to make it handle more edge cases in future
 
     // read WAV file header before reading data
     uint br; // bytes read
