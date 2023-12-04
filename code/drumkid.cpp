@@ -454,42 +454,67 @@ void loadSamplesFromSD() {
     if (FR_OK != fr)
         panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
     FIL fil;
-    const char *const filename = "tom.wav";
+    const char *const filename = "rim.wav";
     fr = f_open(&fil, filename, FA_READ);
     if (FR_OK != fr)
     {
         printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
         return;
     }
-    uint8_t wavHeaderBuffer[44];
-    uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
-    int chunkNum=0;
+
+    // read WAV file header before reading data
     uint br; // bytes read
-    fr = f_read(&fil, wavHeaderBuffer, sizeof wavHeaderBuffer, &br);
-    for(;;)
-    {
-        fr = f_read(&fil, sampleDataBuffer, sizeof sampleDataBuffer, &br);
-        if(br==0) break;
+    bool foundDataChunk = false;
+    char descriptorBuffer[4];
+    uint8_t sizeBuffer[4];
+    uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
 
-        //print_buf(sampleDataBuffer, FLASH_PAGE_SIZE);
-        if(chunkNum%(FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE)==0) {
-            printf("\nErasing target region...\n");
-            uint32_t ints = save_and_disable_interrupts();
-            flash_range_erase(FLASH_TARGET_OFFSET + FLASH_SECTOR_SIZE * chunkNum / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), FLASH_SECTOR_SIZE);
-            restore_interrupts(ints);
-            printf("Done. Read back target region:\n");
-            //print_buf(flash_target_contents, FLASH_PAGE_SIZE);
-        }
-
-        printf("\nProgramming target region...\n");
-        uint32_t ints2 = save_and_disable_interrupts();
-        flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * chunkNum, sampleDataBuffer, FLASH_PAGE_SIZE);
-        restore_interrupts(ints2);
-        printf("Done. Read back target region:\n");
-        //print_buf(flash_target_contents, FLASH_PAGE_SIZE);
-
-        chunkNum++;
+    // first 3 4-byte sections should be "RIFF", file size, "WAVE"
+    for(int i=0; i<3; i++) {
+        fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
+        if(i==0||i==2) printf("check... %s\n", descriptorBuffer);
     }
+
+    while(!foundDataChunk) {
+        fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
+        printf("descriptor=%s, ", descriptorBuffer);
+        fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
+        uint32_t chunkSize = sizeBuffer[0] | sizeBuffer[1] << 8 | sizeBuffer[2] << 16 | sizeBuffer[3] << 24;
+        printf("size=%d bytes\n", chunkSize);
+        int pageNum=0;
+        uint brTotal = 0;
+        for (;;)
+        {
+            uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint) chunkSize);
+            fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
+            if (br == 0)
+                break;
+
+            if (strncmp(descriptorBuffer, "data", 4) == 0) {
+                foundDataChunk = true;
+
+                // flash has to be erased before being written, and can only be erased in 4096-byte "sectors", while data is written in 256-byte "pages", so a sector must be erased before writing every 8 pages
+                if (pageNum % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) == 0)
+                {
+                    uint32_t ints = save_and_disable_interrupts();
+                    flash_range_erase(FLASH_TARGET_OFFSET + FLASH_SECTOR_SIZE * pageNum / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), FLASH_SECTOR_SIZE);
+                    restore_interrupts(ints);
+                }
+
+                uint32_t ints2 = save_and_disable_interrupts();
+                flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * pageNum, sampleDataBuffer, FLASH_PAGE_SIZE);
+                restore_interrupts(ints2);
+            }
+
+            brTotal += br;
+            if(brTotal == chunkSize) {
+                break;
+            }
+
+            pageNum++;
+        }
+    }
+    
     printf("\n");
     fr = f_close(&fil);
     if (FR_OK != fr)
