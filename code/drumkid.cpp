@@ -96,36 +96,15 @@ int main()
             bufferSamples[i] = (int)floatValue1;
             bufferSamples[i + 1] = (int)floatValue2;
 
+            // this stuff below probably doesn't need to be in this loop? should be in a timer callback?
+
             // increment step if needed
             if (beatPlaying)
                 stepPosition++;
             if (stepPosition >= samplesPerStep)
             {
                 stepPosition = 0;
-                step++;
-                if (step == 32)
-                {
-                    step = 0;
-                }
-                if (step % 4 == 0)
-                {
-                    pulseGpio(SYNC_OUT, 20000);
-                    pulseLed(0, 50000);
-                }
-                for (int j = 0; j < NUM_SAMPLES; j++)
-                {
-                    if (beats[beatNum].hits[j][step]) {
-                        samples[j].position = 0.0;
-                        pulseGpio(TRIGGER_OUT_PINS[j], 20000);
-                    }
-                    // basic initial "chance" implementation":
-                    int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
-                    if (chance > randNum)
-                    {
-                        samples[j].position = 0.0;
-                        pulseGpio(TRIGGER_OUT_PINS[j], 20000);
-                    }
-                }
+                doStep();
             }
         }
         buffer->sample_count = buffer->max_sample_count;
@@ -137,6 +116,34 @@ int main()
         }
     }
     return 0;
+}
+
+void doStep() {
+    step++;
+    if (step == 32)
+    {
+        step = 0;
+    }
+    if (step % 4 == 0)
+    {
+        pulseGpio(SYNC_OUT, 20000);
+        pulseLed(0, 50000);
+    }
+    for (int j = 0; j < NUM_SAMPLES; j++)
+    {
+        if (beats[beatNum].hits[j][step])
+        {
+            samples[j].position = 0.0;
+            pulseGpio(TRIGGER_OUT_PINS[j], 20000);
+        }
+        // basic initial "chance" implementation":
+        int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
+        if (chance > randNum)
+        {
+            samples[j].position = 0.0;
+            pulseGpio(TRIGGER_OUT_PINS[j], 20000);
+        }
+    }
 }
 
 uint pulseTimerNum = 0;
@@ -231,14 +238,13 @@ void initBeats() {
     beats[2].addHit(0, 24);
 }
 
-uint16_t microsSinceSyncIn = 0;
-
 bool mainTimerLogic(repeating_timer_t *rt) {
 
 
     updateLeds();
     updateShiftRegButtons();
     updateAnalog();
+    updateSyncIn();
 
     // update effects etc
     samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
@@ -686,5 +692,24 @@ void checkFlashData() {
             }
             writePageToFlash(buffer, FLASH_AUDIO_ADDRESS + i);
         }
+    }
+}
+
+uint32_t microsSinceSyncInChange = 100;
+bool syncInStableState = false;
+void updateSyncIn() {
+    if(microsSinceSyncInChange > 1000) {
+        bool syncInState = !gpio_get(SYNC_IN);
+        if (syncInState != syncInStableState)
+        {
+            syncInStableState = syncInState;
+            microsSinceSyncInChange = 0;
+            if(syncInState) {
+                doStep();
+                pulseLed(3, 50000);
+            }
+        }
+    } else {
+        microsSinceSyncInChange += 100;
     }
 }

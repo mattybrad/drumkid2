@@ -140,6 +140,8 @@ void writePageToFlash(const uint8_t *buffer, uint address);
 void checkFlashData();
 int32_t getIntFromBuffer(const uint8_t *buffer, uint position);
 float getFloatFromBuffer(const uint8_t *buffer, uint position);
+void updateSyncIn();
+void doStep();
 void print_buf(const uint8_t *buf, size_t len);
 
 #endif
