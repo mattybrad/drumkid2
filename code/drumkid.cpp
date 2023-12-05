@@ -43,22 +43,9 @@ float crush = 0;
 float volume = 0;
 int activeButton = -1;
 
-void print_buf(const uint8_t *buf, size_t len)
-{
-    for (size_t i = 0; i < len; ++i)
-    {
-        printf("%02x", buf[i]);
-        if (i % 16 == 15)
-            printf("\n");
-        else
-            printf(" ");
-    }
-}
-void initSamplesFromFlashTemp();
-
 bool sdSafeLoadTemp = false;
-#define FLASH_TARGET_OFFSET (1536 * 1024) // start point for using flash memory
-const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET);
+const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
+const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 
 // main function, obviously
 int main()
@@ -69,8 +56,7 @@ int main()
     printf("Drumkid V2\n");
 
     initGpio();
-    initSamples();
-    initSamplesFromFlashTemp();
+    initSamplesFromFlash();
     initBeats();
 
     struct audio_buffer_pool *ap = init_audio();
@@ -240,14 +226,6 @@ void initBeats() {
     beats[2].addHit(0, 8);
     beats[2].addHit(0, 16);
     beats[2].addHit(0, 24);
-}
-
-void initSamples() {
-    // I don't fully know why this is happening... maybe to stop the samples playing immediately when the machine is booted?
-    for (int i = 0; i < NUM_SAMPLES; i++)
-    {
-        samples[i].position = (float)samples[i].length;
-    }
 }
 
 uint16_t microsSinceSyncIn = 0;
@@ -447,17 +425,6 @@ void updateAnalog()
     }
 }
 
-void previewFlashAudio() {
-    printf("\npreview flash audio data:\n");
-    for(int i=0; i<1024; i+=2) {
-        int16_t thisSample = flash_target_contents[i+1] << 8 | flash_target_contents[i];
-        printf("%d\t%d\n", i/2, thisSample);
-    }
-    printf("\n");
-}
-
-
-
 void loadSamplesFromSD() {
     int pageNum = 0;
     const char* filenames[NUM_SAMPLES] = {"samples/kick.wav","samples/snare.wav","samples/closedhat.wav","samples/tom.wav"};
@@ -508,16 +475,6 @@ void loadSamplesFromSD() {
                     break;
 
                 if (strncmp(descriptorBuffer, "data", 4) == 0) {
-                    // flash has to be erased before being written, and can only be erased in 4096-byte "sectors", while data is written in 256-byte "pages", so a sector must be erased before writing every 8 pages
-                    if (pageNum % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) == 0)
-                    {
-                        uint32_t ints = save_and_disable_interrupts();
-                        flash_range_erase(FLASH_TARGET_OFFSET + FLASH_SECTOR_SIZE * pageNum / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), FLASH_SECTOR_SIZE);
-                        restore_interrupts(ints);
-                    }
-
-                    if(pageNum == 0) pageNum = 1; // reserve page 0 for metadata
-
                     if (!foundDataChunk)
                     {
                         sampleStartPoints[n] = pageNum*FLASH_PAGE_SIZE;
@@ -526,9 +483,7 @@ void loadSamplesFromSD() {
                     }
                     foundDataChunk = true;
 
-                    uint32_t ints2 = save_and_disable_interrupts();
-                    flash_range_program(FLASH_TARGET_OFFSET + FLASH_PAGE_SIZE * pageNum, sampleDataBuffer, FLASH_PAGE_SIZE);
-                    restore_interrupts(ints2);
+                    writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
 
                     pageNum++;
                 }
@@ -559,32 +514,26 @@ void loadSamplesFromSD() {
     }
     print_buf(metadataBuffer, FLASH_PAGE_SIZE);
     printf("\n\n");
-    uint32_t ints3 = save_and_disable_interrupts();
-    flash_range_program(FLASH_TARGET_OFFSET, metadataBuffer, FLASH_PAGE_SIZE);
-    restore_interrupts(ints3);
-    print_buf(flash_target_contents, FLASH_PAGE_SIZE);
+    writePageToFlash(metadataBuffer, FLASH_DATA_ADDRESS);
+    print_buf(flashData, FLASH_PAGE_SIZE);
     printf("\n\n");
 
-    initSamplesFromFlashTemp();
+    initSamplesFromFlash();
 }
 
-void initSamplesFromFlashTemp() {
-    /*for(int i=0; i<samples[1].length; i++) {
-        int16_t thisSample = flash_target_contents[i*2 + 1] << 8 | flash_target_contents[i*2];
-        samples[1].sampleData[i] = thisSample;
-        //printf("%d\t%d\n", i, thisSample);
-    }*/
+void initSamplesFromFlash() {
     for(int n=0; n<NUM_SAMPLES; n++) {
-        uint sampleStart = flash_target_contents[n * 4] | flash_target_contents[n * 4 + 1] << 8 | flash_target_contents[n * 4 + 2] << 16 | flash_target_contents[n * 4 + 3] << 24;
-        uint sampleLength = flash_target_contents[n * 4 + 16] | flash_target_contents[n * 4 + 17] << 8 | flash_target_contents[n * 4 + 18] << 16 | flash_target_contents[n * 4 + 19] << 24;
+        uint sampleStart = flashData[n * 4] | flashData[n * 4 + 1] << 8 | flashData[n * 4 + 2] << 16 | flashData[n * 4 + 3] << 24;
+        uint sampleLength = flashData[n * 4 + 16] | flashData[n * 4 + 17] << 8 | flashData[n * 4 + 18] << 16 | flashData[n * 4 + 19] << 24;
         printf("start %d, length %d\n",sampleStart,sampleLength);
         
         for (int i = 0; i < samples[n].length && i < sampleLength/2; i++)
         {
-            int16_t thisSample = flash_target_contents[i * 2 + 1 + sampleStart] << 8 | flash_target_contents[i * 2 + sampleStart];
+            int16_t thisSample = flashAudio[i * 2 + 1 + sampleStart] << 8 | flashAudio[i * 2 + sampleStart];
             samples[n].sampleData[i] = thisSample;
-            samples[n].length = sampleLength/2;
         }
+        samples[n].length = sampleLength/2;
+        samples[n].position = (float)samples[n].length;
     }
 }
 
@@ -632,4 +581,36 @@ void updateLeds()
         shiftRegOutPhase = 0;
         sevenSegCharNum = (sevenSegCharNum + 1) % 4;
     }
+}
+
+void print_buf(const uint8_t *buf, size_t len)
+{
+    for (size_t i = 0; i < len; ++i)
+    {
+        printf("%02x", buf[i]);
+        if (i % 16 == 15)
+            printf("\n");
+        else
+            printf(" ");
+    }
+}
+
+// Writes a page of data (256 bytes) to a flash address. If the page number is at the start of a sector, that sector is erased first. Function designed to be called several times for consecutive pages, starting at the start of a sector, otherwise data won't be written properly.
+void writePageToFlash(const uint8_t *buffer, uint address)
+{
+    uint32_t interrupts; // The Pico requires you to save and disable interrupts when writing/erasing flash memory
+    
+    uint pageNum = address/FLASH_PAGE_SIZE;
+    if (pageNum % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) == 0)
+    {
+        interrupts = save_and_disable_interrupts();
+        flash_range_erase(address, FLASH_SECTOR_SIZE);
+        restore_interrupts(interrupts);
+    }
+
+    interrupts = save_and_disable_interrupts();
+    flash_range_program(address, buffer, FLASH_PAGE_SIZE);
+    restore_interrupts(interrupts);
+
+    // todo: check data has been written? check buffer is right size? basically more checks
 }

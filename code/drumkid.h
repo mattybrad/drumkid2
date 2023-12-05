@@ -64,6 +64,10 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define CV_MIDPOINT 14
 #define CV_TBC 15
 
+// flash data storage
+#define FLASH_DATA_ADDRESS (1536 * 1024)
+#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE)
+
 // Beat variables
 int step = 0;         // e.g. 0 to 31 for a 4/4 pattern of 8th-notes
 int stepPosition = 0; // position within the step, measured in samples
@@ -111,7 +115,6 @@ uint shiftRegInPhase = 0;   // 0 or 1
 
 void initGpio();
 void initBeats();
-void initSamples();
 bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
@@ -125,5 +128,8 @@ void loadSamplesFromSD();
 void updateLeds();
 void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
+void initSamplesFromFlash();
+void writePageToFlash(const uint8_t *buffer, uint address);
+void print_buf(const uint8_t *buf, size_t len);
 
 #endif
