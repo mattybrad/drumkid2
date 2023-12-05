@@ -42,10 +42,10 @@ uint chance = 0;
 float crush = 0;
 float volume = 0;
 int activeButton = -1;
+alarm_id_t tempAlarm = -1;
+int64_t handleTempoChange(alarm_id_t id, void *user_data);
 
 bool sdSafeLoadTemp = false;
-const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
-const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 
 // main function, obviously
 int main()
@@ -56,10 +56,11 @@ int main()
     printf("Drumkid V2\n");
 
     checkFlashData();
-
     initGpio();
     initSamplesFromFlash();
     initBeats();
+
+    tempo = getFloatFromBuffer(flashData, VAR_TEMPO);
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -118,7 +119,7 @@ int main()
                         pulseGpio(TRIGGER_OUT_PINS[j], 20000);
                     }
                     // basic initial "chance" implementation":
-                    int randNum = rand() % 4096;
+                    int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
                     if (chance > randNum)
                     {
                         samples[j].position = 0.0;
@@ -139,7 +140,7 @@ int main()
 }
 
 uint pulseTimerNum = 0;
-const uint maxPulseTimers = 10;
+const uint maxPulseTimers = 100; // todo: do this is a less stupid way
 repeating_timer_t pulseTimers[maxPulseTimers];
 
 bool onGpioPulseTimeout(repeating_timer_t *rt)
@@ -233,6 +234,8 @@ void initBeats() {
 uint16_t microsSinceSyncIn = 0;
 
 bool mainTimerLogic(repeating_timer_t *rt) {
+
+
     updateLeds();
     updateShiftRegButtons();
     updateAnalog();
@@ -321,15 +324,21 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 }
                 step = 0;
                 stepPosition = 0;
+            } else {
+                // probably just temp code, bit messy, storing tempo change after beat has stopped
+                float storedTempo = getFloatFromBuffer(flashData, VAR_TEMPO);
+                if(storedTempo != tempo) {
+                    if (tempAlarm > 0)
+                        cancel_alarm(tempAlarm);
+                    tempAlarm = add_alarm_in_ms(2000, handleTempoChange, NULL, false);
+                }
             }
             break;
         case BUTTON_INC:
             handleIncDec(true);
-            printf("+\n");
             break;
         case BUTTON_DEC:
             handleIncDec(false);
-            printf("-\n");
             break;
         case BUTTON_SD_TEMP:
             sdSafeLoadTemp = true;
@@ -341,8 +350,19 @@ void handleButtonChange(int buttonNum, bool buttonState)
             printf("(button not assigned)\n");
         }
     } else if(!buttonState) {
-        
+
     }
+}
+
+int64_t handleTempoChange(alarm_id_t id, void *user_data) {
+    tempAlarm = -1;
+    uint8_t buffer[FLASH_PAGE_SIZE];
+    for(int i=0; i<FLASH_PAGE_SIZE; i++) {
+        buffer[i] = flashData[i];
+    }
+    std::memcpy(buffer+VAR_TEMPO, &tempo, 4); // copy check number
+    writePageToFlash(buffer, FLASH_DATA_ADDRESS);
+    return 0;
 }
 
 void handleIncDec(bool isInc) {
@@ -510,9 +530,11 @@ void loadSamplesFromSD() {
     // write sample metadata to flash
     uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
 
-    // currently manually re-adding the check number, but as data grows more complex it will probably make sense to copy the whole data page/sector
-    int32_t refCheckNum = CHECK_NUM;
-    std::memcpy(metadataBuffer, &refCheckNum, 4); // copy check number
+    // copy data so we don't lose other data (check num, tempo, etc)
+    for(int i=0; i<FLASH_PAGE_SIZE; i++) {
+        metadataBuffer[i] = flashData[i];
+    }
+
     for(int n=0;n<NUM_SAMPLES;n++) {
         std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n*4, &sampleStartPoints[n], 4);
         std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n*4, &sampleLengths[n], 4);
@@ -524,8 +546,6 @@ void loadSamplesFromSD() {
 
 void initSamplesFromFlash() {
     for(int n=0; n<NUM_SAMPLES; n++) {
-        //uint sampleStart = flashData[n * 4] | flashData[n * 4 + 1] << 8 | flashData[n * 4 + 2] << 16 | flashData[n * 4 + 3] << 24;
-        //uint sampleLength = flashData[n * 4 + 16] | flashData[n * 4 + 17] << 8 | flashData[n * 4 + 18] << 16 | flashData[n * 4 + 19] << 24;
         uint sampleStart = getIntFromBuffer(flashData, SAMPLE_START_POINTS + n * 4);
         uint sampleLength = getIntFromBuffer(flashData, SAMPLE_LENGTHS + n * 4);
         printf("start %d, length %d\n",sampleStart,sampleLength);
@@ -625,6 +645,20 @@ int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
     return thisInt;
 }
 
+float getFloatFromBuffer(const uint8_t *buffer, uint position)
+{
+    union FloatConverter {
+        uint8_t bytes[4];
+        float floatVal;
+    };
+    FloatConverter converter;
+    for(int i=0; i<4; i++) {
+        converter.bytes[i] = buffer[position+i];
+    }
+    printf("float bytes converted: %d %d %d %d to %f\n", buffer[position], buffer[position + 1], buffer[position + 2], buffer[position + 3], converter.floatVal);
+    return converter.floatVal;
+}
+
 void checkFlashData() {
     int checkNum = getIntFromBuffer(flashData, DATA_CHECK);
     if(checkNum == CHECK_NUM) {
@@ -635,6 +669,8 @@ void checkFlashData() {
         uint8_t buffer[FLASH_PAGE_SIZE];
         int32_t refCheckNum = CHECK_NUM;
         std::memcpy(buffer, &refCheckNum, 4); // copy check number
+        std::memcpy(buffer+VAR_TEMPO, &tempo, 4); // copy tempo float
+        printf("float bytes written to buffer: %d %d %d %d\n", buffer[VAR_TEMPO], buffer[VAR_TEMPO+1], buffer[VAR_TEMPO+2], buffer[VAR_TEMPO+3]);
         uint32_t dummySampleLength = 1024;
         for(int i=0; i<NUM_SAMPLES; i++) {
             uint32_t dummySampleStart = i*dummySampleLength*2;

@@ -84,3 +84,10 @@ A bit like with DK1, I'm going to have to do some checks on boot to see whether 
 Currently all samples are stored back to back in flash, which is efficient, but when loaded into RAM they are just put into fixed arrays, regardless of size. Should also store samples in a single block of RAM, to maximise possible cumulative sample size.
 
 Also store other stuff in flash like tempo, current patch/beat, etc.
+
+5/12/23
+
+Current annoyance/problem: because writing to the flash memory requires the interrupts to be paused (probably), it causes an audible glitch if a beat is playing. Either need to only write to flash when output is silent (not great because people might power down their system with DK still running, hence no writing) or, hopefully, figure out a way to write to flash without stopping the interrupts.
+Okay, looks like you only need to pause interrupts for SD card reasons, but there's still a slow blocking process maybe when writing to flash.
+
+Oh, and also if I press the tempo change button a bunch of times, everything crashes in a way that might suggest I don't understand alarms. Nope, it's not that... basically it crashes if I the tempo gets too fast. Right, apparently everything just gets too busy - 160BPM is fine until you turn up the chance. This... is actually the biggest bug/error/whatever so far. Can the system just not keep up? Increasing sample buffer doesn't seem to help. Looks like the actual fatal error is on line 337 of the Pico SDK's time.c: assert(rt->alarm_id == id); I guess this means somehow the system is running out of timer IDs? Bit of a guess. Aha! It was the pulse timers. I had set maxPulseTimers = 10, and the system clearly needed more than that. Will rewrite now I understand alarms better.
