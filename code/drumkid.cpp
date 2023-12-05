@@ -55,6 +55,8 @@ int main()
 
     printf("Drumkid V2\n");
 
+    checkFlashData();
+
     initGpio();
     initSamplesFromFlash();
     initBeats();
@@ -464,7 +466,8 @@ void loadSamplesFromSD() {
             fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
             printf("descriptor=%s, ", descriptorBuffer);
             fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
-            uint32_t chunkSize = sizeBuffer[0] | sizeBuffer[1] << 8 | sizeBuffer[2] << 16 | sizeBuffer[3] << 24;
+            //uint32_t chunkSize = sizeBuffer[0] | sizeBuffer[1] << 8 | sizeBuffer[2] << 16 | sizeBuffer[3] << 24;
+            uint32_t chunkSize = (uint32_t) getIntFromBuffer(sizeBuffer, 0);
             printf("size=%d bytes\n", chunkSize);
             uint brTotal = 0;
             for (;;)
@@ -504,36 +507,37 @@ void loadSamplesFromSD() {
         f_unmount(pSD->pcName);
     }
 
-    // write metadata at start
+    // write sample metadata to flash
     uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
-    print_buf(metadataBuffer, FLASH_PAGE_SIZE);
-    printf("\n\n");
+
+    // currently manually re-adding the check number, but as data grows more complex it will probably make sense to copy the whole data page/sector
+    int32_t refCheckNum = CHECK_NUM;
+    std::memcpy(metadataBuffer, &refCheckNum, 4); // copy check number
     for(int n=0;n<NUM_SAMPLES;n++) {
-        std::memcpy(metadataBuffer + n*4, &sampleStartPoints[n], 4);
-        std::memcpy(metadataBuffer + n*4 + 16, &sampleLengths[n], 4);
+        std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n*4, &sampleStartPoints[n], 4);
+        std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n*4, &sampleLengths[n], 4);
     }
-    print_buf(metadataBuffer, FLASH_PAGE_SIZE);
-    printf("\n\n");
     writePageToFlash(metadataBuffer, FLASH_DATA_ADDRESS);
-    print_buf(flashData, FLASH_PAGE_SIZE);
-    printf("\n\n");
 
     initSamplesFromFlash();
 }
 
 void initSamplesFromFlash() {
     for(int n=0; n<NUM_SAMPLES; n++) {
-        uint sampleStart = flashData[n * 4] | flashData[n * 4 + 1] << 8 | flashData[n * 4 + 2] << 16 | flashData[n * 4 + 3] << 24;
-        uint sampleLength = flashData[n * 4 + 16] | flashData[n * 4 + 17] << 8 | flashData[n * 4 + 18] << 16 | flashData[n * 4 + 19] << 24;
+        //uint sampleStart = flashData[n * 4] | flashData[n * 4 + 1] << 8 | flashData[n * 4 + 2] << 16 | flashData[n * 4 + 3] << 24;
+        //uint sampleLength = flashData[n * 4 + 16] | flashData[n * 4 + 17] << 8 | flashData[n * 4 + 18] << 16 | flashData[n * 4 + 19] << 24;
+        uint sampleStart = getIntFromBuffer(flashData, SAMPLE_START_POINTS + n * 4);
+        uint sampleLength = getIntFromBuffer(flashData, SAMPLE_LENGTHS + n * 4);
         printf("start %d, length %d\n",sampleStart,sampleLength);
-        
+
+        samples[n].length = sampleLength / 2;
+        samples[n].position = (float)samples[n].length;
+
         for (int i = 0; i < samples[n].length && i < sampleLength/2; i++)
         {
             int16_t thisSample = flashAudio[i * 2 + 1 + sampleStart] << 8 | flashAudio[i * 2 + sampleStart];
             samples[n].sampleData[i] = thisSample;
         }
-        samples[n].length = sampleLength/2;
-        samples[n].position = (float)samples[n].length;
     }
 }
 
@@ -613,4 +617,38 @@ void writePageToFlash(const uint8_t *buffer, uint address)
     restore_interrupts(interrupts);
 
     // todo: check data has been written? check buffer is right size? basically more checks
+}
+
+int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
+{
+    int32_t thisInt = buffer[position] | buffer[position+1] << 8 | buffer[position+2] << 16 | buffer[position+3] << 24;
+    return thisInt;
+}
+
+void checkFlashData() {
+    int checkNum = getIntFromBuffer(flashData, DATA_CHECK);
+    if(checkNum == CHECK_NUM) {
+        printf("Flash check successful\n");
+    } else {
+        printf("Flash check failed: %d\nInitialising flash\n", checkNum);
+        // flash data not valid, likely first time booting the module - initialise flash data (eventually required SD at this point?)
+        uint8_t buffer[FLASH_PAGE_SIZE];
+        int32_t refCheckNum = CHECK_NUM;
+        std::memcpy(buffer, &refCheckNum, 4); // copy check number
+        uint32_t dummySampleLength = 1024;
+        for(int i=0; i<NUM_SAMPLES; i++) {
+            uint32_t dummySampleStart = i*dummySampleLength*2;
+            std::memcpy(buffer+SAMPLE_START_POINTS+4*i, &dummySampleStart, 4);
+            std::memcpy(buffer+SAMPLE_LENGTHS+4*i, &dummySampleLength, 4);
+        }
+        writePageToFlash(buffer, FLASH_DATA_ADDRESS);
+
+        // fill audio buffer with random noise
+        for(int i=0; i<dummySampleLength*2*NUM_SAMPLES; i+=FLASH_PAGE_SIZE) {
+            for(int j=0; j<FLASH_PAGE_SIZE; j++) {
+                buffer[j] = rand() % 256; // random byte
+            }
+            writePageToFlash(buffer, FLASH_AUDIO_ADDRESS + i);
+        }
+    }
 }

@@ -65,8 +65,12 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define CV_TBC 15
 
 // flash data storage
-#define FLASH_DATA_ADDRESS (1536 * 1024)
+#define FLASH_DATA_ADDRESS (1024 * 1024)
 #define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE)
+#define CHECK_NUM -123456789
+#define DATA_CHECK 0
+#define SAMPLE_START_POINTS 4
+#define SAMPLE_LENGTHS 20
 
 // Beat variables
 int step = 0;         // e.g. 0 to 31 for a 4/4 pattern of 8th-notes
@@ -130,6 +134,8 @@ void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
 void initSamplesFromFlash();
 void writePageToFlash(const uint8_t *buffer, uint address);
+void checkFlashData();
+int32_t getIntFromBuffer(const uint8_t *buffer, uint position);
 void print_buf(const uint8_t *buf, size_t len);
 
 #endif
