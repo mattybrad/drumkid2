@@ -53,23 +53,41 @@ bool sdSafeLoadTemp = false;
 uint32_t newStep = 0; // measured in 64th-notes, i.e. 16 steps per quarter note
 float nextHitTime = 0; // s
 float currentTime = 0; // s
-float scheduleAheadTime = 1; // s
-uint16_t mainTimerInterval = 1000; // us
+float scheduleAheadTime = 0.2; // s
+uint16_t mainTimerInterval = 100; // us
 struct hit {
     bool waiting = false;
     float time = 0.0;
     float velocity = 1.0;
     uint8_t channel = 0;
+    uint16_t step = 0;
 };
 const uint maxQueuedHits = 256;
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
 void scheduleHits() {
-    if(newStep % 8 == 0) {
-        if(newStep % 16 == 8) tempHitQueue[hitQueueIndex].channel = 1;
+    if(newStep % 32 == 0) {
+        tempHitQueue[hitQueueIndex].channel = 0;
         tempHitQueue[hitQueueIndex].waiting = true;
         tempHitQueue[hitQueueIndex].time = nextHitTime;
-        printf("schedule hit on step %d, channel %d, time %f, index %d\n", newStep, tempHitQueue[hitQueueIndex].channel, tempHitQueue[hitQueueIndex].time, hitQueueIndex);
+        tempHitQueue[hitQueueIndex].step = newStep;
+        hitQueueIndex++;
+        if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
+    }
+    if(newStep % 32 == 16) {
+        tempHitQueue[hitQueueIndex].channel = 1;
+        tempHitQueue[hitQueueIndex].waiting = true;
+        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        tempHitQueue[hitQueueIndex].step = newStep;
+        hitQueueIndex++;
+        if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
+    }
+    if (newStep % 8 == 0)
+    {
+        tempHitQueue[hitQueueIndex].channel = 2;
+        tempHitQueue[hitQueueIndex].waiting = true;
+        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        tempHitQueue[hitQueueIndex].step = newStep;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
     }
@@ -110,14 +128,37 @@ int main()
 
     updateLedDisplay(1234);
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
-    add_repeating_timer_ms(500, scheduler, NULL, &schedulerTimer);
+    add_repeating_timer_ms(100, scheduler, NULL, &schedulerTimer);
 
-    // main loop, runs forever
+    // temp
+    float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate;
+
+    // audio buffer loop, runs forever
     while (true)
     {
         // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
+
+        // i think this is where i should sort out the scheduled hit stuff..?
+        
+        // temp
+        bool anyHits = false;
+        for (int i = 0; i < maxQueuedHits; i++)
+        {
+            if (tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement)
+            {
+                samples[tempHitQueue[i].channel].position = 0.0;
+                float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
+                if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
+                samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;
+                //printf("hit! time %f %f, channel %d, step %d, delay %d %f\n", currentTime, tempHitQueue[i].time, tempHitQueue[i].channel, tempHitQueue[i].step, samples[tempHitQueue[i].channel].delaySamples, delaySamplesFloat);
+                tempHitQueue[i].time = 0.0; // probably unnecessary
+                tempHitQueue[i].waiting = false;
+                anyHits = true;
+            }
+        }
+        // if(anyHits) printf("(at time %f)\n", currentTime);
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count*2; i+=2)
@@ -143,6 +184,9 @@ int main()
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
+
+        currentTime += timeIncrement;
+        //printf("current time %f\n", currentTime);
 
         if(sdSafeLoadTemp) {
             sdSafeLoadTemp = false;
@@ -274,21 +318,6 @@ void initBeats() {
 }
 
 bool mainTimerLogic(repeating_timer_t *rt) {
-
-    // temp
-    bool anyHits = false;
-    for(int i=0; i<maxQueuedHits; i++) {
-        if(tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime) {
-            //printf("hit! %f\n", tempHitQueue[i].time);
-            samples[tempHitQueue[i].channel].position = 0.0;
-            tempHitQueue[i].time = 0.0; // probably unnecessary
-            tempHitQueue[i].waiting = false;
-            anyHits = true;
-        }
-    }
-    //if(anyHits) printf("(at time %f)\n", currentTime);
-
-    currentTime += mainTimerInterval / 1000000.0; // inefficient
 
     updateLeds();
     updateShiftRegButtons();
