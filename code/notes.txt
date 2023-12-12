@@ -99,4 +99,10 @@ Starting to look at swing implementation, read some articles (Roger Linn intervi
 
 In other news, I was previously scared of multi-core coding but actually it doesn't look too bad, and it would be silly not to try it, given that I could almost double the amount of stuff I can do. Perhaps predictably, some mad stuff happens with interrupts which messes up the SD loading. Not totally sure if the problem is SD loading itself or flash stuff. Okay, I'm not going to have much more coding time in 2023 and I don't want to spend it faffing with IRQ stuff, so I'm going to restore the code to how it was.
 
-Some issues with the new hit scheduling system - the audio is glitchy (too much calculation happening?) and some hits are missing (weird, need to investigate).
+Some issues with the new hit scheduling system - the audio is glitchy (too much calculation happening?) and some hits are missing (weird, need to investigate). Seems to work now.
+
+Just in case I don't get to work on this for a while, here's a reminder for myself of things to work on when I'm back:
+- multicore IRQ conflicts (ugh)
+- swing/slop/slide implementation (a button switches between slop and slide..?) (NB slide is my word for detaching the kick (at least) from the hats, see adam nealy video about quintuplet swing etc)
+- reimplement start/stop button, sync in/out, and trigger out
+- reimplement chance/zoom/range/midpoint

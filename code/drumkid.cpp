@@ -66,10 +66,18 @@ const uint maxQueuedHits = 256;
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
 void scheduleHits() {
+    // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
+    float adjustedHitTime = nextHitTime;
+    if(newStep % 16 == 8) {
+        adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
+    } else if(newStep % 8 == 4) {
+        adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
+    }
+    adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
     if(newStep % 32 == 0) {
         tempHitQueue[hitQueueIndex].channel = 0;
         tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
@@ -77,7 +85,7 @@ void scheduleHits() {
     if(newStep % 32 == 16) {
         tempHitQueue[hitQueueIndex].channel = 1;
         tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
@@ -86,10 +94,20 @@ void scheduleHits() {
     {
         tempHitQueue[hitQueueIndex].channel = 2;
         tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
+    }
+    if (newStep % 8 == 4)
+    {
+        tempHitQueue[hitQueueIndex].channel = 3;
+        tempHitQueue[hitQueueIndex].waiting = true;
+        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
+        tempHitQueue[hitQueueIndex].step = newStep;
+        hitQueueIndex++;
+        if (hitQueueIndex == maxQueuedHits)
+            hitQueueIndex = 0;
     }
 }
 void nextHit() {
