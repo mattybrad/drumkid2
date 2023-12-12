@@ -104,6 +104,7 @@ uint8_t sevenSegCharacters[10] = {
 
 // timers and alarms
 repeating_timer_t mainTimer;
+repeating_timer_t schedulerTimer;
 repeating_timer_t syncInTimer; // temp, wait and see what other LEDs are used for, maybe make a class
 repeating_timer_t syncOutTimer; // temp again probably
 

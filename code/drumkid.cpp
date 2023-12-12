@@ -49,6 +49,48 @@ int64_t handleTempoChange(alarm_id_t id, void *user_data);
 
 bool sdSafeLoadTemp = false;
 
+// temp figuring out proper hit generation
+uint32_t newStep = 0; // measured in 64th-notes, i.e. 16 steps per quarter note
+float nextHitTime = 0; // s
+float currentTime = 0; // s
+float scheduleAheadTime = 1; // s
+uint16_t mainTimerInterval = 1000; // us
+struct hit {
+    bool waiting = false;
+    float time = 0.0;
+    float velocity = 1.0;
+    uint8_t channel = 0;
+};
+const uint maxQueuedHits = 256;
+struct hit tempHitQueue[maxQueuedHits];
+uint16_t hitQueueIndex = 0;
+void scheduleHits() {
+    if(newStep % 8 == 0) {
+        if(newStep % 16 == 8) tempHitQueue[hitQueueIndex].channel = 1;
+        tempHitQueue[hitQueueIndex].waiting = true;
+        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        printf("schedule hit on step %d, channel %d, time %f, index %d\n", newStep, tempHitQueue[hitQueueIndex].channel, tempHitQueue[hitQueueIndex].time, hitQueueIndex);
+        hitQueueIndex++;
+        if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
+    }
+}
+void nextHit() {
+    nextHitTime += (60.0 / tempo) / 16.0;
+    newStep ++;
+    if(newStep == 64) {
+        newStep = 0;
+    }
+}
+bool scheduler(repeating_timer_t *rt)
+{
+    //printf("current time = %f\n", currentTime);
+    while(nextHitTime < currentTime + scheduleAheadTime) {
+        scheduleHits();
+        nextHit();
+    }
+    return true;
+}
+
 // main function, obviously
 int main()
 {
@@ -67,7 +109,8 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     updateLedDisplay(1234);
-    add_repeating_timer_us(100, mainTimerLogic, NULL, &mainTimer);
+    add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
+    add_repeating_timer_ms(500, scheduler, NULL, &schedulerTimer);
 
     // main loop, runs forever
     while (true)
@@ -97,17 +140,6 @@ int main()
 
             bufferSamples[i] = (int)floatValue1;
             bufferSamples[i + 1] = (int)floatValue2;
-
-            // this stuff below probably doesn't need to be in this loop? should be in a timer callback?
-
-            // increment step if needed
-            if (beatPlaying)
-                stepPosition++;
-            if (stepPosition >= samplesPerStep)
-            {
-                stepPosition = 0;
-                doStep();
-            }
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
@@ -120,7 +152,7 @@ int main()
     return 0;
 }
 
-void doStep() {
+/*void doStep() {
 
     step++;
     if (step == 32)
@@ -147,7 +179,7 @@ void doStep() {
             pulseGpio(TRIGGER_OUT_PINS[j], 20000);
         }
     }
-}
+}*/
 
 uint pulseTimerNum = 0;
 const uint maxPulseTimers = 100; // todo: do this is a less stupid way
@@ -242,6 +274,21 @@ void initBeats() {
 }
 
 bool mainTimerLogic(repeating_timer_t *rt) {
+
+    // temp
+    bool anyHits = false;
+    for(int i=0; i<maxQueuedHits; i++) {
+        if(tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime) {
+            //printf("hit! %f\n", tempHitQueue[i].time);
+            samples[tempHitQueue[i].channel].position = 0.0;
+            tempHitQueue[i].time = 0.0; // probably unnecessary
+            tempHitQueue[i].waiting = false;
+            anyHits = true;
+        }
+    }
+    //if(anyHits) printf("(at time %f)\n", currentTime);
+
+    currentTime += mainTimerInterval / 1000000.0; // inefficient
 
     updateLeds();
     updateShiftRegButtons();
@@ -407,7 +454,7 @@ void updateShiftRegButtons()
                 handleButtonChange(shiftRegInLoopNum, buttonState);
             }
         } else {
-            microsSinceChange[shiftRegInLoopNum] += 2000; // total guess at us value for a full shift reg cycle, temporary
+            microsSinceChange[shiftRegInLoopNum] += 20 * mainTimerInterval; // total guess at us value for a full shift reg cycle, temporary
         }
         gpio_put(CLOCK_165, 0);
     } else if(shiftRegInPhase == 3) {
@@ -697,10 +744,10 @@ void checkFlashData() {
     }
 }
 
-uint32_t microsSinceSyncInChange = 100;
+uint32_t microsSinceSyncInChange = mainTimerInterval;
 bool syncInStableState = false;
 void updateSyncIn() {
-    if(microsSinceSyncInChange > 1000) {
+    /*if(microsSinceSyncInChange > 1000) {
         bool syncInState = !gpio_get(SYNC_IN);
         if (syncInState != syncInStableState)
         {
@@ -713,5 +760,5 @@ void updateSyncIn() {
         }
     } else {
         microsSinceSyncInChange += 100;
-    }
+    }*/
 }
