@@ -27,7 +27,9 @@ Aleatoric drum machine
 #include "hardware/structs/clocks.h"
 #include "hardware/adc.h"
 #include "hardware/flash.h"
+#include "hardware/irq.h"
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "pico/audio_i2s.h"
 #include "pico/binary_info.h"
 bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_CLOCK_PIN_BASE, "I2S BCK", PICO_AUDIO_I2S_CLOCK_PIN_BASE + 1, "I2S LRCK"));
@@ -119,6 +121,7 @@ int main()
 }
 
 void doStep() {
+
     step++;
     if (step == 32)
     {
@@ -239,7 +242,6 @@ void initBeats() {
 }
 
 bool mainTimerLogic(repeating_timer_t *rt) {
-
 
     updateLeds();
     updateShiftRegButtons();

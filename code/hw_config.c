@@ -27,7 +27,7 @@ static spi_t spi = {
     .sck_gpio = 2,   // GPIO number (not Pico pin number)
     .mosi_gpio = 3,
     .miso_gpio = 4,
-    .baud_rate = 12 * 1000 * 1000 // Actual frequency: 10416666.
+    .baud_rate = 12 * 1000 * 1000, // Actual frequency: 10416666.
 };
 
 /* SPI Interface */

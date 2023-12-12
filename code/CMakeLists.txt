@@ -16,6 +16,7 @@ add_subdirectory(lib/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src build)
 
 target_link_libraries(drumkid PRIVATE
         pico_stdlib
+        pico_multicore
         pico_audio_i2s
         hardware_adc
         hardware_flash
