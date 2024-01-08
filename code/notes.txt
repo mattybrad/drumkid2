@@ -103,6 +103,9 @@ Some issues with the new hit scheduling system - the audio is glitchy (too much 
 
 Just in case I don't get to work on this for a while, here's a reminder for myself of things to work on when I'm back:
 - multicore IRQ conflicts (ugh)
-- swing/slop/slide implementation (a button switches between slop and slide..?) (NB slide is my word for detaching the kick (at least) from the hats, see adam nealy video about quintuplet swing etc)
+- swing/slop/slide implementation (a button switches between slop and slide..?) (NB slide is my word for detaching the kick/snare (at least) from the hats, see adam nealy video about quintuplet swing etc)
 - reimplement start/stop button, sync in/out, and trigger out
 - reimplement chance/zoom/range/midpoint
+
+2024
+Bit intimidating to come back! 

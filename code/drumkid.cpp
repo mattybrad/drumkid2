@@ -68,12 +68,15 @@ uint16_t hitQueueIndex = 0;
 void scheduleHits() {
     // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
     float adjustedHitTime = nextHitTime;
+    bool isSlide = true;
     if(newStep % 16 == 8) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
     } else if(newStep % 8 == 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
     }
-    adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
+    if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
+
+    // below stuff is temp, will be drawn from a proper beat matrix thing
     if(newStep % 32 == 0) {
         tempHitQueue[hitQueueIndex].channel = 0;
         tempHitQueue[hitQueueIndex].waiting = true;
@@ -94,6 +97,7 @@ void scheduleHits() {
     {
         tempHitQueue[hitQueueIndex].channel = 2;
         tempHitQueue[hitQueueIndex].waiting = true;
+        if(isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
         tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
         hitQueueIndex++;
@@ -108,6 +112,21 @@ void scheduleHits() {
         hitQueueIndex++;
         if (hitQueueIndex == maxQueuedHits)
             hitQueueIndex = 0;
+    }
+    // temp? early reimplementation of aleatoric stuff
+    for(int i=0; i<NUM_SAMPLES; i++) {
+        int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
+        if (chance > randNum)
+        {
+            tempHitQueue[hitQueueIndex].channel = i;
+            tempHitQueue[hitQueueIndex].waiting = true;
+            // timing not yet compatible with slide
+            tempHitQueue[hitQueueIndex].time = adjustedHitTime;
+            tempHitQueue[hitQueueIndex].step = newStep;
+            hitQueueIndex++;
+            if (hitQueueIndex == maxQueuedHits)
+                hitQueueIndex = 0;
+        }
     }
 }
 void nextHit() {
@@ -168,6 +187,7 @@ int main()
             {
                 //printf("play hit step %d\n", newStep);
                 samples[tempHitQueue[i].channel].position = 0.0;
+                pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms late..?
                 float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
                 if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
                 samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;
