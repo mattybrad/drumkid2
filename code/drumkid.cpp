@@ -99,7 +99,7 @@ void scheduleHits() {
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
     }
-    if (newStep % 8 == 4)
+    if (false && newStep % 8 == 4)
     {
         tempHitQueue[hitQueueIndex].channel = 3;
         tempHitQueue[hitQueueIndex].waiting = true;
@@ -120,7 +120,7 @@ void nextHit() {
 bool scheduler(repeating_timer_t *rt)
 {
     //printf("current time = %f\n", currentTime);
-    while(nextHitTime < currentTime + scheduleAheadTime) {
+    while(beatPlaying && nextHitTime < currentTime + scheduleAheadTime) {
         scheduleHits();
         nextHit();
     }
@@ -166,6 +166,7 @@ int main()
         {
             if (tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement)
             {
+                //printf("play hit step %d\n", newStep);
                 samples[tempHitQueue[i].channel].position = 0.0;
                 float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
                 if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
@@ -420,13 +421,22 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_START_STOP:
             beatPlaying = !beatPlaying;
             if(beatPlaying) {
-                for (int j = 0; j < NUM_SAMPLES; j++)
+                // handle beat start
+                for (int i = 0; i < maxQueuedHits; i++)
                 {
-                    samples[j].position = 0.0; // temp
+                    tempHitQueue[i].waiting = false;
                 }
-                step = 0;
-                stepPosition = 0;
+                hitQueueIndex = 0;
+                newStep = 0;
+                nextHitTime = currentTime;
+                scheduler(&schedulerTimer);
             } else {
+                // handle beat stop
+                for(int i = 0; i < maxQueuedHits; i++) {
+                    tempHitQueue[i].waiting = false;
+                }
+                hitQueueIndex = 0;
+
                 // probably just temp code, bit messy, storing tempo change after beat has stopped
                 float storedTempo = getFloatFromBuffer(flashData, VAR_TEMPO);
                 if(storedTempo != tempo) {
