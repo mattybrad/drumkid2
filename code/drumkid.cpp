@@ -40,7 +40,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "drumkid.h"
 
 // move to header file at some point
-uint chance = 0;
+int chance = 0;
+float zoom = 0.0;
 
 int activeButton = -1;
 alarm_id_t tempAlarm = -1;
@@ -48,8 +49,27 @@ int64_t handleTempoChange(alarm_id_t id, void *user_data);
 
 bool sdSafeLoadTemp = false;
 
+// convert zoom and step to velocity multiplier
+int stepVal[MAX_BEAT_STEPS] = {
+    1,7,6,7,5,7,6,7,
+    4,7,6,7,5,7,6,7,
+    3,7,6,7,5,7,6,7,
+    4,7,6,7,5,7,6,7,
+    2,7,6,7,5,7,6,7,
+    4,7,6,7,5,7,6,7,
+    3,7,6,7,5,7,6,7,
+    4,7,6,7,5,7,6,7,
+};
+float getZoomMultiplier(int thisStep) {
+    float vel = 1.0 + zoom - (float)stepVal[thisStep];
+    if(vel<0.0) vel = 0.0;
+    else if(vel>1.0) vel = 1.0;
+    //printf("step %d, vel %f\n", thisStep, vel);
+    return vel;
+}
+
 // temp figuring out proper hit generation
-uint32_t newStep = 0; // measured in 64th-notes, i.e. 16 steps per quarter note
+uint32_t step = 0; // measured in 64th-notes, i.e. 16 steps per quarter note
 float nextHitTime = 0; // s
 float currentTime = 0; // s
 float scheduleAheadTime = 0.2; // s
@@ -68,62 +88,23 @@ void scheduleHits() {
     // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
     float adjustedHitTime = nextHitTime;
     bool isSlide = true;
-    if(newStep % 16 == 8) {
+    if(step % 16 == 8) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
-    } else if(newStep % 8 == 4) {
+    } else if(step % 8 == 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
     }
     if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
 
-    // below stuff is temp, will be drawn from a proper beat matrix thing
-    /*if(newStep % 32 == 0) {
-        tempHitQueue[hitQueueIndex].channel = 0;
-        tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-        tempHitQueue[hitQueueIndex].step = newStep;
-        tempHitQueue[hitQueueIndex].velocity = 1.0;
-        hitQueueIndex++;
-        if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
-    }
-    if(newStep % 32 == 16) {
-        tempHitQueue[hitQueueIndex].channel = 1;
-        tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-        tempHitQueue[hitQueueIndex].step = newStep;
-        tempHitQueue[hitQueueIndex].velocity = 1.0;
-        hitQueueIndex++;
-        if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
-    }
-    if (newStep % 8 == 0)
-    {
-        tempHitQueue[hitQueueIndex].channel = 2;
-        tempHitQueue[hitQueueIndex].waiting = true;
-        if(isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
-        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-        tempHitQueue[hitQueueIndex].step = newStep;
-        tempHitQueue[hitQueueIndex].velocity = 1.0;
-        hitQueueIndex++;
-        if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
-    }
-    if (false && newStep % 8 == 4)
-    {
-        tempHitQueue[hitQueueIndex].channel = 3;
-        tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-        tempHitQueue[hitQueueIndex].step = newStep;
-        tempHitQueue[hitQueueIndex].velocity = 1.0;
-        hitQueueIndex++;
-        if (hitQueueIndex == maxQueuedHits)
-            hitQueueIndex = 0;
-    }*/
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].hits[i][newStep])
+        if (beats[beatNum].hits[i][step])
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
+            if (i==2 && isSlide)
+                adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-            tempHitQueue[hitQueueIndex].step = newStep;
+            tempHitQueue[hitQueueIndex].step = step;
             tempHitQueue[hitQueueIndex].velocity = 1.0;
             hitQueueIndex++;
             if (hitQueueIndex == maxQueuedHits)
@@ -133,15 +114,18 @@ void scheduleHits() {
             int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
             if (chance > randNum)
             {
-                tempHitQueue[hitQueueIndex].channel = i;
-                tempHitQueue[hitQueueIndex].waiting = true;
-                // timing not yet compatible with slide
-                tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-                tempHitQueue[hitQueueIndex].step = newStep;
-                tempHitQueue[hitQueueIndex].velocity = 0.25;
-                hitQueueIndex++;
-                if (hitQueueIndex == maxQueuedHits)
-                    hitQueueIndex = 0;
+                float zoomMult = getZoomMultiplier(step);
+                if(zoomMult > 0.1) {
+                    tempHitQueue[hitQueueIndex].channel = i;
+                    tempHitQueue[hitQueueIndex].waiting = true;
+                    // timing not yet compatible with slide
+                    tempHitQueue[hitQueueIndex].time = adjustedHitTime;
+                    tempHitQueue[hitQueueIndex].step = step;
+                    tempHitQueue[hitQueueIndex].velocity = zoomMult;
+                    hitQueueIndex++;
+                    if (hitQueueIndex == maxQueuedHits)
+                        hitQueueIndex = 0;
+                }
             }
 
         }
@@ -149,9 +133,9 @@ void scheduleHits() {
 }
 void nextHit() {
     nextHitTime += (60.0 / tempo) / 16.0;
-    newStep ++;
-    if(newStep == 64) {
-        newStep = 0;
+    step ++;
+    if(step == 64) {
+        step = 0;
     }
 }
 bool scheduler(repeating_timer_t *rt)
@@ -249,35 +233,6 @@ int main()
     }
     return 0;
 }
-
-/*void doStep() {
-
-    step++;
-    if (step == 32)
-    {
-        step = 0;
-    }
-    if (step % 4 == 0)
-    {
-        pulseGpio(SYNC_OUT, 20000);
-        pulseLed(0, 50000);
-    }
-    for (int j = 0; j < NUM_SAMPLES; j++)
-    {
-        if (beats[beatNum].hits[j][step])
-        {
-            samples[j].position = 0.0;
-            pulseGpio(TRIGGER_OUT_PINS[j], 20000);
-        }
-        // basic initial "chance" implementation":
-        int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
-        if (chance > randNum)
-        {
-            samples[j].position = 0.0;
-            pulseGpio(TRIGGER_OUT_PINS[j], 20000);
-        }
-    }
-}*/
 
 uint pulseTimerNum = 0;
 const uint maxPulseTimers = 100; // todo: do this is a less stupid way
@@ -384,7 +339,10 @@ bool mainTimerLogic(repeating_timer_t *rt) {
     samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
     
     // knobs
-    chance = analogReadings[POT_CHANCE];
+    chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048; // temp, not sure how to combine knob and CV
+    if(chance < 0) chance = 0;
+    else if(chance > 4096) chance = 4096;
+    zoom = analogReadings[POT_ZOOM] / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
 
     // CV
     //samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
@@ -461,7 +419,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     tempHitQueue[i].waiting = false;
                 }
                 hitQueueIndex = 0;
-                newStep = 0;
+                step = 0;
                 nextHitTime = currentTime;
                 scheduler(&schedulerTimer);
             } else {

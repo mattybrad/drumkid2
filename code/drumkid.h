@@ -77,8 +77,6 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define VAR_TEMPO 36
 
 // Beat variables
-int step = 0;         // e.g. 0 to 31 for a 4/4 pattern of 8th-notes
-int stepPosition = 0; // position within the step, measured in samples
 float tempo = 120.0;  // BPM
 int samplesPerStep;   // slower tempos give higher values
 float sampleRate = 44100.0;
