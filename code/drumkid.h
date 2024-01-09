@@ -41,6 +41,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define BUTTON_KICK 7
 #define BUTTON_SD_TEMP 8
 #define BUTTON_MANUAL_TEMPO 9
+#define BUTTON_BEAT 10
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_START_STOP 15
 
@@ -129,6 +130,7 @@ char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
 void handleIncDec(bool isInc);
 void displayTempo();
+void displayBeat();
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();

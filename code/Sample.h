@@ -4,6 +4,7 @@ class Sample {
     public:
         float speed = 1.0;
         float position = 0.0;
+        float velocity = 1.0;
         uint delaySamples = 0;
         int length = MAX_SAMPLE_LENGTH;
         int value = 0;
@@ -14,7 +15,8 @@ class Sample {
                 delaySamples --;
             } else {
                 if(intPosition < length) {
-                    value = sampleData[intPosition];
+                    if(velocity == 1.0) value = sampleData[intPosition];
+                    else value = sampleData[intPosition] * velocity;
                 } else {
                     value = 0;
                 }

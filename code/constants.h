@@ -3,5 +3,6 @@
 
 #define NUM_SAMPLES 4
 #define MAX_SAMPLE_LENGTH 25000
+#define MAX_BEAT_STEPS 64
 
 #endif

@@ -41,8 +41,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 // move to header file at some point
 uint chance = 0;
-float crush = 0;
-float volume = 0;
+
 int activeButton = -1;
 alarm_id_t tempAlarm = -1;
 int64_t handleTempoChange(alarm_id_t id, void *user_data);
@@ -77,11 +76,12 @@ void scheduleHits() {
     if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
 
     // below stuff is temp, will be drawn from a proper beat matrix thing
-    if(newStep % 32 == 0) {
+    /*if(newStep % 32 == 0) {
         tempHitQueue[hitQueueIndex].channel = 0;
         tempHitQueue[hitQueueIndex].waiting = true;
         tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
+        tempHitQueue[hitQueueIndex].velocity = 1.0;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
     }
@@ -90,6 +90,7 @@ void scheduleHits() {
         tempHitQueue[hitQueueIndex].waiting = true;
         tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
+        tempHitQueue[hitQueueIndex].velocity = 1.0;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
     }
@@ -100,6 +101,7 @@ void scheduleHits() {
         if(isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
         tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
+        tempHitQueue[hitQueueIndex].velocity = 1.0;
         hitQueueIndex++;
         if(hitQueueIndex == maxQueuedHits) hitQueueIndex = 0;
     }
@@ -109,23 +111,39 @@ void scheduleHits() {
         tempHitQueue[hitQueueIndex].waiting = true;
         tempHitQueue[hitQueueIndex].time = adjustedHitTime;
         tempHitQueue[hitQueueIndex].step = newStep;
+        tempHitQueue[hitQueueIndex].velocity = 1.0;
         hitQueueIndex++;
         if (hitQueueIndex == maxQueuedHits)
             hitQueueIndex = 0;
-    }
-    // temp? early reimplementation of aleatoric stuff
-    for(int i=0; i<NUM_SAMPLES; i++) {
-        int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
-        if (chance > randNum)
+    }*/
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        if (beats[beatNum].hits[i][newStep])
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
-            // timing not yet compatible with slide
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
             tempHitQueue[hitQueueIndex].step = newStep;
+            tempHitQueue[hitQueueIndex].velocity = 1.0;
             hitQueueIndex++;
             if (hitQueueIndex == maxQueuedHits)
                 hitQueueIndex = 0;
+        } else {
+            // temp? early reimplementation of aleatoric stuff - currently only additive, doesn't remove hits
+            int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
+            if (chance > randNum)
+            {
+                tempHitQueue[hitQueueIndex].channel = i;
+                tempHitQueue[hitQueueIndex].waiting = true;
+                // timing not yet compatible with slide
+                tempHitQueue[hitQueueIndex].time = adjustedHitTime;
+                tempHitQueue[hitQueueIndex].step = newStep;
+                tempHitQueue[hitQueueIndex].velocity = 0.25;
+                hitQueueIndex++;
+                if (hitQueueIndex == maxQueuedHits)
+                    hitQueueIndex = 0;
+            }
+
         }
     }
 }
@@ -185,19 +203,16 @@ int main()
         {
             if (tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement)
             {
-                //printf("play hit step %d\n", newStep);
                 samples[tempHitQueue[i].channel].position = 0.0;
+                samples[tempHitQueue[i].channel].velocity = tempHitQueue[i].velocity;
                 pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms late..?
                 float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
                 if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
                 samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;
-                //printf("hit! time %f %f, channel %d, step %d, delay %d %f\n", currentTime, tempHitQueue[i].time, tempHitQueue[i].channel, tempHitQueue[i].step, samples[tempHitQueue[i].channel].delaySamples, delaySamplesFloat);
-                tempHitQueue[i].time = 0.0; // probably unnecessary
                 tempHitQueue[i].waiting = false;
                 anyHits = true;
             }
         }
-        // if(anyHits) printf("(at time %f)\n", currentTime);
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count*2; i+=2)
@@ -215,8 +230,8 @@ int main()
                 floatValue2 += (float)samples[j].value;
             }
 
-            floatValue1 *= 0.25 * volume; // temp?
-            floatValue2 *= 0.25 * volume; // temp?
+            floatValue1 *= 0.25; // temp?
+            floatValue2 *= 0.25; // temp?
 
             bufferSamples[i] = (int)floatValue1;
             bufferSamples[i + 1] = (int)floatValue2;
@@ -333,27 +348,29 @@ void initGpio() {
 void initBeats() {
     // temporarily defining preset beats here
     beats[0].addHit(0, 0);
-    beats[0].addHit(0, 16);
-    beats[0].addHit(1, 8);
-    beats[0].addHit(1, 24);
-    beats[0].addHit(1, 28);
+    beats[0].addHit(0, 32);
+    beats[0].addHit(1, 16);
+    beats[0].addHit(1, 48);
+    beats[0].addHit(1, 56);
     beats[0].addHit(2, 0);
-    beats[0].addHit(2, 4);
     beats[0].addHit(2, 8);
-    beats[0].addHit(2, 12);
     beats[0].addHit(2, 16);
-    beats[0].addHit(2, 20);
     beats[0].addHit(2, 24);
-    beats[0].addHit(2, 28);
+    beats[0].addHit(2, 32);
+    beats[0].addHit(2, 40);
+    beats[0].addHit(2, 48);
+    beats[0].addHit(2, 56);
+
     beats[1].addHit(0, 0);
-    beats[1].addHit(0, 16);
-    beats[1].addHit(1, 8);
-    beats[1].addHit(1, 24);
-    beats[1].addHit(1, 28);
+    beats[1].addHit(0, 32);
+    beats[1].addHit(1, 16);
+    beats[1].addHit(1, 48);
+    beats[1].addHit(1, 56);
+
     beats[2].addHit(0, 0);
-    beats[2].addHit(0, 8);
     beats[2].addHit(0, 16);
-    beats[2].addHit(0, 24);
+    beats[2].addHit(0, 32);
+    beats[2].addHit(0, 48);
 }
 
 bool mainTimerLogic(repeating_timer_t *rt) {
@@ -367,10 +384,7 @@ bool mainTimerLogic(repeating_timer_t *rt) {
     samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
     
     // knobs
-    chance = analogReadings[0];
-    crush = ((float)analogReadings[10]) / 4095.0;
-    volume = ((float)analogReadings[11]) / 4095.0;
-
+    chance = analogReadings[POT_CHANCE];
 
     // CV
     //samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
@@ -457,7 +471,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 }
                 hitQueueIndex = 0;
 
-                // probably just temp code, bit messy, storing tempo change after beat has stopped
+                // probably just temp code, bit messy, storing tempo change 2 seconds after beat has stopped
                 float storedTempo = getFloatFromBuffer(flashData, VAR_TEMPO);
                 if(storedTempo != tempo) {
                     if (tempAlarm > 0)
@@ -478,6 +492,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_MANUAL_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
             displayTempo();
+            break;
+        case BUTTON_BEAT:
+            activeButton = BUTTON_BEAT;
+            displayBeat();
+            break;
         default:
             printf("(button not assigned)\n");
         }
@@ -506,11 +525,23 @@ void handleIncDec(bool isInc) {
         // todo: press and hold function
         displayTempo();
         break;
+
+        case BUTTON_BEAT:
+        beatNum += isInc ? 1 : -1;
+        if(beatNum>3) beatNum = 3;
+        if(beatNum<0) beatNum = 0;
+        displayBeat();
+        break;
     }
 }
 
 void displayTempo() {
     updateLedDisplay((int)tempo);
+}
+
+void displayBeat()
+{
+    updateLedDisplay(beatNum);
 }
 
 void updateShiftRegButtons()
