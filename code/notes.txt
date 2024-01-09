@@ -108,4 +108,7 @@ Just in case I don't get to work on this for a while, here's a reminder for myse
 - reimplement chance/zoom/range/midpoint
 
 2024
-Bit intimidating to come back! 
+Bit intimidating to come back! But making improvements. For the first time it really sounds like an improved version of Drumkid, with the hi-fi audio and new timing engine. Thoughts:
+- while messing around at 250BPM, it actually sounded really cool with 64th-notes at low volume, so I might actually want to expand zoom to 128th-notes to achieve this effect with regular tempos (overall approach with any param is that turning a knob up to full should always be too far, so that the sweet spot is available)
+- probably need a CV atten control for chance
+- sync in and sync out are working, but could be improved. sync in is basically a tap tempo right now, and likely to be out of phase with sync input. sync out works but isn't precise, triggered at start of buffer (like all triggers, needs delay). everything just running off 1ppqn right now.

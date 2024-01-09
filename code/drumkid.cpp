@@ -45,6 +45,11 @@ float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
 
+// tempo/sync stuff
+bool syncInMode = false;
+int syncInStep = 0;
+float syncInHistory[8] = {-1,-1,-1,-1,-1,-1,-1,-1};
+
 int activeButton = -1;
 alarm_id_t tempAlarm = -1;
 int64_t handleTempoChange(alarm_id_t id, void *user_data);
@@ -80,13 +85,24 @@ struct hit {
     bool waiting = false;
     float time = 0.0;
     float velocity = 1.0;
-    uint8_t channel = 0;
+    int channel = 0;
     uint16_t step = 0;
 };
 const uint maxQueuedHits = 256;
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
 void scheduleHits() {
+    // schedule sync out pulses using hit queue, special channel = -1
+    if(step % 16 == 0) {
+        tempHitQueue[hitQueueIndex].channel = -1;
+        tempHitQueue[hitQueueIndex].waiting = true;
+        tempHitQueue[hitQueueIndex].time = nextHitTime;
+        tempHitQueue[hitQueueIndex].step = step;
+        hitQueueIndex++;
+        if (hitQueueIndex == maxQueuedHits)
+            hitQueueIndex = 0;
+    }
+
     // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
     float adjustedHitTime = nextHitTime;
     bool isSlide = true;
@@ -193,14 +209,18 @@ int main()
         {
             if (tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement)
             {
-                samples[tempHitQueue[i].channel].position = 0.0;
-                samples[tempHitQueue[i].channel].velocity = tempHitQueue[i].velocity;
-                pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms late..?
-                float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
-                if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
-                samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;
+                if(tempHitQueue[i].channel == -1) {
+                    pulseGpio(SYNC_OUT, 20000); // currently not using delay compensation, up to 3ms early..?
+                } else {
+                    samples[tempHitQueue[i].channel].position = 0.0; // possible niche issue where a sample which is already playing would be muted a few ms early here
+                    samples[tempHitQueue[i].channel].velocity = tempHitQueue[i].velocity;
+                    pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms early..?
+                    float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
+                    if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
+                    samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;
+                    anyHits = true;
+                }
                 tempHitQueue[i].waiting = false;
-                anyHits = true;
             }
         }
 
@@ -439,7 +459,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
 
                 // probably just temp code, bit messy, storing tempo change 2 seconds after beat has stopped
                 float storedTempo = getFloatFromBuffer(flashData, VAR_TEMPO);
-                if(storedTempo != tempo) {
+                if(storedTempo != tempo && !syncInMode) {
                     if (tempAlarm > 0)
                         cancel_alarm(tempAlarm);
                     tempAlarm = add_alarm_in_ms(2000, handleTempoChange, NULL, false);
@@ -821,18 +841,43 @@ void checkFlashData() {
 uint32_t microsSinceSyncInChange = mainTimerInterval;
 bool syncInStableState = false;
 void updateSyncIn() {
-    /*if(microsSinceSyncInChange > 1000) {
+    if(microsSinceSyncInChange > 1000) {
         bool syncInState = !gpio_get(SYNC_IN);
         if (syncInState != syncInStableState)
         {
             syncInStableState = syncInState;
             microsSinceSyncInChange = 0;
             if(syncInState) {
-                doStep();
+                syncInMode = true; // temp, once a sync signal is received, module stays in "sync in" mode until reboot
+                //doStep();
+                float historyTally = 0.0;
+                int validHistoryCount = 0;
+                for(int i=7; i>=1; i--) {
+                    syncInHistory[i] = syncInHistory[i-1];
+                }
+                syncInHistory[0] = currentTime;
+                for(int i=0; i<7; i++) {
+                    if (syncInHistory[i] >= 0 && syncInHistory[i+1] >= 0)
+                    {
+                        float timeDiff = syncInHistory[i] - syncInHistory[i+1];
+                        if (timeDiff >= 0 && timeDiff < 10)
+                        {
+                            // arbitrary 10-second limit for now
+                            //printf("%d %f\t", i, timeDiff);
+                            validHistoryCount++;
+                            historyTally += timeDiff;
+                        }
+                    }
+                }
+                if(validHistoryCount > 0) {
+                    float testSyncTempo = 60.0 * validHistoryCount / historyTally;
+                    //printf("test sync tempo %f\n", testSyncTempo);
+                    tempo = testSyncTempo;
+                }
                 pulseLed(3, 50000);
             }
         }
     } else {
         microsSinceSyncInChange += 100;
-    }*/
+    }
 }
