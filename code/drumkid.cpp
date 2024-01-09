@@ -370,7 +370,9 @@ bool mainTimerLogic(repeating_timer_t *rt) {
     else if(chance > 4096) chance = 4096;
     zoom = analogReadings[POT_ZOOM] / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
     velRange = analogReadings[POT_RANGE];
-    velMidpoint = analogReadings[POT_MIDPOINT];
+    velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
+    if(velMidpoint < 0) velMidpoint = 0;
+    else if(velMidpoint > 4096) velMidpoint = 4096;
 
     // CV
     //samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
