@@ -42,6 +42,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // move to header file at some point
 int chance = 0;
 float zoom = 0.0;
+int velRange = 0;
+int velMidpoint = 0;
 
 int activeButton = -1;
 alarm_id_t tempAlarm = -1;
@@ -115,13 +117,17 @@ void scheduleHits() {
             if (chance > randNum)
             {
                 float zoomMult = getZoomMultiplier(step);
-                if(zoomMult > 0.1) {
+                int intVel = (rand() % velRange) + velMidpoint - velRange/2;
+                if(intVel < 0) intVel = 0;
+                else if(intVel > 4096) intVel = 4096;
+                float floatVel = zoomMult * (float)intVel / 4096.0;
+                if(floatVel >= 0.1) {
                     tempHitQueue[hitQueueIndex].channel = i;
                     tempHitQueue[hitQueueIndex].waiting = true;
                     // timing not yet compatible with slide
                     tempHitQueue[hitQueueIndex].time = adjustedHitTime;
                     tempHitQueue[hitQueueIndex].step = step;
-                    tempHitQueue[hitQueueIndex].velocity = zoomMult;
+                    tempHitQueue[hitQueueIndex].velocity = floatVel;
                     hitQueueIndex++;
                     if (hitQueueIndex == maxQueuedHits)
                         hitQueueIndex = 0;
@@ -343,6 +349,8 @@ bool mainTimerLogic(repeating_timer_t *rt) {
     if(chance < 0) chance = 0;
     else if(chance > 4096) chance = 4096;
     zoom = analogReadings[POT_ZOOM] / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
+    velRange = analogReadings[POT_RANGE];
+    velMidpoint = analogReadings[POT_MIDPOINT];
 
     // CV
     //samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
