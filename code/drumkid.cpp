@@ -47,6 +47,9 @@ int velMidpoint = 0;
 int newNumSteps = 64;
 int numSteps = 64; // 64=4/4, 48=3/4, etc
 bool shift = false;
+int tuplet = TUPLET_STRAIGHT;
+float quarterNoteDivision = 16.0;
+float quarterNoteDivisionRef[8] = {16,16,12,12,10,10,14,14};
 
 // tempo/sync stuff
 bool syncInMode = false;
@@ -60,6 +63,7 @@ int64_t handleTempoChange(alarm_id_t id, void *user_data);
 bool sdSafeLoadTemp = false;
 
 // convert zoom and step to velocity multiplier
+// currently set up for 4/4 - for other time sigs, there should be no "2" value, and "1" should only happen once (not %-looped as happens now)
 int stepVal[MAX_BEAT_STEPS] = {
     1,7,6,7,5,7,6,7,
     4,7,6,7,5,7,6,7,
@@ -157,8 +161,10 @@ void scheduleHits() {
     }
 }
 void nextHit() {
-    nextHitTime += (60.0 / tempo) / 16.0;
+    //nextHitTime += (60.0 / tempo) / 16.0; // for 16 steps per quarter note
+    nextHitTime += (60.0 / tempo) / quarterNoteDivision;
     step ++;
+    if(step%16 >= (int)quarterNoteDivision) step += 16 - (step%16);
     if(step == numSteps) {
         numSteps = newNumSteps;
         if(activeButton == BUTTON_TIME_SIGNATURE) displayTimeSignature(); // temp? not 100% sure this is a good idea, maybe OTT, shows new time signature has come into effect
@@ -499,6 +505,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
             activeButton = BUTTON_TIME_SIGNATURE;
             displayTimeSignature();
             break;
+        case BUTTON_TUPLET:
+            activeButton = BUTTON_TUPLET;
+            displayTuplet();
+            break;
         case BUTTON_BEAT:
             activeButton = BUTTON_BEAT;
             displayBeat();
@@ -550,6 +560,14 @@ void handleIncDec(bool isInc) {
         if(beatNum<0) beatNum = 0;
         displayBeat();
         break;
+
+        case BUTTON_TUPLET:
+        tuplet += isInc ? 2 : -2;
+        if(tuplet < 1) tuplet = 1;
+        else if(tuplet > 7) tuplet = 7;
+        quarterNoteDivision = quarterNoteDivisionRef[tuplet]; // ugly, temp
+        displayTuplet();
+        break;
     }
 }
 
@@ -561,6 +579,10 @@ void displayTimeSignature() {
     int tempTimeSig = 4 + 10 * newNumSteps / 16;
     if(newNumSteps != numSteps) tempTimeSig += 8000; // temp, shows that the new signature is not yet active
     updateLedDisplay(tempTimeSig);
+}
+
+void displayTuplet() {
+    updateLedDisplay(tuplet);
 }
 
 void displayBeat()

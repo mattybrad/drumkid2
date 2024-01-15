@@ -38,7 +38,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 
 #define BUTTON_SHIFT 7
 
-#define BUTTON_SD_TEMP 8
+#define BUTTON_TUPLET 8
 #define BUTTON_MANUAL_TEMPO 9
 #define BUTTON_BEAT 10
 
@@ -47,6 +47,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 
 // shifted button numbers..?
 #define BUTTON_TIME_SIGNATURE 25
+#define BUTTON_SD_TEMP 22
 
 // pot numbers
 #define POT_CHANCE 0
@@ -67,6 +68,12 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define CV_ZOOM 15
 #define CV_MIDPOINT 13
 #define CV_TBC 14
+
+// tuplet modes
+#define TUPLET_STRAIGHT 1
+#define TUPLET_TRIPLET 3
+#define TUPLET_QUINTUPLET 5
+#define TUPLET_SEPTUPLET 7
 
 // flash data storage
 #define FLASH_DATA_ADDRESS (1024 * 1024)
@@ -133,6 +140,7 @@ void handleIncDec(bool isInc);
 void displayTempo();
 void displayBeat();
 void displayTimeSignature();
+void displayTuplet();
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();

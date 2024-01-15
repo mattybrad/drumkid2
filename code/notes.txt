@@ -127,3 +127,8 @@ OKAY. Got a couple of days to work on this. Let's make a to-do list. Let's crack
     - Kick/snare/hat/other
     - Tap tempo
 - Remove/reduce audible clicks (probably from retriggering a sample before it ends? some sort of quick fade needed?)
+- Maybe getting some performance issues?
+- HANDLE TRIPLETS
+- handle n-tuplets?
+- make zoom work properly for non-4/4 time sigs
+- zoom goes weird when using tuplets
