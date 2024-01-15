@@ -35,15 +35,18 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
-#define BUTTON_RIDE 4
-#define BUTTON_HAT 5
-#define BUTTON_SNARE 6
-#define BUTTON_KICK 7
+
+#define BUTTON_SHIFT 7
+
 #define BUTTON_SD_TEMP 8
 #define BUTTON_MANUAL_TEMPO 9
 #define BUTTON_BEAT 10
+
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_START_STOP 15
+
+// shifted button numbers..?
+#define BUTTON_TIME_SIGNATURE 25
 
 // pot numbers
 #define POT_CHANCE 0
@@ -129,6 +132,7 @@ void updateLedDisplay(int num);
 void handleIncDec(bool isInc);
 void displayTempo();
 void displayBeat();
+void displayTimeSignature();
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();

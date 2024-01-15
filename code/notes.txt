@@ -112,3 +112,18 @@ Bit intimidating to come back! But making improvements. For the first time it re
 - while messing around at 250BPM, it actually sounded really cool with 64th-notes at low volume, so I might actually want to expand zoom to 128th-notes to achieve this effect with regular tempos (overall approach with any param is that turning a knob up to full should always be too far, so that the sweet spot is available)
 - probably need a CV atten control for chance
 - sync in and sync out are working, but could be improved. sync in is basically a tap tempo right now, and likely to be out of phase with sync input. sync out works but isn't precise, triggered at start of buffer (like all triggers, needs delay). everything just running off 1ppqn right now.
+
+15/1/24
+OKAY. Got a couple of days to work on this. Let's make a to-do list. Let's crack through some things.
+- Leave sync in/out for the moment, it's complicated and will likely change during beta testing, let's just get all the buttons working
+- Buttons/functions:
+    - Shift
+    - Time signature
+    - Save patch
+    - Load patch
+    - Choose slot
+    - Choose bank
+    - Choose output (1/2)
+    - Kick/snare/hat/other
+    - Tap tempo
+- Remove/reduce audible clicks (probably from retriggering a sample before it ends? some sort of quick fade needed?)

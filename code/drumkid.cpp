@@ -44,6 +44,9 @@ int chance = 0;
 float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
+int newNumSteps = 64;
+int numSteps = 64; // 64=4/4, 48=3/4, etc
+bool shift = false;
 
 // tempo/sync stuff
 bool syncInMode = false;
@@ -68,7 +71,7 @@ int stepVal[MAX_BEAT_STEPS] = {
     4,7,6,7,5,7,6,7,
 };
 float getZoomMultiplier(int thisStep) {
-    float vel = 1.0 + zoom - (float)stepVal[thisStep];
+    float vel = 1.0 + zoom - (float)stepVal[thisStep%64];
     if(vel<0.0) vel = 0.0;
     else if(vel>1.0) vel = 1.0;
     //printf("step %d, vel %f\n", thisStep, vel);
@@ -115,7 +118,7 @@ void scheduleHits() {
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].hits[i][step])
+        if (beats[beatNum].hits[i][step%64])
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
@@ -156,7 +159,9 @@ void scheduleHits() {
 void nextHit() {
     nextHitTime += (60.0 / tempo) / 16.0;
     step ++;
-    if(step == 64) {
+    if(step == numSteps) {
+        numSteps = newNumSteps;
+        if(activeButton == BUTTON_TIME_SIGNATURE) displayTimeSignature(); // temp? not 100% sure this is a good idea, maybe OTT, shows new time signature has come into effect
         step = 0;
     }
 }
@@ -437,10 +442,16 @@ void updateLedDisplay(int num)
 
 void handleButtonChange(int buttonNum, bool buttonState)
 {
+    if(shift && buttonNum != BUTTON_SHIFT) buttonNum += 16;
     if(buttonState) {
         switch (buttonNum)
         {
+        case BUTTON_SHIFT:
+            shift = true;
+            break;
         case BUTTON_START_STOP:
+            numSteps = newNumSteps;
+            if(activeButton == BUTTON_TIME_SIGNATURE) displayTimeSignature();
             beatPlaying = !beatPlaying;
             if(beatPlaying) {
                 // handle beat start
@@ -466,6 +477,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
                         cancel_alarm(tempAlarm);
                     tempAlarm = add_alarm_in_ms(2000, handleTempoChange, NULL, false);
                 }
+
+                numSteps = newNumSteps;
+                if(activeButton == BUTTON_TIME_SIGNATURE) displayTimeSignature();
             }
             break;
         case BUTTON_INC:
@@ -481,6 +495,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
             activeButton = BUTTON_MANUAL_TEMPO;
             displayTempo();
             break;
+        case BUTTON_TIME_SIGNATURE:
+            activeButton = BUTTON_TIME_SIGNATURE;
+            displayTimeSignature();
+            break;
         case BUTTON_BEAT:
             activeButton = BUTTON_BEAT;
             displayBeat();
@@ -489,7 +507,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
             printf("(button not assigned)\n");
         }
     } else if(!buttonState) {
-
+        switch(buttonNum) {
+            case BUTTON_SHIFT:
+                shift = false;
+                break;
+        }
     }
 }
 
@@ -514,6 +536,14 @@ void handleIncDec(bool isInc) {
         displayTempo();
         break;
 
+        case BUTTON_TIME_SIGNATURE:
+        newNumSteps += isInc ? 16 : -16;
+        if(newNumSteps > 112) newNumSteps = 112;
+        else if(newNumSteps < 16) newNumSteps = 16;
+        if(!beatPlaying) numSteps = newNumSteps;
+        displayTimeSignature();
+        break;
+
         case BUTTON_BEAT:
         beatNum += isInc ? 1 : -1;
         if(beatNum>3) beatNum = 3;
@@ -525,6 +555,12 @@ void handleIncDec(bool isInc) {
 
 void displayTempo() {
     updateLedDisplay((int)tempo);
+}
+
+void displayTimeSignature() {
+    int tempTimeSig = 4 + 10 * newNumSteps / 16;
+    if(newNumSteps != numSteps) tempTimeSig += 8000; // temp, shows that the new signature is not yet active
+    updateLedDisplay(tempTimeSig);
 }
 
 void displayBeat()
