@@ -127,8 +127,12 @@ OKAY. Got a couple of days to work on this. Let's make a to-do list. Let's crack
     - Kick/snare/hat/other
     - Tap tempo
 - Remove/reduce audible clicks (probably from retriggering a sample before it ends? some sort of quick fade needed?)
-- Maybe getting some performance issues?
+- Maybe getting some performance issues? Random clicks. Seems to be worse with kick drums..?! Maybe clicks are 0.4 seconds apart? Annoying! Okay, the clicks seem to be missing chunks of audio, possibly a whole buffer's worth, 3ms. AAH deep into Charlie-Always-Sunny conspiracy board territory, but...
+    - at 110BPM (not sure if relevant), there are 4ms gaps (not exactly a buffer, but close!), at (alternately) 1.2s and 2.0s. Garbage collection..?
+    - i tried loading in some longer samples to make it easier to see where the gaps were happening, and... everything crashed, in a way that felt like an SD card problem or running out of memory or something
+    - 
 - HANDLE TRIPLETS
 - handle n-tuplets?
 - make zoom work properly for non-4/4 time sigs
 - zoom goes weird when using tuplets
+- smoothing function for pots, prevent random spikes

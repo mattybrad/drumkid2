@@ -29,7 +29,7 @@ Aleatoric drum machine
 #include "hardware/flash.h"
 #include "hardware/irq.h"
 #include "pico/stdlib.h"
-#include "pico/multicore.h"
+//#include "pico/multicore.h"
 #include "pico/audio_i2s.h"
 #include "pico/binary_info.h"
 bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_CLOCK_PIN_BASE, "I2S BCK", PICO_AUDIO_I2S_CLOCK_PIN_BASE + 1, "I2S LRCK"));
@@ -140,6 +140,7 @@ void scheduleHits() {
             if (chance > randNum)
             {
                 float zoomMult = getZoomMultiplier(step);
+                //float zoomMult = step % 4 == 0 ? 1.0 : 0.0;
                 int intVel = (rand() % velRange) + velMidpoint - velRange/2;
                 if(intVel < 0) intVel = 0;
                 else if(intVel > 4096) intVel = 4096;
@@ -223,13 +224,21 @@ int main()
                 if(tempHitQueue[i].channel == -1) {
                     pulseGpio(SYNC_OUT, 20000); // currently not using delay compensation, up to 3ms early..?
                 } else {
-                    samples[tempHitQueue[i].channel].position = 0.0; // possible niche issue where a sample which is already playing would be muted a few ms early here
+                    //samples[tempHitQueue[i].channel].position = 0.0; // possible niche issue where a sample which is already playing would be muted a few ms early here
+                    if(samples[tempHitQueue[i].channel].playing) {
+                        samples[tempHitQueue[i].channel].retriggerQueued = true;
+                    }
                     samples[tempHitQueue[i].channel].velocity = tempHitQueue[i].velocity;
                     pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms early..?
                     float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
-                    if(delaySamplesFloat < 0) delaySamplesFloat = 0.0;
+                    if(delaySamplesFloat < 0) {
+                        delaySamplesFloat = 0.0;
+                        samples[tempHitQueue[i].channel].position = 0.0;
+                        pulseLed(0, 20000);
+                    }
                     samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;
                     anyHits = true;
+                    //printf("hit %d %d\n", tempHitQueue[i].channel, tempHitQueue[i].step);
                 }
                 tempHitQueue[i].waiting = false;
             }
@@ -244,18 +253,21 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 samples[j].update();
-                if(j==0)
+                if(j==1)
                 {
                     floatValue1 += (float)samples[j].value;
                 }
                 floatValue2 += (float)samples[j].value;
             }
 
-            floatValue1 *= 0.25; // temp?
-            floatValue2 *= 0.25; // temp?
+            int out1 = (int)floatValue1;
+            int out2 = (int)floatValue2;
+            //floatValue1 *= 0.25; // temp?
+            //floatValue2 *= 0.25; // temp?
+            // NB if i'm converting to int anyway in the next step, i could convert to int first and then do a quicker bit-shift operation to reduce volume? just need to be sure i'm not hitting the 16-bit max before attenuating
 
-            bufferSamples[i] = (int)floatValue1;
-            bufferSamples[i + 1] = (int)floatValue2;
+            bufferSamples[i] = out1 >> 2;
+            bufferSamples[i + 1] = out2 >> 2;
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
@@ -266,6 +278,10 @@ int main()
         if(sdSafeLoadTemp) {
             sdSafeLoadTemp = false;
             loadSamplesFromSD();
+        }
+
+        for(int i=0; i<NUM_SAMPLES; i++) {
+            //bitWrite(singleLedData, i, samples[i].playing);
         }
     }
     return 0;
@@ -379,6 +395,7 @@ bool mainTimerLogic(repeating_timer_t *rt) {
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048; // temp, not sure how to combine knob and CV
     if(chance < 0) chance = 0;
     else if(chance > 4096) chance = 4096;
+    chance = 4096; // temp, for testing
     zoom = analogReadings[POT_ZOOM] / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
