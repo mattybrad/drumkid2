@@ -2,6 +2,7 @@
 
 class Sample {
     public:
+        float velocity = 0.5;
         bool playing = false;
         int16_t value = 0;
         int position = 0;
