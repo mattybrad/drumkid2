@@ -28,7 +28,7 @@
 #define SYNC_OUT 17
 #define BUTTON_PIN_START_STOP 0
 #define BUTTON_PIN_TAP_TEMPO 1
-const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
+const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // button numbers
 #define BUTTON_CANCEL 0
@@ -75,86 +75,9 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15,28,22,18};
 #define TUPLET_QUINTUPLET 5
 #define TUPLET_SEPTUPLET 7
 
-// flash data storage
-#define FLASH_DATA_ADDRESS (1024 * 1024)
-#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE)
-const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
-const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
-#define CHECK_NUM -123456789
-#define DATA_CHECK 0
-#define SAMPLE_START_POINTS 4
-#define SAMPLE_LENGTHS 20
-#define VAR_TEMPO 36
-
-// Beat variables
-float tempo = 120.0;  // BPM
-int samplesPerStep;   // slower tempos give higher values
-float sampleRate = 44100.0;
-bool beatPlaying = false;
-int beatNum = 0;
-Beat beats[8];
-Sample samples[NUM_SAMPLES];
-
-// temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
-uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
-uint8_t singleLedData = 0b0000; // 4 x 3mm LEDs
-uint16_t storedLedData[4] = {0, 0, 0, 0};
-uint8_t sevenSegCharacters[10] = {
-    0b11111100,
-    0b01100000,
-    0b11011010,
-    0b11110010,
-    0b01100110,
-    0b10110110,
-    0b10111110,
-    0b11100000,
-    0b11111110,
-    0b11110110};
-
-// timers and alarms
-repeating_timer_t mainTimer;
-repeating_timer_t schedulerTimer;
-repeating_timer_t syncInTimer; // temp, wait and see what other LEDs are used for, maybe make a class
-repeating_timer_t syncOutTimer; // temp again probably
-
-uint analogLoopNum = 0; // 0 to 7
-uint analogPhase = 0;   // 0 or 1
-uint analogReadings[16] = {0};
-
-uint shiftRegOutLoopNum = 0; // 0 to 15
-uint shiftRegOutPhase = 0;   // 0, 1, or 2
-uint sevenSegCharNum = 0;
-
-bool buttonStableStates[18] = {false}; // array of bools not good use of space, change
-uint32_t microsSinceChange[18] = {0};                          // milliseconds since state change
-uint shiftRegInLoopNum = 0; // 0 to 15
-uint shiftRegInPhase = 0;   // 0 or 1
-
 void initGpio();
-void initBeats();
-bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
-char getNthDigit(int x, int n);
-void updateLedDisplay(int num);
-void handleIncDec(bool isInc);
-void displayTempo();
-void displayBeat();
-void displayTimeSignature();
-void displayTuplet();
-void handleButtonChange(int buttonNum, bool buttonState);
-void updateShiftRegButtons();
-void updateAnalog();
-void loadSamplesFromSD();
-void updateLeds();
-void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
-void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
-void initSamplesFromFlash();
-void writePageToFlash(const uint8_t *buffer, uint address);
-void checkFlashData();
-int32_t getIntFromBuffer(const uint8_t *buffer, uint position);
-float getFloatFromBuffer(const uint8_t *buffer, uint position);
-void updateSyncIn();
-void doStep();
-void print_buf(const uint8_t *buf, size_t len);
+bool mainTimerLogic(repeating_timer_t *rt);
+bool testTimerLogic(repeating_timer_t *rt);
 
 #endif
