@@ -146,7 +146,8 @@ float getZoomMultiplier(int thisStep)
 uint32_t step = 0;                // measured in 64th-notes, i.e. 16 steps per quarter note
 float nextHitTime = 0;            // s
 float currentTime = 0;            // s
-float scheduleAheadTime = 0.2;    // s
+float scheduleAheadTime = 0.1;    // s
+uint16_t schedulerInterval = 20; // ms
 uint16_t mainTimerInterval = 100; // us
 struct hit
 {
@@ -176,12 +177,12 @@ void scheduleHits()
     // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
     float adjustedHitTime = nextHitTime;
     bool isSlide = true;
-    /*if(step % 16 == 8) {
+    if(step % 16 == 8) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
     } else if(step % 8 == 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
     }
-    if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);*/
+    if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
@@ -189,8 +190,10 @@ void scheduleHits()
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
-            // if (i==2 && isSlide)
-            //     adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
+            if (i==2 && isSlide)
+            {
+                adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
+            }
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
             tempHitQueue[hitQueueIndex].step = step;
             tempHitQueue[hitQueueIndex].velocity = 1.0;
@@ -212,7 +215,7 @@ void scheduleHits()
                 else if (intVel > 4096)
                     intVel = 4096;
                 float floatVel = zoomMult * (float)intVel / 4096.0;
-                if (floatVel >= 0.1)
+                if (floatVel >= 0.01)
                 {
                     if (tempHitQueue[hitQueueIndex].waiting)
                     {
@@ -277,7 +280,7 @@ int main()
 
     updateLedDisplay(1234);
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
-    add_repeating_timer_ms(100, scheduler, NULL, &schedulerTimer);
+    add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
 
     // temp
     float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate;
@@ -286,6 +289,8 @@ int main()
     // audio buffer loop, runs forever
     while (true)
     {
+        
+
         // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
@@ -350,7 +355,7 @@ int main()
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
 
-        currentTime += timeIncrement * 2;
+        currentTime += timeIncrement;
         // printf("current time %f\n", currentTime);
 
         if (sdSafeLoadTemp)
@@ -361,7 +366,7 @@ int main()
 
         for (int i = 0; i < NUM_SAMPLES; i++)
         {
-            // bitWrite(singleLedData, i, samples[i].playing);
+            bitWrite(singleLedData, i, samples[i].playing);
         }
     }
     return 0;
@@ -483,7 +488,6 @@ bool mainTimerLogic(repeating_timer_t *rt)
         chance = 0;
     else if (chance > 4096)
         chance = 4096;
-    chance = 4096;                            // temp, for testing
     zoom = analogReadings[POT_ZOOM] / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
@@ -491,8 +495,6 @@ bool mainTimerLogic(repeating_timer_t *rt)
         velMidpoint = 0;
     else if (velMidpoint > 4096)
         velMidpoint = 4096;
-    velRange = 0;
-    velMidpoint = 1000;
 
     // CV
     // samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;

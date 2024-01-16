@@ -2,7 +2,7 @@
 
 class Sample {
     public:
-        float velocity = 0.5;
+        float velocity = 1.0;
         bool playing = false;
         int16_t value = 0;
         int position = 0;
@@ -14,7 +14,7 @@ class Sample {
         }
         void update() {
             if(playing) {
-                value = sampleData[position];
+                value = velocity * sampleData[position]; // combining ints and floats but i think it's fine..?
                 position ++;
                 if(position >= length) {
                     playing = false;

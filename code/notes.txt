@@ -140,3 +140,5 @@ OKAY. Got a couple of days to work on this. Let's make a to-do list. Let's crack
 
 16/1/24
 Attempting a rewrite/refactor. Everything had become a bit messy.
+
+RIGHT. That was a very frustrating day but I think I've pretty much gotten rid of the problem. I greatly reduced the scheduler timer interval from 100ms to 20ms. I've also rewritten Sample.h, it needs the delay stuff reimplementing but it's better than before. I've also moved from floats to ints where possible. I would have liked a more concrete outcome from today, in that it would have been nice to have found a variable I could tweak to increase the severity/frequency of the clicks so I could be certain, but I do think that tweaking the relative values of schedulerInterval and scheduleAheadTime is probably the answer. I'm still getting some clicks but I'm pretty sure these are from sudden retriggers, which is a known/solvable problem. Leaving code in a decent-ish state, and tuplet stuff is really nice.
