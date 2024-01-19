@@ -235,6 +235,9 @@ void scheduleHits()
         }
     }
 }
+/*void scheduleHit(channel, time, step, vel) {
+
+}*/
 void nextHit()
 {
     // nextHitTime += (60.0 / tempo) / 16.0; // for 16 steps per quarter note
@@ -301,6 +304,17 @@ int main()
         bool anyHits = false;
         for (int i = 0; i < maxQueuedHits; i++)
         {
+            int delaySamples;
+            if(tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement * 2)
+            {
+                delaySamples = (tempHitQueue[i].time - currentTime) * sampleRate;
+                if (samples[tempHitQueue[i].channel].delaySamples == 0)
+                {
+                    samples[tempHitQueue[i].channel].delaySamples = delaySamples;
+                    samples[tempHitQueue[i].channel].waiting = true;
+                    samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
+                }
+            }
             if (tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement)
             {
                 if (tempHitQueue[i].channel == -1)
@@ -309,8 +323,7 @@ int main()
                 }
                 else
                 {
-                    samples[tempHitQueue[i].channel].velocity = tempHitQueue[i].velocity;
-                    samples[tempHitQueue[i].channel].trigger();
+                    //samples[tempHitQueue[i].channel].trigger();
                     pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms early..?
                     /*float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
                     if (delaySamplesFloat < 0)
@@ -338,7 +351,7 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 samples[j].update();
-                if (j == 1)
+                if (j == 0)
                 {
                     out1 += samples[j].value;
                 }
