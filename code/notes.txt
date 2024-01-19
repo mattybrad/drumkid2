@@ -147,3 +147,5 @@ RIGHT. That was a very frustrating day but I think I've pretty much gotten rid o
 Random(!) idea: "chaininess" (succession? roll?) - a sort of secondary/replacement "chance" value which is only used on the next (zoom-dependent) hit after a hit (so, after a rest, the code would refer to the "chance" value, but after a hit it would instead refer to this new "chaininess" value). The upshot would be more flams, rolls, that kind of thing. So, the beat would be random but once a random hit had occurred, it could be much more likely (or indeed less likely) for another hit to occur immediately after. Might be "off" at zero, otherwise you would have to manually match it to chance to recreate current behaviour.
 
 Finally reduced clicks by adding a tiny fade-out before a retrigger. In doing so, actually got rid of explicit "trigger" function, replaced with "waiting" and "delaySamples".
+
+N.B. Missing first hit after changes, should be simple fix.
