@@ -292,49 +292,34 @@ int main()
     // audio buffer loop, runs forever
     while (true)
     {
-        
-
         // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
-        // i think this is where i should sort out the scheduled hit stuff..?
-
-        // temp
-        bool anyHits = false;
+        // before populating buffer, check queue for impending hits and pass timing data to sample objects
         for (int i = 0; i < maxQueuedHits; i++)
         {
             int delaySamples;
             if(tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement * 2)
             {
+                // calculate time (in samples) before next hit on same channel
                 delaySamples = (tempHitQueue[i].time - currentTime) * sampleRate;
+                if(delaySamples < 0) delaySamples = 0;
+                
+                // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
                 if (samples[tempHitQueue[i].channel].delaySamples == 0)
                 {
-                    samples[tempHitQueue[i].channel].delaySamples = delaySamples;
+                    samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1;
                     samples[tempHitQueue[i].channel].waiting = true;
                     samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
                 }
-            }
-            if (tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement)
-            {
                 if (tempHitQueue[i].channel == -1)
                 {
                     pulseGpio(SYNC_OUT, 20000); // currently not using delay compensation, up to 3ms early..?
                 }
                 else
                 {
-                    //samples[tempHitQueue[i].channel].trigger();
                     pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms early..?
-                    /*float delaySamplesFloat = (tempHitQueue[i].time - currentTime) * sampleRate;
-                    if (delaySamplesFloat < 0)
-                    {
-                        delaySamplesFloat = 0.0;
-                        samples[tempHitQueue[i].channel].position = 0.0;
-                        pulseLed(0, 20000);
-                    }
-                    samples[tempHitQueue[i].channel].delaySamples = (uint)delaySamplesFloat;*/
-                    anyHits = true;
-                    // printf("hit %d %d\n", tempHitQueue[i].channel, tempHitQueue[i].step);
                 }
                 tempHitQueue[i].waiting = false;
             }
