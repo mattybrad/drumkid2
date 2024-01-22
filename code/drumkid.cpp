@@ -299,27 +299,30 @@ int main()
         // before populating buffer, check queue for impending hits and pass timing data to sample objects
         for (int i = 0; i < maxQueuedHits; i++)
         {
+            float delaySeconds;
             int delaySamples;
             if(tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement * 2)
             {
                 // calculate time (in samples) before next hit on same channel
-                delaySamples = (tempHitQueue[i].time - currentTime) * sampleRate;
-                if(delaySamples < 0) delaySamples = 0;
+                delaySeconds = tempHitQueue[i].time - currentTime;
+                if(delaySeconds < 0.0) delaySeconds = 0.0;
+                delaySamples = delaySeconds * sampleRate;
                 
-                // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
-                if (samples[tempHitQueue[i].channel].delaySamples == 0)
-                {
-                    samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
-                    samples[tempHitQueue[i].channel].waiting = true;
-                    samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
-                }
                 if (tempHitQueue[i].channel == -1)
                 {
-                    pulseGpio(SYNC_OUT, 20000); // currently not using delay compensation, up to 3ms early..?
+                    pulseGpio(SYNC_OUT, delaySeconds * 1000000);
                 }
                 else
                 {
-                    pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], 20000); // currently not using delay compensation, up to 3ms early..?
+                    pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
+
+                    // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
+                    if (samples[tempHitQueue[i].channel].delaySamples == 0)
+                    {
+                        samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
+                        samples[tempHitQueue[i].channel].waiting = true;
+                        samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
+                    }
                 }
                 tempHitQueue[i].waiting = false;
             }
@@ -342,10 +345,6 @@ int main()
                 }
                 out2 += samples[j].value;
             }
-
-            // floatValue1 *= 0.25; // temp?
-            // floatValue2 *= 0.25; // temp?
-            //  NB if i'm converting to int anyway in the next step, i could convert to int first and then do a quicker bit-shift operation to reduce volume? just need to be sure i'm not hitting the 16-bit max before attenuating
 
             bufferSamples[i] = out1 >> 2;
             bufferSamples[i + 1] = out2 >> 2;
@@ -374,18 +373,25 @@ uint pulseTimerNum = 0;
 const uint maxPulseTimers = 100; // todo: do this is a less stupid way
 repeating_timer_t pulseTimers[maxPulseTimers];
 
-bool onGpioPulseTimeout(repeating_timer_t *rt)
+bool onGpioPulseLowTimeout(repeating_timer_t *rt)
 {
     uint gpioNum = (uint)(rt->user_data);
     gpio_put(gpioNum, 0);
     return false;
 }
 
-void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros)
+bool onGpioPulseHighTimeout(repeating_timer_t *rt)
 {
+    uint gpioNum = (uint)(rt->user_data);
     gpio_put(gpioNum, 1);
-    add_repeating_timer_us(pulseLengthMicros, onGpioPulseTimeout, (void *)gpioNum, &pulseTimers[pulseTimerNum]);
-    pulseTimerNum = (pulseTimerNum + 1) % maxPulseTimers;
+    return false;
+}
+
+void pulseGpio(uint gpioNum, uint16_t delayMicros)
+{
+    add_repeating_timer_us(delayMicros, onGpioPulseHighTimeout, (void *)gpioNum, &pulseTimers[pulseTimerNum]);
+    add_repeating_timer_us(delayMicros+20000, onGpioPulseLowTimeout, (void *)gpioNum, &pulseTimers[pulseTimerNum+1]);
+    pulseTimerNum = (pulseTimerNum + 2) % maxPulseTimers;
 }
 
 bool onLedPulseTimeout(repeating_timer_t *rt)
