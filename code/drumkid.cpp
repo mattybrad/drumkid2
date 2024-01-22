@@ -487,12 +487,17 @@ bool mainTimerLogic(repeating_timer_t *rt)
     samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
 
     // knobs
-    chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048; // temp, not sure how to combine knob and CV
+    chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
     if (chance < 0)
         chance = 0;
     else if (chance > 4096)
         chance = 4096;
-    zoom = analogReadings[POT_ZOOM] / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
+    int zoomInt = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
+    if (zoomInt < 0)
+        zoomInt = 0;
+    else if (zoomInt > 4096)
+        zoomInt = 4096;
+    zoom = zoomInt / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
     if (velMidpoint < 0)
