@@ -309,7 +309,7 @@ int main()
                 // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
                 if (samples[tempHitQueue[i].channel].delaySamples == 0)
                 {
-                    samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1;
+                    samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
                     samples[tempHitQueue[i].channel].waiting = true;
                     samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
                 }

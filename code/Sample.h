@@ -28,14 +28,6 @@ class Sample {
                     doFade = true;
                     fadeOut = delaySamples / 250.0;
                 }
-            } else if(delaySamples == 0) {
-                // this part handles samples which are triggered "immediately"
-                if(waiting) {
-                    playing = true;
-                    waiting = false;
-                    position = 0;
-                    velocity = nextVelocity;
-                }
             }
             if(playing) {
 
