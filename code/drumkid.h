@@ -92,7 +92,7 @@ float tempo = 120.0; // BPM
 int samplesPerStep;  // slower tempos give higher values
 float sampleRate = 44100.0;
 bool beatPlaying = false;
-int beatNum = 3;
+int beatNum = 1;
 Beat beats[8];
 Sample samples[NUM_SAMPLES];
 

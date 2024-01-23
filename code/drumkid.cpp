@@ -48,10 +48,10 @@ int velMidpoint = 0;
 int newNumSteps = MAX_BEAT_STEPS;
 int numSteps = MAX_BEAT_STEPS; // 64=4/4, 48=3/4, etc
 bool shift = false;
-int tuplet = TUPLET_STRAIGHT;
+int tuplet = TUPLET_TRIPLET;
 int fullQuarterNoteDivision = MAX_BEAT_STEPS / 4;
-float quarterNoteDivision = fullQuarterNoteDivision;
 float quarterNoteDivisionRef[8] = {1, MAX_BEAT_STEPS / 4, 1, 3 * MAX_BEAT_STEPS / 16, 1, 5 * MAX_BEAT_STEPS / 32, 1, 7 * MAX_BEAT_STEPS / 32};
+float quarterNoteDivision = quarterNoteDivisionRef[tuplet];
 uint32_t tempTime = 0;
 int outputSample = 0;
 int tempMissingCount = 0;
@@ -67,7 +67,7 @@ bool sdSafeLoadTemp = false;
 
 // convert zoom and step to velocity multiplier
 // currently set up for 4/4 - for other time sigs, there should be no "2" value, and "1" should only happen once (not %-looped as happens now)
-uint8_t maxZoom = 9;
+uint8_t maxZoom = 8;
 float zoomDivisor = 4096 / maxZoom;
 uint8_t stepVal[MAX_BEAT_STEPS * 2] = {};
 float getZoomMultiplier(int thisStep)
@@ -130,7 +130,7 @@ void scheduleHits()
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].hits[i][step % MAX_BEAT_STEPS])
+        if (beats[beatNum].getHit(i, step, tuplet))
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
@@ -262,7 +262,7 @@ int main()
                 }
                 else
                 {
-                    //pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
+                    pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
 
                     // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
                     if (samples[tempHitQueue[i].channel].delaySamples == 0)
@@ -395,31 +395,14 @@ void initGpio()
 
 void initBeats()
 {
-    // temporarily defining preset beats here
-    beats[0].addHit(0, 0);
-    beats[0].addHit(0, MAX_BEAT_STEPS/2);
-    beats[0].addHit(1, MAX_BEAT_STEPS/4);
-    beats[0].addHit(1, 3*MAX_BEAT_STEPS/4);
-    beats[0].addHit(1, 7*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 0);
-    beats[0].addHit(2, 1*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 2*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 3*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 4*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 5*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 6*MAX_BEAT_STEPS/8);
-    beats[0].addHit(2, 7*MAX_BEAT_STEPS/8);
+    // new, simpler beat definition (but also prob temp?)
+    beats[0].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
+    beats[0].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
+    beats[0].beatData[2] = 0b0000000100000001000000010000000100000001000000010000000100000001;
 
-    beats[1].addHit(0, 0);
-    beats[1].addHit(0, MAX_BEAT_STEPS/2);
-    beats[1].addHit(1, MAX_BEAT_STEPS/4);
-    beats[1].addHit(1, 3*MAX_BEAT_STEPS/4);
-    beats[1].addHit(1, 7*MAX_BEAT_STEPS/8);
-
-    beats[2].addHit(0, 0);
-    beats[2].addHit(0, MAX_BEAT_STEPS/4);
-    beats[2].addHit(0, MAX_BEAT_STEPS/2);
-    beats[2].addHit(0, 3*MAX_BEAT_STEPS/4);
+    beats[1].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
+    beats[1].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
+    beats[1].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
 }
 
 bool mainTimerLogic(repeating_timer_t *rt)
