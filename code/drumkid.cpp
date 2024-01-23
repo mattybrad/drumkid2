@@ -54,6 +54,7 @@ float quarterNoteDivision = fullQuarterNoteDivision;
 float quarterNoteDivisionRef[8] = {1, MAX_BEAT_STEPS / 4, 1, 3 * MAX_BEAT_STEPS / 16, 1, 5 * MAX_BEAT_STEPS / 32, 1, 7 * MAX_BEAT_STEPS / 32};
 uint32_t tempTime = 0;
 int outputSample = 0;
+int tempMissingCount = 0;
 
 // tempo/sync stuff
 bool syncInMode = false;
@@ -68,72 +69,7 @@ bool sdSafeLoadTemp = false;
 // currently set up for 4/4 - for other time sigs, there should be no "2" value, and "1" should only happen once (not %-looped as happens now)
 uint8_t maxZoom = 9;
 float zoomDivisor = 4096 / maxZoom;
-uint8_t stepVal[MAX_BEAT_STEPS * 2] = {
-    1,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    4,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    3,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    4,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    2,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    4,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    3,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-    4,
-    7,
-    6,
-    7,
-    5,
-    7,
-    6,
-    7,
-};
+uint8_t stepVal[MAX_BEAT_STEPS * 2] = {};
 float getZoomMultiplier(int thisStep)
 {
     uint8_t thisStepVal = stepVal[thisStep];
@@ -153,7 +89,7 @@ float getZoomMultiplier(int thisStep)
 uint32_t step = 0;                // measured in 64th-notes, i.e. 16 steps per quarter note
 float nextHitTime = 0;            // s
 float currentTime = 0;            // s
-float scheduleAheadTime = 0.01;    // s
+float scheduleAheadTime = 0.02;    // s
 uint16_t schedulerInterval = 5; // ms
 uint16_t mainTimerInterval = 100; // us
 struct hit
@@ -184,11 +120,12 @@ void scheduleHits()
     // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
     float adjustedHitTime = nextHitTime;
     bool isSlide = true;
-    if(step % fullQuarterNoteDivision == fullQuarterNoteDivision / 2) {
+    // this next bit is causing issues! messing up nice smooth high-freq wave at high zoom values
+    /*if(step % fullQuarterNoteDivision == fullQuarterNoteDivision / 2) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
     } else if(step % (fullQuarterNoteDivision / 2) == fullQuarterNoteDivision / 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
-    }
+    }*/
     if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
 
     for (int i = 0; i < NUM_SAMPLES; i++)
@@ -211,7 +148,7 @@ void scheduleHits()
         else
         {
             // temp? early reimplementation of aleatoric stuff - currently only additive, doesn't remove hits
-            int randNum = rand() % 4080; // a bit less than 4096 in case of imperfect pots that can't quite reach max
+            int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
             if (chance > randNum)
             {
                 float zoomMult = getZoomMultiplier(step);
@@ -295,6 +232,7 @@ int main()
     add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
 
     // temp
+    beatPlaying = true;
     float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate;
     float prevTime = 0;
 
@@ -324,7 +262,7 @@ int main()
                 }
                 else
                 {
-                    pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
+                    //pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
 
                     // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
                     if (samples[tempHitQueue[i].channel].delaySamples == 0)
@@ -332,6 +270,9 @@ int main()
                         samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
                         samples[tempHitQueue[i].channel].waiting = true;
                         samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
+                    } else {
+                        tempMissingCount ++;
+                        printf("missing %d\n", tempMissingCount);
                     }
                 }
                 tempHitQueue[i].waiting = false;

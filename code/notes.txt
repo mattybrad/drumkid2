@@ -161,3 +161,5 @@ Aha! Replaced the bad timers with good timers. Got rid of messy tempo storage st
 Some clicks occasionally sneaking in.
 
 Trying to add at least one extra level of zoom and in doing so, removing all hardcoded 16/64/whatever stuff, so that in future I can just change "maxZoom" and everything else will figure itself out. Getting a few clicks, maybe because the fade-out is now too long and doesn't get a chance to kick in before the next hit..? Not sure.
+
+Okay, pretty sure I'm now hitting the issue where the code can't schedule multiple hits in one buffer window. Shortening the buffer almost fixes it? To be investigated. Aaaah okay it was the swing knob messing things up, it's never really set to zero so is constantly adding little perturbations which sound like buffer glitches. Need dead zones at top and bottom of all knobs (and/or probably a better CV input, not sure what's causing the wiggles, pot noise or CV noise when not plugged in).
