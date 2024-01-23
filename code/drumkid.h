@@ -158,5 +158,6 @@ float getFloatFromBuffer(const uint8_t *buffer, uint position);
 void updateSyncIn();
 void doStep();
 void print_buf(const uint8_t *buf, size_t len);
+void initZoom();
 
 #endif

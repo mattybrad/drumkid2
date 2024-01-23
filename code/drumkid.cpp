@@ -45,12 +45,13 @@ int chain = 0;
 float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
-int newNumSteps = 64;
-int numSteps = 64; // 64=4/4, 48=3/4, etc
+int newNumSteps = MAX_BEAT_STEPS;
+int numSteps = MAX_BEAT_STEPS; // 64=4/4, 48=3/4, etc
 bool shift = false;
 int tuplet = TUPLET_STRAIGHT;
-float quarterNoteDivision = 16.0;
-float quarterNoteDivisionRef[8] = {16, 16, 12, 12, 10, 10, 14, 14};
+int fullQuarterNoteDivision = MAX_BEAT_STEPS / 4;
+float quarterNoteDivision = fullQuarterNoteDivision;
+float quarterNoteDivisionRef[8] = {1, MAX_BEAT_STEPS / 4, 1, 3 * MAX_BEAT_STEPS / 16, 1, 5 * MAX_BEAT_STEPS / 32, 1, 7 * MAX_BEAT_STEPS / 32};
 uint32_t tempTime = 0;
 int outputSample = 0;
 
@@ -65,7 +66,9 @@ bool sdSafeLoadTemp = false;
 
 // convert zoom and step to velocity multiplier
 // currently set up for 4/4 - for other time sigs, there should be no "2" value, and "1" should only happen once (not %-looped as happens now)
-int stepVal[MAX_BEAT_STEPS] = {
+uint8_t maxZoom = 9;
+float zoomDivisor = 4096 / maxZoom;
+uint8_t stepVal[MAX_BEAT_STEPS * 2] = {
     1,
     7,
     6,
@@ -133,7 +136,11 @@ int stepVal[MAX_BEAT_STEPS] = {
 };
 float getZoomMultiplier(int thisStep)
 {
-    float vel = 1.0 + zoom - (float)stepVal[thisStep % 64];
+    uint8_t thisStepVal = stepVal[thisStep];
+    if(numSteps != MAX_BEAT_STEPS) {
+        if(thisStep > 0 && thisStepVal <= 2) thisStepVal = 3;
+    }
+    float vel = 1.0 + zoom - (float)thisStepVal;
     if (vel < 0.0)
         vel = 0.0;
     else if (vel > 1.0)
@@ -163,7 +170,7 @@ uint16_t hitQueueIndex = 0;
 void scheduleHits()
 {
     // schedule sync out pulses using hit queue, special channel = -1
-    if (step % 16 == 0)
+    if (step % fullQuarterNoteDivision == 0)
     {
         tempHitQueue[hitQueueIndex].channel = -1;
         tempHitQueue[hitQueueIndex].waiting = true;
@@ -177,16 +184,16 @@ void scheduleHits()
     // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
     float adjustedHitTime = nextHitTime;
     bool isSlide = true;
-    if(step % 16 == 8) {
+    if(step % fullQuarterNoteDivision == fullQuarterNoteDivision / 2) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
-    } else if(step % 8 == 4) {
+    } else if(step % (fullQuarterNoteDivision / 2) == fullQuarterNoteDivision / 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
     }
     if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].hits[i][step % 64])
+        if (beats[beatNum].hits[i][step % MAX_BEAT_STEPS])
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
@@ -243,8 +250,8 @@ void nextHit()
     // nextHitTime += (60.0 / tempo) / 16.0; // for 16 steps per quarter note
     nextHitTime += (60.0 / tempo) / quarterNoteDivision;
     step++;
-    if (step % 16 >= (int)quarterNoteDivision)
-        step += 16 - (step % 16);
+    if (step % fullQuarterNoteDivision >= (int)quarterNoteDivision)
+        step += fullQuarterNoteDivision - (step % fullQuarterNoteDivision);
     if (step == numSteps)
     {
         numSteps = newNumSteps;
@@ -269,7 +276,8 @@ int main()
 {
     stdio_init_all();
     time_init();
-    alarm_pool_init_default();
+    alarm_pool_init_default(); // not sure if needed
+    initZoom();
 
     printf("Drumkid V2\n");
 
@@ -278,7 +286,7 @@ int main()
     initSamplesFromFlash();
     initBeats();
 
-    tempo = 320;
+    tempo = 120;
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -448,29 +456,29 @@ void initBeats()
 {
     // temporarily defining preset beats here
     beats[0].addHit(0, 0);
-    beats[0].addHit(0, 32);
-    beats[0].addHit(1, 16);
-    beats[0].addHit(1, 48);
-    beats[0].addHit(1, 56);
+    beats[0].addHit(0, MAX_BEAT_STEPS/2);
+    beats[0].addHit(1, MAX_BEAT_STEPS/4);
+    beats[0].addHit(1, 3*MAX_BEAT_STEPS/4);
+    beats[0].addHit(1, 7*MAX_BEAT_STEPS/8);
     beats[0].addHit(2, 0);
-    beats[0].addHit(2, 8);
-    beats[0].addHit(2, 16);
-    beats[0].addHit(2, 24);
-    beats[0].addHit(2, 32);
-    beats[0].addHit(2, 40);
-    beats[0].addHit(2, 48);
-    beats[0].addHit(2, 56);
+    beats[0].addHit(2, 1*MAX_BEAT_STEPS/8);
+    beats[0].addHit(2, 2*MAX_BEAT_STEPS/8);
+    beats[0].addHit(2, 3*MAX_BEAT_STEPS/8);
+    beats[0].addHit(2, 4*MAX_BEAT_STEPS/8);
+    beats[0].addHit(2, 5*MAX_BEAT_STEPS/8);
+    beats[0].addHit(2, 6*MAX_BEAT_STEPS/8);
+    beats[0].addHit(2, 7*MAX_BEAT_STEPS/8);
 
     beats[1].addHit(0, 0);
-    beats[1].addHit(0, 32);
-    beats[1].addHit(1, 16);
-    beats[1].addHit(1, 48);
-    beats[1].addHit(1, 56);
+    beats[1].addHit(0, MAX_BEAT_STEPS/2);
+    beats[1].addHit(1, MAX_BEAT_STEPS/4);
+    beats[1].addHit(1, 3*MAX_BEAT_STEPS/4);
+    beats[1].addHit(1, 7*MAX_BEAT_STEPS/8);
 
     beats[2].addHit(0, 0);
-    beats[2].addHit(0, 16);
-    beats[2].addHit(0, 32);
-    beats[2].addHit(0, 48);
+    beats[2].addHit(0, MAX_BEAT_STEPS/4);
+    beats[2].addHit(0, MAX_BEAT_STEPS/2);
+    beats[2].addHit(0, 3*MAX_BEAT_STEPS/4);
 }
 
 bool mainTimerLogic(repeating_timer_t *rt)
@@ -497,7 +505,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
         zoomInt = 0;
     else if (zoomInt > 4096)
         zoomInt = 4096;
-    zoom = zoomInt / 585.15; // gives range of 0.0 to 7.0 for complicated reasons
+    zoom = zoomInt / zoomDivisor; // gives range of 0.0 to 7.0 for complicated reasons. to do, define this in relation to maxZoom
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
     if (velMidpoint < 0)
@@ -672,11 +680,11 @@ void handleIncDec(bool isInc)
         break;
 
     case BUTTON_TIME_SIGNATURE:
-        newNumSteps += isInc ? 16 : -16;
-        if (newNumSteps > 112)
-            newNumSteps = 112;
-        else if (newNumSteps < 16)
-            newNumSteps = 16;
+        newNumSteps += isInc ? fullQuarterNoteDivision : -fullQuarterNoteDivision;
+        if (newNumSteps > 7 * fullQuarterNoteDivision)
+            newNumSteps = 7 * fullQuarterNoteDivision;
+        else if (newNumSteps < fullQuarterNoteDivision)
+            newNumSteps = fullQuarterNoteDivision;
         if (!beatPlaying)
             numSteps = newNumSteps;
         displayTimeSignature();
@@ -727,7 +735,7 @@ void displayTempo()
 
 void displayTimeSignature()
 {
-    int tempTimeSig = 4 + 10 * newNumSteps / 16;
+    int tempTimeSig = 4 + 10 * newNumSteps / fullQuarterNoteDivision;
     if (newNumSteps != numSteps)
         tempTimeSig += 8000; // temp, shows that the new signature is not yet active
     updateLedDisplay(tempTimeSig);
@@ -954,8 +962,8 @@ void initSamplesFromFlash()
         }
 
         // temp
-        samples[n].output1 = n%2 == 1;
-        samples[n].output2 = n%2 == 0;
+        samples[n].output1 = true;
+        samples[n].output2 = n == 2;
     }
 }
 
@@ -1146,5 +1154,17 @@ void updateSyncIn()
     else
     {
         microsSinceSyncInChange += 100;
+    }
+}
+
+void initZoom() {
+    for(int i=0; i<MAX_BEAT_STEPS*2; i++) {
+        bool foundLevel = false;
+        for(int j=0; j<maxZoom && !foundLevel; j++) {
+            if((i%(MAX_BEAT_STEPS>>j))==0) {
+                foundLevel = true;
+                stepVal[i] = j+1;
+            }
+        }
     }
 }

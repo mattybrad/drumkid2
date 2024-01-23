@@ -157,3 +157,7 @@ Am playing with timing windows to try and make the CV control work "live", as in
 
 23/1/24
 Aha! Replaced the bad timers with good timers. Got rid of messy tempo storage stuff, can just store manually with patches. Starting to sound really good.
+
+Some clicks occasionally sneaking in.
+
+Trying to add at least one extra level of zoom and in doing so, removing all hardcoded 16/64/whatever stuff, so that in future I can just change "maxZoom" and everything else will figure itself out. Getting a few clicks, maybe because the fade-out is now too long and doesn't get a chance to kick in before the next hit..? Not sure.
