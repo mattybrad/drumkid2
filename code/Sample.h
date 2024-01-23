@@ -13,6 +13,8 @@ class Sample {
         int delaySamples = 0;
         uint length = MAX_SAMPLE_LENGTH;
         int16_t sampleData[MAX_SAMPLE_LENGTH];
+        bool output1 = true;
+        bool output2 = true;
         void update() {
             bool doFade = false;
             if (delaySamples > 0)

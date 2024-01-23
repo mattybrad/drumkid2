@@ -41,6 +41,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 // move to header file at some point
 int chance = 0;
+int chain = 0;
 float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
@@ -51,6 +52,7 @@ int tuplet = TUPLET_STRAIGHT;
 float quarterNoteDivision = 16.0;
 float quarterNoteDivisionRef[8] = {16, 16, 12, 12, 10, 10, 14, 14};
 uint32_t tempTime = 0;
+int outputSample = 0;
 
 // tempo/sync stuff
 bool syncInMode = false;
@@ -58,8 +60,6 @@ int syncInStep = 0;
 float syncInHistory[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
 
 int activeButton = -1;
-alarm_id_t tempAlarm = -1;
-int64_t handleTempoChange(alarm_id_t id, void *user_data);
 
 bool sdSafeLoadTemp = false;
 
@@ -146,8 +146,8 @@ float getZoomMultiplier(int thisStep)
 uint32_t step = 0;                // measured in 64th-notes, i.e. 16 steps per quarter note
 float nextHitTime = 0;            // s
 float currentTime = 0;            // s
-float scheduleAheadTime = 0.1;    // s
-uint16_t schedulerInterval = 20; // ms
+float scheduleAheadTime = 0.01;    // s
+uint16_t schedulerInterval = 5; // ms
 uint16_t mainTimerInterval = 100; // us
 struct hit
 {
@@ -269,6 +269,7 @@ int main()
 {
     stdio_init_all();
     time_init();
+    alarm_pool_init_default();
 
     printf("Drumkid V2\n");
 
@@ -277,7 +278,7 @@ int main()
     initSamplesFromFlash();
     initBeats();
 
-    tempo = getFloatFromBuffer(flashData, VAR_TEMPO);
+    tempo = 320;
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -311,6 +312,7 @@ int main()
                 if (tempHitQueue[i].channel == -1)
                 {
                     pulseGpio(SYNC_OUT, delaySeconds * 1000000);
+                    pulseLed(3, delaySeconds * 1000000);
                 }
                 else
                 {
@@ -339,11 +341,8 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 samples[j].update();
-                if (j == 0)
-                {
-                    out1 += samples[j].value;
-                }
-                out2 += samples[j].value;
+                if(samples[j].output1) out1 += samples[j].value;
+                if(samples[j].output2) out2 += samples[j].value;
             }
 
             bufferSamples[i] = out1 >> 2;
@@ -363,49 +362,50 @@ int main()
 
         for (int i = 0; i < NUM_SAMPLES; i++)
         {
-            bitWrite(singleLedData, i, samples[i].playing);
+            //bitWrite(singleLedData, i, samples[i].playing);
         }
     }
     return 0;
 }
 
-uint pulseTimerNum = 0;
-const uint maxPulseTimers = 100; // todo: do this is a less stupid way
-repeating_timer_t pulseTimers[maxPulseTimers];
-
-bool onGpioPulseLowTimeout(repeating_timer_t *rt)
+int64_t onGpioPulseLowTimeout(alarm_id_t id, void *user_data)
 {
-    uint gpioNum = (uint)(rt->user_data);
+    uint gpioNum = (uint)user_data;
     gpio_put(gpioNum, 0);
-    return false;
+    return 0;
 }
 
-bool onGpioPulseHighTimeout(repeating_timer_t *rt)
+int64_t onGpioPulseHighTimeout(alarm_id_t id, void *user_data)
 {
-    uint gpioNum = (uint)(rt->user_data);
+    uint gpioNum = (uint)user_data;
     gpio_put(gpioNum, 1);
-    return false;
+    return 0;
 }
 
 void pulseGpio(uint gpioNum, uint16_t delayMicros)
 {
-    add_repeating_timer_us(delayMicros, onGpioPulseHighTimeout, (void *)gpioNum, &pulseTimers[pulseTimerNum]);
-    add_repeating_timer_us(delayMicros+20000, onGpioPulseLowTimeout, (void *)gpioNum, &pulseTimers[pulseTimerNum+1]);
-    pulseTimerNum = (pulseTimerNum + 2) % maxPulseTimers;
+    add_alarm_in_us(delayMicros, onGpioPulseHighTimeout, (void *) gpioNum, true);
+    add_alarm_in_us(delayMicros + 20000, onGpioPulseLowTimeout, (void *) gpioNum, true);
 }
 
-bool onLedPulseTimeout(repeating_timer_t *rt)
+int64_t onLedPulseLowTimeout(alarm_id_t id, void *user_data)
 {
-    uint ledNum = (uint)(rt->user_data);
-    bitWrite(singleLedData, ledNum, 0);
-    return false;
+    uint ledNum = (uint)user_data;
+    bitWrite(singleLedData, ledNum, false);
+    return 0;
 }
 
-void pulseLed(uint ledNum, uint16_t pulseLengthMicros)
+int64_t onLedPulseHighTimeout(alarm_id_t id, void *user_data)
 {
-    bitWrite(singleLedData, ledNum, 1);
-    add_repeating_timer_us(pulseLengthMicros, onLedPulseTimeout, (void *)ledNum, &pulseTimers[pulseTimerNum]);
-    pulseTimerNum = (pulseTimerNum + 1) % maxPulseTimers;
+    uint ledNum = (uint)user_data;
+    bitWrite(singleLedData, ledNum, true);
+    return 0;
+}
+
+void pulseLed(uint gpioNum, uint16_t delayMicros)
+{
+    add_alarm_in_us(delayMicros, onLedPulseHighTimeout, (void *)gpioNum, true);
+    add_alarm_in_us(delayMicros + 50000, onLedPulseLowTimeout, (void *)gpioNum, true);
 }
 
 void initGpio()
@@ -603,15 +603,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 }
                 hitQueueIndex = 0;
 
-                // probably just temp code, bit messy, storing tempo change 2 seconds after beat has stopped
-                float storedTempo = getFloatFromBuffer(flashData, VAR_TEMPO);
-                if (storedTempo != tempo && !syncInMode)
-                {
-                    if (tempAlarm > 0)
-                        cancel_alarm(tempAlarm);
-                    tempAlarm = add_alarm_in_ms(2000, handleTempoChange, NULL, false);
-                }
-
                 numSteps = newNumSteps;
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
@@ -623,6 +614,12 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_DEC:
             handleIncDec(false);
             break;
+        case BUTTON_CONFIRM:
+            handleYesNo(true);
+            break;
+        case BUTTON_CANCEL:
+            handleYesNo(false);
+            break;
         case BUTTON_SD_TEMP:
             sdSafeLoadTemp = true;
             break;
@@ -633,6 +630,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_TIME_SIGNATURE:
             activeButton = BUTTON_TIME_SIGNATURE;
             displayTimeSignature();
+            break;
+        case BUTTON_OUTPUT:
+            activeButton = BUTTON_OUTPUT;
             break;
         case BUTTON_TUPLET:
             activeButton = BUTTON_TUPLET;
@@ -655,19 +655,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         }
     }
-}
-
-int64_t handleTempoChange(alarm_id_t id, void *user_data)
-{
-    tempAlarm = -1;
-    uint8_t buffer[FLASH_PAGE_SIZE];
-    for (int i = 0; i < FLASH_PAGE_SIZE; i++)
-    {
-        buffer[i] = flashData[i];
-    }
-    std::memcpy(buffer + VAR_TEMPO, &tempo, 4); // copy check number
-    writePageToFlash(buffer, FLASH_DATA_ADDRESS);
-    return 0;
 }
 
 void handleIncDec(bool isInc)
@@ -713,6 +700,23 @@ void handleIncDec(bool isInc)
         quarterNoteDivision = quarterNoteDivisionRef[tuplet]; // ugly, temp
         displayTuplet();
         break;
+
+    case BUTTON_OUTPUT:
+        outputSample += isInc ? 1 : -1;
+        if(outputSample < 0) outputSample = 0;
+        else if(outputSample > NUM_SAMPLES-1) outputSample = NUM_SAMPLES-1;
+        updateLedDisplay(outputSample);
+        break;
+
+    }
+}
+
+void handleYesNo(bool isYes) {
+    switch(activeButton)
+    {
+        case BUTTON_OUTPUT:
+            samples[outputSample].output1 = isYes;
+            break;
     }
 }
 
@@ -948,6 +952,10 @@ void initSamplesFromFlash()
             int16_t thisSample = flashAudio[i * 2 + 1 + sampleStart] << 8 | flashAudio[i * 2 + sampleStart];
             samples[n].sampleData[i] = thisSample;
         }
+
+        // temp
+        samples[n].output1 = n%2 == 1;
+        samples[n].output2 = n%2 == 0;
     }
 }
 

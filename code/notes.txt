@@ -117,8 +117,8 @@ Bit intimidating to come back! But making improvements. For the first time it re
 OKAY. Got a couple of days to work on this. Let's make a to-do list. Let's crack through some things.
 - Leave sync in/out for the moment, it's complicated and will likely change during beta testing, let's just get all the buttons working
 - Buttons/functions:
-    - Shift
-    - Time signature
+    - Shift DONE
+    - Time signature DONE
     - Save patch
     - Load patch
     - Choose slot
@@ -149,3 +149,11 @@ Random(!) idea: "chaininess" (succession? roll?) - a sort of secondary/replaceme
 Finally reduced clicks by adding a tiny fade-out before a retrigger. In doing so, actually got rid of explicit "trigger" function, replaced with "waiting" and "delaySamples".
 
 N.B. Missing first hit after changes, should be simple fix.
+
+22/1/24
+Still occasionally getting a crash from assert(rt->alarm_id == id), almost certainly because I'm trying to create hundreds of GPIO pulse timers in a stupid way. Don't do this. Whatever happens, failure modes should be "the sound goes a bit glitchy", not "the unit crashes".
+
+Am playing with timing windows to try and make the CV control work "live", as in being able to feed in an envelope signal to the mid CV and trigger a rhythmic cascade of drums.
+
+23/1/24
+Aha! Replaced the bad timers with good timers. Got rid of messy tempo storage stuff, can just store manually with patches. Starting to sound really good.

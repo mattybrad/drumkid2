@@ -9,7 +9,7 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-#define SAMPLES_PER_BUFFER 512 // 256 works well
+#define SAMPLES_PER_BUFFER 256 // 256 works well
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
@@ -46,8 +46,9 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_START_STOP 15
 
 // shifted button numbers..?
-#define BUTTON_TIME_SIGNATURE 25
 #define BUTTON_SD_TEMP 22
+#define BUTTON_TIME_SIGNATURE 25
+#define BUTTON_OUTPUT 26
 
 // pot numbers
 #define POT_CHANCE 0
@@ -58,7 +59,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define POT_SLOP 5
 #define POT_DROP 6
 #define POT_PITCH 7
-#define POT_CRUSH 8
+#define POT_CHAIN 8
 #define POT_CROP 9
 #define POT_TBC 10
 #define POT_VOLUME 11
@@ -137,6 +138,7 @@ struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
 void handleIncDec(bool isInc);
+void handleYesNo(bool isYes);
 void displayTempo();
 void displayBeat();
 void displayTimeSignature();
