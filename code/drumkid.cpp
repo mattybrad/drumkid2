@@ -45,12 +45,12 @@ int chain = 0;
 float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
-int newNumSteps = MAX_BEAT_STEPS;
-int numSteps = MAX_BEAT_STEPS; // 64=4/4, 48=3/4, etc
+int timeSignature = 4;
+int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
+int numSteps = timeSignature * QUARTER_NOTE_STEPS;
 bool shift = false;
 int tuplet = TUPLET_TRIPLET;
-int fullQuarterNoteDivision = MAX_BEAT_STEPS / 4;
-float quarterNoteDivisionRef[8] = {1, MAX_BEAT_STEPS / 4, 1, 3 * MAX_BEAT_STEPS / 16, 1, 5 * MAX_BEAT_STEPS / 32, 1, 7 * MAX_BEAT_STEPS / 32};
+float quarterNoteDivisionRef[NUM_TUPLET_MODES] = {QUARTER_NOTE_STEPS, 3*QUARTER_NOTE_STEPS/4, 5*QUARTER_NOTE_STEPS/8, 7*QUARTER_NOTE_STEPS/8}; // to do: calculate this automatically
 float quarterNoteDivision = quarterNoteDivisionRef[tuplet];
 uint32_t tempTime = 0;
 int outputSample = 0;
@@ -66,14 +66,14 @@ int activeButton = -1;
 bool sdSafeLoadTemp = false;
 
 // convert zoom and step to velocity multiplier
-// currently set up for 4/4 - for other time sigs, there should be no "2" value, and "1" should only happen once (not %-looped as happens now)
-uint8_t maxZoom = 8;
+uint8_t maxZoom = log(4*QUARTER_NOTE_STEPS)/log(2) + 1;
 float zoomDivisor = 4096 / maxZoom;
-uint8_t stepVal[MAX_BEAT_STEPS * 2] = {};
+uint8_t stepVal[QUARTER_NOTE_STEPS * 4] = {};
 float getZoomMultiplier(int thisStep)
 {
-    uint8_t thisStepVal = stepVal[thisStep];
-    if(numSteps != MAX_BEAT_STEPS) {
+    uint8_t thisStepVal = stepVal[thisStep%(4*QUARTER_NOTE_STEPS)];
+    if(numSteps != 4 * QUARTER_NOTE_STEPS) {
+        // bit complicated, this, but basically only the 4/4 time signature needs the "2" value (it sounds weird in other time signatures), and we also need to prevent an additional "1" value for 5/4 or 6/4, because it naturally occurs after 4 beats but again sounds wrong (sorry, bad explanation)
         if(thisStep > 0 && thisStepVal <= 2) thisStepVal = 3;
     }
     float vel = 1.0 + zoom - (float)thisStepVal;
@@ -86,7 +86,7 @@ float getZoomMultiplier(int thisStep)
 }
 
 // temp figuring out proper hit generation
-uint32_t step = 0;                // measured in 64th-notes, i.e. 16 steps per quarter note
+uint32_t step = 0; 
 float nextHitTime = 0;            // s
 float currentTime = 0;            // s
 float scheduleAheadTime = 0.02;    // s
@@ -106,7 +106,7 @@ uint16_t hitQueueIndex = 0;
 void scheduleHits()
 {
     // schedule sync out pulses using hit queue, special channel = -1
-    if (step % fullQuarterNoteDivision == 0)
+    if (step % QUARTER_NOTE_STEPS == 0)
     {
         tempHitQueue[hitQueueIndex].channel = -1;
         tempHitQueue[hitQueueIndex].waiting = true;
@@ -121,9 +121,9 @@ void scheduleHits()
     float adjustedHitTime = nextHitTime;
     bool isSlide = true;
     // this next bit is causing issues! messing up nice smooth high-freq wave at high zoom values
-    /*if(step % fullQuarterNoteDivision == fullQuarterNoteDivision / 2) {
+    /*if(step % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS / 2) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
-    } else if(step % (fullQuarterNoteDivision / 2) == fullQuarterNoteDivision / 4) {
+    } else if(step % (QUARTER_NOTE_STEPS / 2) == QUARTER_NOTE_STEPS / 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
     }*/
     if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
@@ -184,11 +184,12 @@ void scheduleHits()
 }*/
 void nextHit()
 {
-    // nextHitTime += (60.0 / tempo) / 16.0; // for 16 steps per quarter note
+    // bit messy right now, hard to account for all the tuplet stuff
+
     nextHitTime += (60.0 / tempo) / quarterNoteDivision;
     step++;
-    if (step % fullQuarterNoteDivision >= (int)quarterNoteDivision)
-        step += fullQuarterNoteDivision - (step % fullQuarterNoteDivision);
+    if (step % QUARTER_NOTE_STEPS >= (int)quarterNoteDivision)
+        step += QUARTER_NOTE_STEPS - (step % QUARTER_NOTE_STEPS);
     if (step == numSteps)
     {
         numSteps = newNumSteps;
@@ -217,6 +218,7 @@ int main()
     initZoom();
 
     printf("Drumkid V2\n");
+    printf("zoom %d\n", maxZoom);
 
     checkFlashData();
     initGpio();
@@ -604,11 +606,11 @@ void handleIncDec(bool isInc)
         break;
 
     case BUTTON_TIME_SIGNATURE:
-        newNumSteps += isInc ? fullQuarterNoteDivision : -fullQuarterNoteDivision;
-        if (newNumSteps > 7 * fullQuarterNoteDivision)
-            newNumSteps = 7 * fullQuarterNoteDivision;
-        else if (newNumSteps < fullQuarterNoteDivision)
-            newNumSteps = fullQuarterNoteDivision;
+        newNumSteps += isInc ? QUARTER_NOTE_STEPS : -QUARTER_NOTE_STEPS;
+        if (newNumSteps > 7 * QUARTER_NOTE_STEPS)
+            newNumSteps = 7 * QUARTER_NOTE_STEPS;
+        else if (newNumSteps < QUARTER_NOTE_STEPS)
+            newNumSteps = QUARTER_NOTE_STEPS;
         if (!beatPlaying)
             numSteps = newNumSteps;
         displayTimeSignature();
@@ -624,12 +626,12 @@ void handleIncDec(bool isInc)
         break;
 
     case BUTTON_TUPLET:
-        tuplet += isInc ? 2 : -2;
-        if (tuplet < 1)
-            tuplet = 1;
-        else if (tuplet > 7)
-            tuplet = 7;
-        quarterNoteDivision = quarterNoteDivisionRef[tuplet]; // ugly, temp
+        tuplet += isInc ? 1 : -1;
+        if (tuplet < 0)
+            tuplet = 0;
+        else if (tuplet >= NUM_TUPLET_MODES)
+            tuplet = NUM_TUPLET_MODES - 1;
+        quarterNoteDivision = quarterNoteDivisionRef[tuplet];
         displayTuplet();
         break;
 
@@ -659,7 +661,7 @@ void displayTempo()
 
 void displayTimeSignature()
 {
-    int tempTimeSig = 4 + 10 * newNumSteps / fullQuarterNoteDivision;
+    int tempTimeSig = 4 + 10 * newNumSteps / QUARTER_NOTE_STEPS;
     if (newNumSteps != numSteps)
         tempTimeSig += 8000; // temp, shows that the new signature is not yet active
     updateLedDisplay(tempTimeSig);
@@ -667,7 +669,7 @@ void displayTimeSignature()
 
 void displayTuplet()
 {
-    updateLedDisplay(tuplet);
+    updateLedDisplay(tuplet*2+1);
 }
 
 void displayBeat()
@@ -1082,13 +1084,14 @@ void updateSyncIn()
 }
 
 void initZoom() {
-    for(int i=0; i<MAX_BEAT_STEPS*2; i++) {
+    for(int i=0; i<QUARTER_NOTE_STEPS*4; i++) {
         bool foundLevel = false;
         for(int j=0; j<maxZoom && !foundLevel; j++) {
-            if((i%(MAX_BEAT_STEPS>>j))==0) {
+            if((i%((QUARTER_NOTE_STEPS*4)>>j))==0) {
                 foundLevel = true;
                 stepVal[i] = j+1;
             }
         }
+        printf("%d ", stepVal[i]);
     }
 }

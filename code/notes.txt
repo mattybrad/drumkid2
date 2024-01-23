@@ -163,3 +163,17 @@ Some clicks occasionally sneaking in.
 Trying to add at least one extra level of zoom and in doing so, removing all hardcoded 16/64/whatever stuff, so that in future I can just change "maxZoom" and everything else will figure itself out. Getting a few clicks, maybe because the fade-out is now too long and doesn't get a chance to kick in before the next hit..? Not sure.
 
 Okay, pretty sure I'm now hitting the issue where the code can't schedule multiple hits in one buffer window. Shortening the buffer almost fixes it? To be investigated. Aaaah okay it was the swing knob messing things up, it's never really set to zero so is constantly adding little perturbations which sound like buffer glitches. Need dead zones at top and bottom of all knobs (and/or probably a better CV input, not sure what's causing the wiggles, pot noise or CV noise when not plugged in).
+
+----
+
+While it's clear(ish) in my head, some notes about properly defining the timing/step/tuplet system. Ideally, all variables should be defined in relation to a small number of basic constants. I think all I need to define are:
+QUARTER_NOTE_STEPS (32?) - the number of steps into which a quarter note is divided for the aleatoric functions (no need to sequence down to this level)
+QUARTER_NOTE_SEQUENCE_STEPS_MAX (8) - max number of steps per quarter note than can be sequenced (can be less for tuplet modes)
+TUPLET_MAP - coded by hand for musicality, could maybe be automated but perhaps better to just compile-time assert above values as 32 and 8. Or just don't be so precious and automate it.
+
+The rest can then probably be calculated..?
+
+QUARTER_NOTE_STEPS_TUPLET (8,6,5,7) - maybe could actually be calculated rather than defined
+MAX_ZOOM can then be defined as 2^(QUARTER_NOTE_STEPS*4-1).
+
+Okay, that worked pretty well. Zoom still doesn't work properly for tuplet modes, probably needs a tuplet map like the beat class.

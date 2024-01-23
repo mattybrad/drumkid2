@@ -71,10 +71,11 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define CV_TBC 14
 
 // tuplet modes
-#define TUPLET_STRAIGHT 1
-#define TUPLET_TRIPLET 3
-#define TUPLET_QUINTUPLET 5
-#define TUPLET_SEPTUPLET 7
+#define TUPLET_STRAIGHT 0
+#define TUPLET_TRIPLET 1
+#define TUPLET_QUINTUPLET 2
+#define TUPLET_SEPTUPLET 3
+#define NUM_TUPLET_MODES 4
 
 // flash data storage
 #define FLASH_DATA_ADDRESS (1024 * 1024)
