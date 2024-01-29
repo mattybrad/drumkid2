@@ -177,3 +177,9 @@ QUARTER_NOTE_STEPS_TUPLET (8,6,5,7) - maybe could actually be calculated rather 
 MAX_ZOOM can then be defined as 2^(QUARTER_NOTE_STEPS*4-1).
 
 Okay, that worked pretty well. Zoom still doesn't work properly for tuplet modes, probably needs a tuplet map like the beat class.
+
+29/1/24
+Just listening to The new Smile album. Need to try some rides, crashes, chinas, longer samples, test the limits and just try something different. Just tried loading samples and it crashed. Oh, and exciting new problem, if the sample loading doesn't work but does put (bad) data into flash, you also can't reboot the unit. Workaround is to add line of code to reload (good) samples from SD before loading from flash. So how should SD loading work safely? Maybe...
+- Give choice of folder to load
+- Read sample metadata (and/or data itself) to check data size
+- If total size too big, show error on screen, don't load data

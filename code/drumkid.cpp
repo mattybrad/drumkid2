@@ -222,6 +222,7 @@ int main()
 
     checkFlashData();
     initGpio();
+    //loadSamplesFromSD(); // temp!
     initSamplesFromFlash();
     initBeats();
 
@@ -229,7 +230,6 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    updateLedDisplay(1234);
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
     add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
 
@@ -500,6 +500,15 @@ void updateLedDisplay(int num)
     }
 }
 
+void updateLedDisplayAlpha(int num1, int num2, int num3, int num4)
+{
+    sevenSegData[3] = sevenSegAlphaCharacters[num1];
+    sevenSegData[2] = sevenSegAlphaCharacters[num2];
+    sevenSegData[1] = sevenSegAlphaCharacters[num3];
+    sevenSegData[0] = sevenSegAlphaCharacters[num4];
+}
+
+int tempAlphaNum = 0;
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if (shift && buttonNum != BUTTON_SHIFT)
@@ -541,6 +550,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
             }
+            break;
+        case BUTTON_TAP_TEMPO:
+            // temp, testing alpha display
+            updateLedDisplayAlpha(tempAlphaNum % 26, (tempAlphaNum + 1) % 26, (tempAlphaNum + 2) % 26, (tempAlphaNum + 3) % 26);
+            tempAlphaNum += 4;
             break;
         case BUTTON_INC:
             handleIncDec(true);
@@ -767,7 +781,7 @@ void updateAnalog()
 void loadSamplesFromSD()
 {
     int pageNum = 0;
-    const char *filenames[NUM_SAMPLES] = {"samples/kick.wav", "samples/snare.wav", "samples/closedhat.wav", "samples/tom.wav"};
+    const char *filenames[NUM_SAMPLES] = {"samples/kick.wav", "samples/snare.wav", "samples/closedhat.wav", "samples/snare.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
 
@@ -808,7 +822,6 @@ void loadSamplesFromSD()
             fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
             printf("descriptor=%s, ", descriptorBuffer);
             fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
-            // uint32_t chunkSize = sizeBuffer[0] | sizeBuffer[1] << 8 | sizeBuffer[2] << 16 | sizeBuffer[3] << 24;
             uint32_t chunkSize = (uint32_t)getIntFromBuffer(sizeBuffer, 0);
             printf("size=%d bytes\n", chunkSize);
             uint brTotal = 0;

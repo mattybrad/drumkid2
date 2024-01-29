@@ -93,8 +93,8 @@ float tempo = 120.0; // BPM
 int samplesPerStep;  // slower tempos give higher values
 float sampleRate = 44100.0;
 bool beatPlaying = false;
-int beatNum = 1;
-Beat beats[8];
+int beatNum = 0;
+Beat beats[8]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
@@ -112,6 +112,33 @@ uint8_t sevenSegCharacters[10] = {
     0b11100000,
     0b11111110,
     0b11110110};
+uint8_t sevenSegAlphaCharacters[26] = {
+    0b11101110,
+    0b00111110,
+    0b10011100,
+    0b01111010,
+    0b10011110,
+    0b10001110,
+    0b11110110,
+    0b01101110,
+    0b01100000,
+    0b01111000,
+    0b01101110,
+    0b00011100,
+    0b11101100,
+    0b00101010,
+    0b00111010,
+    0b11001110,
+    0b11100110,
+    0b00001010,
+    0b10110110,
+    0b00011110,
+    0b01111100,
+    0b00111000,
+    0b01111100,
+    0b01101110,
+    0b01110110,
+    0b11011010};
 
 // timers and alarms
 repeating_timer_t mainTimer;
@@ -138,6 +165,7 @@ bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
+void updateLedDisplayAlpha(int num1, int num2, int num3, int num4);
 void handleIncDec(bool isInc);
 void handleYesNo(bool isYes);
 void displayTempo();
