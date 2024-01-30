@@ -56,6 +56,10 @@ uint32_t tempTime = 0;
 int outputSample = 0;
 int tempMissingCount = 0;
 
+// SD card stuff
+int sampleFolderNum = 0;
+char sampleFolderName[255];
+
 // tempo/sync stuff
 bool syncInMode = false;
 int syncInStep = 0;
@@ -64,6 +68,7 @@ float syncInHistory[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
 int activeButton = -1;
 
 bool sdSafeLoadTemp = false;
+bool sdShowFolderTemp = false;
 
 // convert zoom and step to velocity multiplier
 uint8_t maxZoom = log(4*QUARTER_NOTE_STEPS)/log(2) + 1;
@@ -226,6 +231,9 @@ int main()
     initSamplesFromFlash();
     initBeats();
 
+    char startString[4] = "abc";
+    updateLedDisplayAlpha(startString);
+
     tempo = 120;
 
     struct audio_buffer_pool *ap = init_audio();
@@ -234,7 +242,7 @@ int main()
     add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
 
     // temp
-    beatPlaying = true;
+    //beatPlaying = true;
     float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate;
     float prevTime = 0;
 
@@ -309,6 +317,11 @@ int main()
         {
             sdSafeLoadTemp = false;
             loadSamplesFromSD();
+        }
+
+        if(sdShowFolderTemp) {
+            sdShowFolderTemp = false;
+            getNthSampleFolder(sampleFolderNum);
         }
 
         for (int i = 0; i < NUM_SAMPLES; i++)
@@ -496,19 +509,33 @@ void updateLedDisplay(int num)
 {
     for (int i = 0; i < 4; i++)
     {
-        sevenSegData[i] = sevenSegCharacters[getNthDigit(num, i)];
+        sevenSegData[3-i] = sevenSegCharacters[getNthDigit(num, i)];
     }
 }
 
-void updateLedDisplayAlpha(int num1, int num2, int num3, int num4)
+void updateLedDisplayAlpha(char* word)
 {
-    sevenSegData[3] = sevenSegAlphaCharacters[num1];
-    sevenSegData[2] = sevenSegAlphaCharacters[num2];
-    sevenSegData[1] = sevenSegAlphaCharacters[num3];
-    sevenSegData[0] = sevenSegAlphaCharacters[num4];
+    bool foundWordEnd = false;
+    for(int i=0; i<4; i++) {
+        int alphaNum = 0;
+        bool skipChar = false;
+        if(word[i] == '\0') {
+            foundWordEnd = true;
+        } else {
+            alphaNum = word[i] - 97; // temp, only lower case alphabet for now
+            if(alphaNum < 0 || alphaNum > 122) {
+                skipChar = true;
+            }
+        }
+        if(foundWordEnd || skipChar) {
+            sevenSegData[i] = 0b00000000;
+        } else {
+            sevenSegData[i] = sevenSegAlphaCharacters[alphaNum];
+        }
+        
+    }
 }
 
-int tempAlphaNum = 0;
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if (shift && buttonNum != BUTTON_SHIFT)
@@ -552,9 +579,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             break;
         case BUTTON_TAP_TEMPO:
-            // temp, testing alpha display
-            updateLedDisplayAlpha(tempAlphaNum % 26, (tempAlphaNum + 1) % 26, (tempAlphaNum + 2) % 26, (tempAlphaNum + 3) % 26);
-            tempAlphaNum += 4;
             break;
         case BUTTON_INC:
             handleIncDec(true);
@@ -568,8 +592,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CANCEL:
             handleYesNo(false);
             break;
-        case BUTTON_SD_TEMP:
-            sdSafeLoadTemp = true;
+        case BUTTON_LOAD_SAMPLES:
+            activeButton = BUTTON_LOAD_SAMPLES;
+            sdShowFolderTemp = true;
+            //displaySamplePack();
+            //sdSafeLoadTemp = true;
             break;
         case BUTTON_MANUAL_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
@@ -656,6 +683,14 @@ void handleIncDec(bool isInc)
         updateLedDisplay(outputSample);
         break;
 
+    case BUTTON_LOAD_SAMPLES:
+        sampleFolderNum += isInc ? 1 : -1;
+        if (sampleFolderNum < 0)
+            sampleFolderNum = 0;
+        else if (sampleFolderNum > 3)
+            sampleFolderNum = 3;
+        sdShowFolderTemp = true;
+        break;
     }
 }
 
@@ -778,10 +813,90 @@ void updateAnalog()
     }
 }
 
+void getNthSampleFolder(int n) {
+    printf("get nth sample folder...\n");
+    sd_card_t *pSD = sd_get_by_num(0);
+    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+    if (FR_OK != fr)
+        panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+    static FILINFO fno;
+    UINT i;
+    int foundNum = -1;
+    char path[256];
+    strcpy(path, "samples/");
+    DIR dir;
+    fr = f_opendir(&dir, path);
+    if (FR_OK != fr)
+    {
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        return;
+    }
+    for (;;)
+    {
+        fr = f_readdir(&dir, &fno); /* Read a directory item */
+        if (fr != FR_OK || fno.fname[0] == 0)
+            break; /* Break on error or end of dir */
+        if (fno.fattrib & AM_DIR)
+        { /* It is a directory */
+            foundNum ++;
+            i = strlen(path);
+            sprintf(&path[i], "/%s", fno.fname); // don't totally understand this
+            path[i] = 0;
+            if(foundNum == n) {
+                printf("sample folder: %s\n", fno.fname);
+                updateLedDisplayAlpha(fno.fname);
+                break;
+            }
+        }
+        else
+        { /* It is a file. */
+            printf("%s/%s\n", path, fno.fname);
+        }
+    }
+    f_closedir(&dir);
+}
+
+void listSampleFolders() {
+    printf("list sample folders...\n");
+    sd_card_t *pSD = sd_get_by_num(0);
+    static FILINFO fno;
+    UINT i;
+    char path[256];
+    strcpy(path, "samples/");
+    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+    if (FR_OK != fr)
+        panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+    DIR dir;
+    fr = f_opendir(&dir, path);
+    if (FR_OK != fr)
+    {
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        return;
+    }
+    for (;;)
+    {
+        fr = f_readdir(&dir, &fno); /* Read a directory item */
+        if (fr != FR_OK || fno.fname[0] == 0)
+            break; /* Break on error or end of dir */
+        if (fno.fattrib & AM_DIR)
+        { /* It is a directory */
+            i = strlen(path);
+            sprintf(&path[i], "/%s", fno.fname);
+            printf("%s/%s\n", path, fno.fname);
+            path[i] = 0;
+        }
+        else
+        { /* It is a file. */
+            printf("%s/%s\n", path, fno.fname);
+        }
+    }
+    f_closedir(&dir);
+}
+
 void loadSamplesFromSD()
 {
     int pageNum = 0;
-    const char *filenames[NUM_SAMPLES] = {"samples/kick.wav", "samples/snare.wav", "samples/closedhat.wav", "samples/snare.wav"};
+    const char *filenames[NUM_SAMPLES] = {"samples/default/kick.wav", "samples/default/snare.wav", "samples/default/closedhat.wav", "samples/default/snare.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
 
@@ -792,7 +907,6 @@ void loadSamplesFromSD()
         if (FR_OK != fr)
             panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
         FIL fil;
-        // const char *const filename = "samples/kick.wav";
         fr = f_open(&fil, filenames[n], FA_READ);
         if (FR_OK != fr)
         {
@@ -913,7 +1027,7 @@ void updateLeds()
         // copy LED data so it doesn't change during serial transfer
         for (int i = 0; i < 4; i++)
         {
-            storedLedData[i] = (sevenSegData[i] << 8) + 0b11110000 + singleLedData;
+            storedLedData[i] = (sevenSegData[3-i] << 8) + 0b11110000 + singleLedData;
             bitWrite(storedLedData[i], 4 + i, 0);
         }
         gpio_put(LATCH_595, 0);

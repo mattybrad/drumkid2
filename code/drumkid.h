@@ -46,7 +46,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_START_STOP 15
 
 // shifted button numbers..?
-#define BUTTON_SD_TEMP 22
+#define BUTTON_LOAD_SAMPLES 22
 #define BUTTON_TIME_SIGNATURE 25
 #define BUTTON_OUTPUT 26
 
@@ -165,7 +165,7 @@ bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
-void updateLedDisplayAlpha(int num1, int num2, int num3, int num4);
+void updateLedDisplayAlpha(char* word);
 void handleIncDec(bool isInc);
 void handleYesNo(bool isYes);
 void displayTempo();
@@ -175,6 +175,8 @@ void displayTuplet();
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();
+void getNthSampleFolder(int n);
+void listSampleFolders();
 void loadSamplesFromSD();
 void updateLeds();
 void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
