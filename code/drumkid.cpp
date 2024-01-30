@@ -49,7 +49,7 @@ int timeSignature = 4;
 int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
 int numSteps = timeSignature * QUARTER_NOTE_STEPS;
 bool shift = false;
-int tuplet = TUPLET_TRIPLET;
+int tuplet = TUPLET_STRAIGHT;
 float quarterNoteDivisionRef[NUM_TUPLET_MODES] = {QUARTER_NOTE_STEPS, 3*QUARTER_NOTE_STEPS/4, 5*QUARTER_NOTE_STEPS/8, 7*QUARTER_NOTE_STEPS/8}; // to do: calculate this automatically
 float quarterNoteDivision = quarterNoteDivisionRef[tuplet];
 uint32_t tempTime = 0;
@@ -227,7 +227,12 @@ int main()
 
     checkFlashData();
     initGpio();
-    //loadSamplesFromSD(); // temp!
+
+    // temp...
+    getNthSampleFolder(0);
+    loadSamplesFromSD();
+    // ...end temp
+
     initSamplesFromFlash();
     initBeats();
 
@@ -700,6 +705,10 @@ void handleYesNo(bool isYes) {
         case BUTTON_OUTPUT:
             samples[outputSample].output1 = isYes;
             break;
+        
+        case BUTTON_LOAD_SAMPLES:
+            sdSafeLoadTemp = true;
+            break;
     }
 }
 
@@ -844,6 +853,7 @@ void getNthSampleFolder(int n) {
             path[i] = 0;
             if(foundNum == n) {
                 printf("sample folder: %s\n", fno.fname);
+                strcpy(sampleFolderName, fno.fname);
                 updateLedDisplayAlpha(fno.fname);
                 break;
             }
@@ -856,47 +866,12 @@ void getNthSampleFolder(int n) {
     f_closedir(&dir);
 }
 
-void listSampleFolders() {
-    printf("list sample folders...\n");
-    sd_card_t *pSD = sd_get_by_num(0);
-    static FILINFO fno;
-    UINT i;
-    char path[256];
-    strcpy(path, "samples/");
-    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
-    if (FR_OK != fr)
-        panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-    DIR dir;
-    fr = f_opendir(&dir, path);
-    if (FR_OK != fr)
-    {
-        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-        return;
-    }
-    for (;;)
-    {
-        fr = f_readdir(&dir, &fno); /* Read a directory item */
-        if (fr != FR_OK || fno.fname[0] == 0)
-            break; /* Break on error or end of dir */
-        if (fno.fattrib & AM_DIR)
-        { /* It is a directory */
-            i = strlen(path);
-            sprintf(&path[i], "/%s", fno.fname);
-            printf("%s/%s\n", path, fno.fname);
-            path[i] = 0;
-        }
-        else
-        { /* It is a file. */
-            printf("%s/%s\n", path, fno.fname);
-        }
-    }
-    f_closedir(&dir);
-}
-
 void loadSamplesFromSD()
 {
+    uint totalSize = 0;
+    bool dryRun = false;
     int pageNum = 0;
-    const char *filenames[NUM_SAMPLES] = {"samples/default/kick.wav", "samples/default/snare.wav", "samples/default/closedhat.wav", "samples/default/snare.wav"};
+    const char *sampleNames[NUM_SAMPLES] = {"/kick.wav", "/snare.wav", "/closedhat.wav", "/tom.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
 
@@ -907,7 +882,11 @@ void loadSamplesFromSD()
         if (FR_OK != fr)
             panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
         FIL fil;
-        fr = f_open(&fil, filenames[n], FA_READ);
+        char filename[255];
+        strcpy(filename, "samples/");
+        strcpy(filename+strlen(filename), sampleFolderName);
+        strcpy(filename+strlen(filename), sampleNames[n]);
+        fr = f_open(&fil, filename, FA_READ);
         if (FR_OK != fr)
         {
             printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
@@ -952,11 +931,14 @@ void loadSamplesFromSD()
                     {
                         sampleStartPoints[n] = pageNum * FLASH_PAGE_SIZE;
                         sampleLengths[n] = chunkSize;
+                        totalSize += chunkSize;
                         printf("sample %d, start on page %d, length %d\n", n, sampleStartPoints[n], sampleLengths[n]);
                     }
                     foundDataChunk = true;
 
-                    writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                    if(!dryRun) {
+                        writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                    }
 
                     pageNum++;
                 }
@@ -977,41 +959,48 @@ void loadSamplesFromSD()
         }
         f_unmount(pSD->pcName);
     }
+    printf("TOTAL SAMPLE SIZE: %d bytes\n", totalSize);
 
-    // write sample metadata to flash
-    uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
+    if(!dryRun) {
+        // write sample metadata to flash
+        uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
 
-    // copy data so we don't lose other data (check num, tempo, etc)
-    for (int i = 0; i < FLASH_PAGE_SIZE; i++)
-    {
-        metadataBuffer[i] = flashData[i];
+        // copy data so we don't lose other data (check num, tempo, etc)
+        for (int i = 0; i < FLASH_PAGE_SIZE; i++)
+        {
+            metadataBuffer[i] = flashData[i];
+        }
+
+        for (int n = 0; n < NUM_SAMPLES; n++)
+        {
+            std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
+            std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
+        }
+        writePageToFlash(metadataBuffer, FLASH_DATA_ADDRESS);
+
+        initSamplesFromFlash();
     }
-
-    for (int n = 0; n < NUM_SAMPLES; n++)
-    {
-        std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
-        std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
-    }
-    writePageToFlash(metadataBuffer, FLASH_DATA_ADDRESS);
-
-    initSamplesFromFlash();
 }
 
 void initSamplesFromFlash()
 {
+    int startPos = 0;
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
         uint sampleStart = getIntFromBuffer(flashData, SAMPLE_START_POINTS + n * 4);
         uint sampleLength = getIntFromBuffer(flashData, SAMPLE_LENGTHS + n * 4);
         printf("start %d, length %d\n", sampleStart, sampleLength);
 
-        samples[n].length = sampleLength / 2;
+        samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
+        samples[n].startPosition = sampleStart / 2;
+        printf("sample %d, start %d, length %d\n",n,samples[n].startPosition,samples[n].length);
         samples[n].position = (float)samples[n].length;
 
         for (int i = 0; i < samples[n].length && i < sampleLength / 2; i++)
         {
             int16_t thisSample = flashAudio[i * 2 + 1 + sampleStart] << 8 | flashAudio[i * 2 + sampleStart];
-            samples[n].sampleData[i] = thisSample;
+            //samples[n].sampleData[i] = thisSample;
+            Sample::sampleData[sampleStart/2+i] = thisSample;
         }
 
         // temp

@@ -183,3 +183,6 @@ Just listening to The new Smile album. Need to try some rides, crashes, chinas, 
 - Give choice of folder to load
 - Read sample metadata (and/or data itself) to check data size
 - If total size too big, show error on screen, don't load data
+
+30/1/24
+A frustrating but necessary day figuring out why big samples crashed the code. Turns out I was loading samples larger than the MAX_SAMPLE_SIZE without checking, and MAX_SAMPLE_SIZE is not very big (25000 samples, about 0.5 seconds). Think I mentioned this before but I need to create a shared audio sample buffer for all four samples, to allow for one long samples and three short samples (or something). Also should be able to use different sample rates. There's enough RAM for 100,000 16-bit samples, which is 2 secs at 44kHz or 4 secs at 22kHz, allowing maybe a 3-second sample at 22kHz if the others are short. But first priority is a shared variable.
