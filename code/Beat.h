@@ -30,6 +30,6 @@ class Beat {
 // e.g. there are 8 available steps (0-7) per quarter note; in straight mode (0th array), this is a direct mapping, but in triplet mode (1st array), element 3 of the array has the value 4 (not 3), so instead of returning hit 3, we should return hit 4 (because it will line up better with the way the beat was intended..?)
 const int Beat::tupletMap[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS_SEQUENCEABLE] = {
     {0, 1, 2, 3, 4, 5, 6, 7},
-    {0, 1, 2, 4, 5, 6, 7, 7},
+    {0, 1, 3, 4, 5, 6, 7, 7},
     {0, 2, 4, 5, 7, 7, 7, 7},
     {0, 1, 2, 3, 4, 6, 7, 7}};

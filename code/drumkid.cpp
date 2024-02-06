@@ -70,17 +70,34 @@ int activeButton = -1;
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
 
+void generateTupletMap();
+
 // convert zoom and step to velocity multiplier
 uint8_t maxZoom = log(4*QUARTER_NOTE_STEPS)/log(2) + 1;
 float zoomDivisor = 4096 / maxZoom;
-uint8_t stepVal[QUARTER_NOTE_STEPS * 4] = {};
+uint8_t tupletMap[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
+uint8_t stepVal[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
 float getZoomMultiplier(int thisStep)
 {
-    uint8_t thisStepVal = stepVal[thisStep%(4*QUARTER_NOTE_STEPS)];
+    uint8_t thisStepVal = stepVal[0][thisStep % (4 * QUARTER_NOTE_STEPS)];
     if(numSteps != 4 * QUARTER_NOTE_STEPS) {
         // bit complicated, this, but basically only the 4/4 time signature needs the "2" value (it sounds weird in other time signatures), and we also need to prevent an additional "1" value for 5/4 or 6/4, because it naturally occurs after 4 beats but again sounds wrong (sorry, bad explanation)
         if(thisStep > 0 && thisStepVal <= 2) thisStepVal = 3;
     }
+    // I try not to hardcode stuff that could be done programatically, but this stuff is confusing, and should only change if I add, say, undectuplets, which isn't even a word
+    if(thisStepVal == 4) {
+        // tuplets don't make sense at this level and need to be disabled
+        if(tuplet == TUPLET_TRIPLET) {
+            thisStepVal = 5; // revert to quarter notes
+        } else if(tuplet >= TUPLET_QUINTUPLET) {
+            thisStepVal = 6;
+        }
+    } else if(thisStepVal == 5) {
+        if(tuplet >= TUPLET_QUINTUPLET) {
+            thisStepVal = 6;
+        }
+    }
+
     float vel = 1.0 + zoom - (float)thisStepVal;
     if (vel < 0.0)
         vel = 0.0;
@@ -1200,14 +1217,33 @@ void updateSyncIn()
 }
 
 void initZoom() {
-    for(int i=0; i<QUARTER_NOTE_STEPS*4; i++) {
+    generateTupletMap();
+    for (int i = 0; i < QUARTER_NOTE_STEPS * 4; i++)
+    {
         bool foundLevel = false;
-        for(int j=0; j<maxZoom && !foundLevel; j++) {
-            if((i%((QUARTER_NOTE_STEPS*4)>>j))==0) {
+        for (int j = 0; j < maxZoom && !foundLevel; j++)
+        {
+            if ((i % ((QUARTER_NOTE_STEPS * 4) >> j)) == 0)
+            {
                 foundLevel = true;
-                stepVal[i] = j+1;
+                stepVal[0][i] = j + 1;
             }
         }
-        printf("%d ", stepVal[i]);
+        printf("%d ", stepVal[0][i]);
+    }
+}
+
+void generateTupletMap() {
+    printf("\n");
+    for(int q=0; q<4; q++) {
+        for(int i=0; i<NUM_TUPLET_MODES; i++) {
+            float multiplier = QUARTER_NOTE_STEPS / quarterNoteDivisionRef[i];
+            for(int j=0; j<QUARTER_NOTE_STEPS; j++) {
+                int thisStep = static_cast<int>(round(j * multiplier));
+                if(thisStep >= QUARTER_NOTE_STEPS) thisStep = QUARTER_NOTE_STEPS - 1;
+                tupletMap[i][j + q * QUARTER_NOTE_STEPS] = thisStep + q * QUARTER_NOTE_STEPS;
+            }
+            printf("\n");
+        }
     }
 }

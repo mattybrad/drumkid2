@@ -191,7 +191,7 @@ A frustrating but necessary day figuring out why big samples crashed the code. T
 Not that we need more features, but... what if somehow the beat itself could evolve over time via chance? Like, start with kick snare kick snare, then if there's enough "chance", that becomes kick snare snare kick, or the kick gets shifted by an 8th note, or deleted, or another hit is added. Could even be as simple as a temporary vs permanent switch, so when a hit is generated (in normal mode), it's not just heard once, it's added to the pattern and heard on every subsequent loop. Probably mad. Just an idea.
 
 Some random things to work on this week:
-- zoom tuplet map
+- zoom tuplet map (have maybe now solved without a map but the audio is hiccupping so should probably make a map after all)
 - clamp the pot values
 - user beat edit
 - drop
