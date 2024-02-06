@@ -186,3 +186,13 @@ Just listening to The new Smile album. Need to try some rides, crashes, chinas, 
 
 30/1/24
 A frustrating but necessary day figuring out why big samples crashed the code. Turns out I was loading samples larger than the MAX_SAMPLE_SIZE without checking, and MAX_SAMPLE_SIZE is not very big (25000 samples, about 0.5 seconds). Think I mentioned this before but I need to create a shared audio sample buffer for all four samples, to allow for one long samples and three short samples (or something). Also should be able to use different sample rates. There's enough RAM for 100,000 16-bit samples, which is 2 secs at 44kHz or 4 secs at 22kHz, allowing maybe a 3-second sample at 22kHz if the others are short. But first priority is a shared variable.
+
+6/2/24
+Not that we need more features, but... what if somehow the beat itself could evolve over time via chance? Like, start with kick snare kick snare, then if there's enough "chance", that becomes kick snare snare kick, or the kick gets shifted by an 8th note, or deleted, or another hit is added. Could even be as simple as a temporary vs permanent switch, so when a hit is generated (in normal mode), it's not just heard once, it's added to the pattern and heard on every subsequent loop. Probably mad. Just an idea.
+
+Some random things to work on this week:
+- zoom tuplet map
+- clamp the pot values
+- user beat edit
+- drop
+- pitch
