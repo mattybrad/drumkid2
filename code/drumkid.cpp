@@ -55,6 +55,8 @@ float quarterNoteDivision = quarterNoteDivisionRef[tuplet];
 uint32_t tempTime = 0;
 int outputSample = 0;
 int tempMissingCount = 0;
+float nextHoldUpdateInc = 0;
+float nextHoldUpdateDec = 0;
 
 // SD card stuff
 int sampleFolderNum = 0;
@@ -610,9 +612,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_TAP_TEMPO:
             break;
         case BUTTON_INC:
+            nextHoldUpdateInc = currentTime + 1.0;
             handleIncDec(true);
             break;
         case BUTTON_DEC:
+            nextHoldUpdateDec = currentTime + 1.0;
             handleIncDec(false);
             break;
         case BUTTON_CONFIRM:
@@ -805,6 +809,24 @@ void updateShiftRegButtons()
         {
             shiftRegInPhase = 0;
             shiftRegInLoopNum = 0;
+        }
+    }
+
+    // handle inc/dec hold - maybe should be in another function..?
+    if (buttonStableStates[BUTTON_INC])
+    {
+        if (currentTime > nextHoldUpdateInc)
+        {
+            nextHoldUpdateInc = currentTime + 0.1;
+            handleIncDec(true);
+        }
+    }
+    else if (buttonStableStates[BUTTON_DEC])
+    {
+        if (currentTime > nextHoldUpdateDec)
+        {
+            nextHoldUpdateDec = currentTime + 0.1;
+            handleIncDec(false);
         }
     }
 }
