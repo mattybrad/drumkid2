@@ -45,6 +45,7 @@ int chain = 0;
 float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
+float pitch = 1.0;
 int timeSignature = 4;
 int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
 int numSteps = timeSignature * QUARTER_NOTE_STEPS;
@@ -460,7 +461,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     // update effects etc
     samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
 
-    // knobs
+    // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
     if (chance < 0)
         chance = 0;
@@ -482,9 +483,13 @@ bool mainTimerLogic(repeating_timer_t *rt)
         velMidpoint = 4096;
     //velRange = 0; // temp
     //velMidpoint = 4096; // temp
-
-    // CV
-    // samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;
+    int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 2048;
+    if (pitchInt < 0)
+        pitchInt = 0;
+    else if (pitchInt > 4096)
+        pitchInt = 4096;
+    pitch = 0.01 + pitchInt / 512.0; // temp values
+    Sample::pitch = pitch; // temp, redundant extra variable...
 
     return true;
 }
@@ -1040,7 +1045,7 @@ void initSamplesFromFlash()
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
         samples[n].startPosition = sampleStart / 2;
         printf("sample %d, start %d, length %d\n",n,samples[n].startPosition,samples[n].length);
-        samples[n].position = (float)samples[n].length;
+        samples[n].floatPosition = (float)samples[n].length;
 
         for (int i = 0; i < samples[n].length && i < sampleLength / 2; i++)
         {
