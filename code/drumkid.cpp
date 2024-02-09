@@ -148,7 +148,9 @@ void scheduleHits()
     } else if(step % (QUARTER_NOTE_STEPS / 2) == QUARTER_NOTE_STEPS / 4) {
         adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
     }*/
-    if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
+
+    // this is also causing issues, removing for now, causing hiccups due to inconsistent pot readings? need a dead zone and maybe pot reading smoothing/average
+    //if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
@@ -158,7 +160,8 @@ void scheduleHits()
             tempHitQueue[hitQueueIndex].waiting = true;
             if (i==2 && isSlide)
             {
-                adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
+                // this is also causing issues, removing for now, causing hiccups due to inconsistent pot readings? need a dead zone and maybe pot reading smoothing/average
+                // adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
             }
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
             tempHitQueue[hitQueueIndex].step = step;
@@ -461,11 +464,13 @@ bool mainTimerLogic(repeating_timer_t *rt)
         chance = 0;
     else if (chance > 4096)
         chance = 4096;
+    //chance = 4096; // temp!
     int zoomInt = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
     if (zoomInt < 0)
         zoomInt = 0;
     else if (zoomInt > 4096)
         zoomInt = 4096;
+    //zoomInt = 4096; // temp!
     zoom = zoomInt / zoomDivisor; // gives range of 0.0 to 7.0 for complicated reasons. to do, define this in relation to maxZoom
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
@@ -473,6 +478,8 @@ bool mainTimerLogic(repeating_timer_t *rt)
         velMidpoint = 0;
     else if (velMidpoint > 4096)
         velMidpoint = 4096;
+    //velRange = 0; // temp
+    //velMidpoint = 4096; // temp
 
     // CV
     // samples[1].speed = 0.25 + 4.0 * ((float)analogReadings[14]) / 4095.0;

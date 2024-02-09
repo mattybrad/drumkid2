@@ -1,0 +1,11 @@
+BUGS TO FIX
+- Changing tuplet mode causes timing glitch (number of steps not reset at correct time?)
+- Swing is disabled
+- Slide is disabled
+- Glitchy audio above 200BPM at high zoom
+
+FEATURES TO ADD
+- Pitch
+- Pitch CV
+- Drop
+- Press and hold for inc/dec

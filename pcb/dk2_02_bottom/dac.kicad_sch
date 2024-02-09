@@ -1188,6 +1188,13 @@
     (uuid fb92839e-7cf4-4908-8105-7eb04bf572f2)
   )
 
+  (text_box "Yet another note! Might be good to power the pots/ADC ref(?) via this supply if I can actually get the pins right..."
+    (at 82.55 53.34 0) (size 27.94 13.97)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid 0e17d7a4-058a-4fc9-a253-4ccf1ad5f100)
+  )
   (text_box "Another warning! JLCPCB lists this as SOT-23, but it's actually SOT-23R, which has a different pinout!!"
     (at 48.26 53.34 0) (size 33.02 13.97)
     (stroke (width 0) (type default))

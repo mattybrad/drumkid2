@@ -1070,6 +1070,13 @@
     (uuid fc4df730-ebe5-4da2-bed2-5cf5f9c317e3)
   )
 
+  (text_box "Pretty sure these resistor values are too high, should be between 40R (absolute max brightness, 2.5V forward voltage, not really desirable) and 70R (1.9V forward voltage, min brightness). Maybe test on breadboard via headers."
+    (at 137.16 15.24 0) (size 35.56 17.78)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid 0305d3c6-eb70-4d13-8a91-8ed3a8d53f97)
+  )
   (text_box "Not sure I need all 4 of these extra LEDs, just adding them because I have spare pins"
     (at 166.37 127.635 0) (size 35.56 9.525)
     (stroke (width 0) (type default))

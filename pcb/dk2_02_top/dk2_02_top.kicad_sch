@@ -920,6 +920,28 @@
     (uuid f9bf922f-0904-4d4f-bd90-922c63858f42)
   )
 
+  (text_box "These buttons need to be connected to a shift register, or at least not connected to the serial RX/TX pins."
+    (at 132.08 124.46 0) (size 26.67 12.7)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid 4c9e6af2-79cb-4412-b569-9cf0dda6400d)
+  )
+  (text_box "Maybe think about more advanced circuitry for SD card, protection etc, do some research (but works fine for now)."
+    (at 95.25 152.4 0) (size 24.13 15.24)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid b300db1f-0826-4df1-a7fe-56087c992c53)
+  )
+  (text_box "Keep TX/RX pins free! Maybe break out debug pins"
+    (at 22.86 29.21 0) (size 20.32 8.89)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid f41d68d5-9953-46fe-a51e-f8a1c7b5acf3)
+  )
+
   (text "Right header" (at 85.725 17.145 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 4a36a98f-ee77-4b05-a299-ab01f4be67fc)

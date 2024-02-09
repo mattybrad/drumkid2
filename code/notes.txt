@@ -196,3 +196,9 @@ Some random things to work on this week:
 - user beat edit
 - drop
 - pitch
+
+9/2/24
+Don't think the hiccups are coming from the tuplet calculation, but from the slide control (which is maybe too niche to deserve its own knob anyway?). Need deadzones and smoothing for all pots, and maybe a better. Additionally, should maybe use clean 3.3V supply from (currently problematic) DAC power supply as the ADC/pot voltage. Oh, and I'm hitting issues with high-zoom quasi-drones (HZQDs?!) above 160BPM. Probably need to be able to queue more than one hit per buffer. Can get to ~190BPM by reducing buffer from 256 to 128 samples but that's a slight hack. And above this, the problem isn't necessarily as simple as multiple hits per buffer, as the missing hits aren't printed to serial.
+
+Unrelatedly, "midpoint" is a stupid name, should be "velocity" or something.
+
