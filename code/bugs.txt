@@ -3,9 +3,7 @@ BUGS TO FIX
 - Swing is disabled
 - Slide is disabled
 - Glitchy audio above 200BPM at high zoom
-- Tempo slows down when too many hits (pitch float += too slow)
+- Fade is disabled (smoothing clicks from retriggering)
 
 FEATURES TO ADD
-- Pitch
-- Pitch CV
 - Drop

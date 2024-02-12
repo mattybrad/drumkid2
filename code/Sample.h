@@ -27,8 +27,8 @@ class Sample {
                 if (delaySamples == 0)
                 {
                     velocity = nextVelocity;
-                    positionAccurate = 0;
-                    position = 0;
+                    positionAccurate = Sample::pitch >= 0 ? 0 : length << 10;
+                    position = Sample::pitch >= 0 ? 0 : length;
                     playing = true;
                     waiting = false;
                 } else if(playing && delaySamples < 250) {
@@ -38,21 +38,33 @@ class Sample {
             }
             if(playing) {
 
-                //value = velocity * sampleData[position + startPosition];
-                
                 // lerp, not available natively because of old C++ version...
                 int y1 = sampleData[position + startPosition];
                 int y2 = sampleData[position + 1 + startPosition];
                 value = y1 + ((y2-y1) * (positionAccurate - (position << 10))) / 1024;
-                value *= velocity;
+                value *= velocity; // temp, should be int not float velocity
 
-                if(doFade) value *= fadeOut;
+                //if(doFade) value *= fadeOut; // temporarily disable fade out while figuring out reverse
                 positionAccurate += Sample::pitch;
                 position = positionAccurate >> 10;
-                if (position >= length)
-                {
-                    playing = false;
-                    value = 0;
+                if(Sample::pitch > 0) {
+                    // playing forwards
+                    if (position >= length)
+                    {
+                        position = length;
+                        positionAccurate = length << 10;
+                        playing = false;
+                        value = 0;
+                    }
+                } else {
+                    // playing reverse
+                    if (position <= 0)
+                    {
+                        position = 0;
+                        positionAccurate = 0;
+                        playing = false;
+                        value = 0;
+                    }
                 }
             }
         }

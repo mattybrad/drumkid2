@@ -483,11 +483,11 @@ bool mainTimerLogic(repeating_timer_t *rt)
         velMidpoint = 4096;
     //velRange = 0; // temp
     //velMidpoint = 4096; // temp
-    int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 2048;
-    if (pitchInt < 0)
-        pitchInt = 0;
-    else if (pitchInt > 4096)
-        pitchInt = 4096;
+    int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 4096; // temp, haven't figured out final range
+    if (pitchInt < -2048)
+        pitchInt = -2048;
+    else if (pitchInt > 2048)
+        pitchInt = 2048;
     pitch = 0.01 + pitchInt / 512.0; // temp values
     Sample::pitch = pitchInt; // temp, trying to remove floats...
 
