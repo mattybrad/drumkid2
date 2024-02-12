@@ -1,4 +1,5 @@
 #include "constants.h"
+#include <stdio.h>
 
 class Sample {
     private:
@@ -37,7 +38,14 @@ class Sample {
             }
             if(playing) {
 
-                value = velocity * sampleData[position + startPosition];
+                //value = velocity * sampleData[position + startPosition];
+                
+                // lerp, not available natively because of old C++ version...
+                int y1 = sampleData[position + startPosition];
+                int y2 = sampleData[position + 1 + startPosition];
+                value = y1 + ((y2-y1) * (positionAccurate - (position << 10))) / 1024;
+                value *= velocity;
+
                 if(doFade) value *= fadeOut;
                 positionAccurate += Sample::pitch;
                 position = positionAccurate >> 10;
