@@ -202,3 +202,7 @@ Don't think the hiccups are coming from the tuplet calculation, but from the sli
 
 Unrelatedly, "midpoint" is a stupid name, should be "velocity" or something.
 
+12/2/24
+Hit some performance issues last week, at least some of which may have stemmed from float arithmetic. Shouldn't really be using floats for much stuff in here, particularly when a 32-bit int is so huge. Today am going to try and strip out all float arithemetic which is used every single loop, top improve performance.
+
+Have managed to implement pitch control without floats, sounds nice for sped-up samples, horrid for slowed-down, probably need to do lerping.

@@ -489,7 +489,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     else if (pitchInt > 4096)
         pitchInt = 4096;
     pitch = 0.01 + pitchInt / 512.0; // temp values
-    Sample::pitch = pitch; // temp, redundant extra variable...
+    Sample::pitch = pitchInt; // temp, trying to remove floats...
 
     return true;
 }
@@ -1045,12 +1045,12 @@ void initSamplesFromFlash()
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
         samples[n].startPosition = sampleStart / 2;
         printf("sample %d, start %d, length %d\n",n,samples[n].startPosition,samples[n].length);
-        samples[n].floatPosition = (float)samples[n].length;
+        samples[n].position = samples[n].length;
+        samples[n].positionAccurate = samples[n].length << 10; // temp hardcoded accurary of 10 bits
 
         for (int i = 0; i < samples[n].length && i < sampleLength / 2; i++)
         {
             int16_t thisSample = flashAudio[i * 2 + 1 + sampleStart] << 8 | flashAudio[i * 2 + sampleStart];
-            //samples[n].sampleData[i] = thisSample;
             Sample::sampleData[sampleStart/2+i] = thisSample;
         }
 
