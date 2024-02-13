@@ -66,7 +66,6 @@ bool shift = false;
 int tuplet = TUPLET_STRAIGHT;
 float quarterNoteDivisionRef[NUM_TUPLET_MODES] = {QUARTER_NOTE_STEPS, 3*QUARTER_NOTE_STEPS/4, 5*QUARTER_NOTE_STEPS/8, 7*QUARTER_NOTE_STEPS/8}; // to do: calculate this automatically
 float quarterNoteDivision = quarterNoteDivisionRef[tuplet];
-uint32_t tempTime = 0;
 int outputSample = 0;
 int tempMissingCount = 0;
 float nextHoldUpdateInc = 0;
@@ -79,7 +78,7 @@ char sampleFolderName[255];
 // tempo/sync stuff
 bool syncInMode = false;
 int syncInStep = 0;
-float syncInHistory[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
+int64_t syncInHistory[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
 
 int activeButton = -1;
 
@@ -125,15 +124,16 @@ float getZoomMultiplier(int thisStep)
 
 // temp figuring out proper hit generation
 uint32_t step = 0; 
-float nextHitTime = 0;            // s
-float currentTime = 0;            // s
-float scheduleAheadTime = 0.02;    // s
-uint16_t schedulerInterval = 5; // ms
+int64_t nextHitTime = 0; // in samples
+int64_t currentTime = 0; // in samples
+int32_t testTime = 0;
+int scheduleAheadTime = 4096; // in samples, was 0.02 seconds
+uint16_t schedulerInterval = 1; // 5 ms
 uint16_t mainTimerInterval = 100; // us
 struct hit
 {
     bool waiting = false;
-    float time = 0.0;
+    int64_t time = 0;
     float velocity = 1.0;
     int channel = 0;
     uint16_t step = 0;
@@ -227,7 +227,8 @@ void nextHit()
 {
     // bit messy right now, hard to account for all the tuplet stuff
 
-    nextHitTime += (60.0 / tempo) / quarterNoteDivision;
+    //nextHitTime += (60.0 / tempo) / quarterNoteDivision;
+    nextHitTime += (2646000 / tempo) / quarterNoteDivision;
     step++;
     if (step % QUARTER_NOTE_STEPS >= (int)quarterNoteDivision)
         step += QUARTER_NOTE_STEPS - (step % QUARTER_NOTE_STEPS);
@@ -247,6 +248,14 @@ bool scheduler(repeating_timer_t *rt)
         scheduleHits();
         nextHit();
     }
+    return true;
+}
+repeating_timer_t testTimer;
+bool testTimeCallback(repeating_timer_t *rt)
+{
+    testTime += 44100;
+    int diff = (int)testTime - (int)currentTime;
+    printf("%d %lld %d\n", testTime, currentTime, diff);
     return true;
 }
 
@@ -281,11 +290,13 @@ int main()
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
     add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
+    //add_repeating_timer_ms(1000, testTimeCallback, NULL, &testTimer);
 
     // temp
     //beatPlaying = true;
-    float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate;
-    float prevTime = 0;
+    //float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate; // in seconds..?
+    int timeIncrement = SAMPLES_PER_BUFFER; // in samples
+    int64_t prevTime = 0;
 
     // audio buffer loop, runs forever
     while (true)
@@ -304,7 +315,8 @@ int main()
                 // calculate time (in samples) before next hit on same channel
                 delaySeconds = tempHitQueue[i].time - currentTime;
                 if(delaySeconds < 0.0) delaySeconds = 0.0;
-                delaySamples = delaySeconds * sampleRate;
+                //delaySamples = delaySeconds * sampleRate;
+                delaySamples = delaySeconds; // temp, cancels out now that's switching to sample-based timing
                 
                 if (tempHitQueue[i].channel == -1)
                 {
@@ -313,12 +325,12 @@ int main()
                 }
                 else
                 {
-                    pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
+                    //pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
 
-                    bool dropHit = !bitRead(dropRef[drop], tempHitQueue[i].channel);
+                    //bool dropHit = !bitRead(dropRef[drop], tempHitQueue[i].channel);
 
                     // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
-                    if (samples[tempHitQueue[i].channel].delaySamples == 0 && !dropHit)
+                    if (samples[tempHitQueue[i].channel].delaySamples == 0)
                     {
                         samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
                         samples[tempHitQueue[i].channel].waiting = true;
@@ -463,10 +475,9 @@ void initBeats()
     beats[1].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
 }
 
+float stressTest = 0.0;
 bool mainTimerLogic(repeating_timer_t *rt)
 {
-
-    tempTime += mainTimerInterval;
 
     updateLeds();
     updateShiftRegButtons();
@@ -504,7 +515,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     else if (pitchInt > 2048)
         pitchInt = 2048;
     pitch = 0.01 + pitchInt / 512.0; // temp values
-    Sample::pitch = pitchInt; // temp, trying to remove floats...
+    Sample::pitch = pitchInt; // temp...
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
 
     return true;

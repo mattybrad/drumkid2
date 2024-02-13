@@ -224,3 +224,11 @@ Adding the "drop" parameter because it's really useful for live performance. (On
 Seems to work fine, does the job for now, might need to be adjusted if fourth default sample is not a tom (or indeed if all samples are different).
 
 Just did a quick check of analog reading accuracy - currently experiencing fluctuations of up to 1% (delta of 45 from a range of 4096);
+
+I'm still grappling with annoying tiny silences when dialling zoom up to 100% (HZQD!). Current thought: get rid of all floats. Just use ints, remove all mystery. Might hit some int overflow issues, although not immediately... 32-bit int tracking current time in samples would overflow within a day. 64-bit looks good for 6 million years, which should be adequate.
+
+Well, everything still works, but the problem is still there. Anticlimactic. Just measured missing audio, looks like 0.003s / 3ms.
+
+AHA! Maybe have found the culprit. "mainTimerLogic"..? I just stripped some stuff out of it and maybe reduced the clicks. Let's see...
+
+Hard to exactly replicate the glitches with mainTimerLogic. Ah, but... it could well be the scheduler callback. This seems to maybe cause more glitches with longer intervals, so more notes are stacked up waiting to be scheduled. Yes! This seems to be it. But... I'm still hitting issues as the tempo goes higher. Maybe I'm just starting to run up against the limit of how much stuff I can schedule...? Maybe I need to go dual-core? Maybe I need to ignore the glitches for now and get it to some testers while I work on the underlying engine? Time for a walk.
