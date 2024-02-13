@@ -5,6 +5,7 @@ class Sample {
     private:
         float fadeOut = 1.0;
     public:
+        static int LERP_BITS;
         static int16_t sampleData[MAX_SAMPLE_STORAGE];
         static int pitch;
         bool playing = false;
@@ -27,7 +28,7 @@ class Sample {
                 if (delaySamples == 0)
                 {
                     velocity = nextVelocity;
-                    positionAccurate = Sample::pitch >= 0 ? 0 : length << 10;
+                    positionAccurate = Sample::pitch >= 0 ? 0 : length << LERP_BITS;
                     position = Sample::pitch >= 0 ? 0 : length;
                     playing = true;
                     waiting = false;
@@ -41,18 +42,18 @@ class Sample {
                 // lerp, not available natively because of old C++ version...
                 int y1 = sampleData[position + startPosition];
                 int y2 = sampleData[position + 1 + startPosition];
-                value = y1 + ((y2-y1) * (positionAccurate - (position << 10))) / 1024;
+                value = y1 + ((y2-y1) * (positionAccurate - (position << LERP_BITS))) / (1<<LERP_BITS);
                 value *= velocity; // temp, should be int not float velocity
 
                 //if(doFade) value *= fadeOut; // temporarily disable fade out while figuring out reverse
                 positionAccurate += Sample::pitch;
-                position = positionAccurate >> 10;
+                position = positionAccurate >> LERP_BITS;
                 if(Sample::pitch > 0) {
                     // playing forwards
                     if (position >= length)
                     {
                         position = length;
-                        positionAccurate = length << 10;
+                        positionAccurate = length << LERP_BITS;
                         playing = false;
                         value = 0;
                     }
@@ -70,5 +71,6 @@ class Sample {
         }
 };
 
+int Sample::LERP_BITS = 10;
 int16_t Sample::sampleData[MAX_SAMPLE_STORAGE];
-int Sample::pitch = 256;
+int Sample::pitch = 1<<LERP_BITS;

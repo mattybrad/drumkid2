@@ -46,6 +46,19 @@ float zoom = 0.0;
 int velRange = 0;
 int velMidpoint = 0;
 float pitch = 1.0;
+int drop = 0;
+// NB order = NA,NA,NA,NA,tom,hat,snare,kick
+uint8_t dropRef[9] = {
+    0b00000000,
+    0b00000001,
+    0b00001001,
+    0b00001101,
+    0b00001111,
+    0b00001110,
+    0b00000110,
+    0b00000100,
+    0b00000000
+};
 int timeSignature = 4;
 int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
 int numSteps = timeSignature * QUARTER_NOTE_STEPS;
@@ -302,8 +315,10 @@ int main()
                 {
                     pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
 
+                    bool dropHit = !bitRead(dropRef[drop], tempHitQueue[i].channel);
+
                     // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
-                    if (samples[tempHitQueue[i].channel].delaySamples == 0)
+                    if (samples[tempHitQueue[i].channel].delaySamples == 0 && !dropHit)
                     {
                         samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
                         samples[tempHitQueue[i].channel].waiting = true;
@@ -490,6 +505,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
         pitchInt = 2048;
     pitch = 0.01 + pitchInt / 512.0; // temp values
     Sample::pitch = pitchInt; // temp, trying to remove floats...
+    drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
 
     return true;
 }
@@ -1046,7 +1062,7 @@ void initSamplesFromFlash()
         samples[n].startPosition = sampleStart / 2;
         printf("sample %d, start %d, length %d\n",n,samples[n].startPosition,samples[n].length);
         samples[n].position = samples[n].length;
-        samples[n].positionAccurate = samples[n].length << 10; // temp hardcoded accurary of 10 bits
+        samples[n].positionAccurate = samples[n].length << Sample::LERP_BITS;
 
         for (int i = 0; i < samples[n].length && i < sampleLength / 2; i++)
         {

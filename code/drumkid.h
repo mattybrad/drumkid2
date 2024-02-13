@@ -57,9 +57,9 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define POT_MIDPOINT 3
 #define POT_SWING 4
 #define POT_SLOP 5
-#define POT_DROP 6
+#define POT_CROP 6
 #define POT_CHAIN 7
-#define POT_CROP 8
+#define POT_DROP 8
 #define POT_PITCH 9
 #define POT_TBC 10
 #define POT_VOLUME 11

@@ -6,4 +6,3 @@ BUGS TO FIX
 - Fade is disabled (smoothing clicks from retriggering)
 
 FEATURES TO ADD
-- Drop

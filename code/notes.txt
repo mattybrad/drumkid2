@@ -206,3 +206,21 @@ Unrelatedly, "midpoint" is a stupid name, should be "velocity" or something.
 Hit some performance issues last week, at least some of which may have stemmed from float arithmetic. Shouldn't really be using floats for much stuff in here, particularly when a 32-bit int is so huge. Today am going to try and strip out all float arithemetic which is used every single loop, top improve performance.
 
 Have managed to implement pitch control without floats, sounds nice for sped-up samples, horrid for slowed-down, probably need to do lerping.
+
+Did some lerping, sounds better.
+
+13/2/24
+Adding the "drop" parameter because it's really useful for live performance. (On that note, think about positioning the "range" knob directly below "mid"/"vel", because the most performable(?!) knobs should be on the top row. Drop, on DK1, mutes/unmutes groups of samples, broadly bassy stuff on left, treble on right, everything together in the middle, silence at both extremes. Like this:
+0 silence
+1 kick
+2 kick, tom
+3 kick, hat, tom
+4 everything
+5 hat, snare, tom
+6 hat, snare
+7 hat
+8 silence
+
+Seems to work fine, does the job for now, might need to be adjusted if fourth default sample is not a tom (or indeed if all samples are different).
+
+Just did a quick check of analog reading accuracy - currently experiencing fluctuations of up to 1% (delta of 45 from a range of 4096);
