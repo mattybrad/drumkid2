@@ -234,3 +234,16 @@ AHA! Maybe have found the culprit. "mainTimerLogic"..? I just stripped some stuf
 Hard to exactly replicate the glitches with mainTimerLogic. Ah, but... it could well be the scheduler callback. This seems to maybe cause more glitches with longer intervals, so more notes are stacked up waiting to be scheduled. Yes! This seems to be it. But... I'm still hitting issues as the tempo goes higher. Maybe I'm just starting to run up against the limit of how much stuff I can schedule...? Maybe I need to go dual-core? Maybe I need to ignore the glitches for now and get it to some testers while I work on the underlying engine? Time for a walk.
 
 Had a walk. Tried adding an alarm to test for buffer underruns or whatever this stupid problem is. Can't figure it out.
+
+16/2/24
+Spent an hour or so playing with multi-core code again, but I just don't think it's worth it. I don't understand it well enough, it's going to be a faff to manage the data flow between the cores, and there are probably a lot of efficiency savings I can make in the main code. I'd overlooked how much float stuff I was doing with the zoom velocity for every single hit, so I can start there.
+
+Okay, firstly, at higher tempos, I'm getting the "missing" error, which I'm pretty sure is to do with my bad design of the sample class, and is therefore soluble. But at lower tempos, the really annoying problem ("random" 3ms silences) can now be replicated!! If I just add some pointless extra float maths when calculating a hit's velocity, I can cause extra glitches! So I'm pretty certain I just need to speed this stuff up by using ints.
+
+SO the plan is:
+1) Rewrite sample triggering (again!) to allow plenty of pre-scheduled hits (without this, I won't be able to stress-test the more annoying glitch at higher tempos)
+2) Rewrite velocity stuff without floats to (hopefully) improve performance
+3) Stress test at higher speeds, potentially look at moving the scheduler out of a repeating timer callback and instead do it straight after populating the buffer in the loop, and maybe add a time limit for scheduling (the while loop is a worry), so that the failure mode is not quite scheduling all the desired hits (nice-ish audio weirdness), rather than skipping buffer updates (horrid audio weirdness).
+
+Just getting stuck into this, making a mess but making progress. By shrinking the buffer size, I can have a quick fix to the "missing" issue and therefore find how fast I can go before the float processing causes issues. I've disabled a bunch of float stuff without actually replacing it (e.g. just fixing velocity at 100%), and that actually allowed me to go really high (1000BPM+). With very little float processing, the limit is all down to the "missing" issue, which I'm about to fix, hopefully.
+

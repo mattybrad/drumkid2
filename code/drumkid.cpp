@@ -126,8 +126,7 @@ float getZoomMultiplier(int thisStep)
 uint32_t step = 0; 
 int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
-int32_t testTime = 0;
-int scheduleAheadTime = 4096; // in samples, was 0.02 seconds
+int scheduleAheadTime = 512; // in samples, was 0.02 seconds
 uint16_t schedulerInterval = 1; // 5 ms
 uint16_t mainTimerInterval = 100; // us
 struct hit
@@ -192,15 +191,15 @@ void scheduleHits()
             int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
             if (chance > randNum)
             {
-                float zoomMult = getZoomMultiplier(step);
+                //float zoomMult = getZoomMultiplier(step);
                 // float zoomMult = step % 4 == 0 ? 1.0 : 0.0;
                 int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
                 else if (intVel > 4096)
                     intVel = 4096;
-                float floatVel = zoomMult * (float)intVel / 4096.0;
-                if (floatVel >= 0.01)
+                //float floatVel = zoomMult * (float)intVel / 4096.0;
+                if (true/*floatVel >= 0.01*/)
                 {
                     if (tempHitQueue[hitQueueIndex].waiting)
                     {
@@ -211,7 +210,7 @@ void scheduleHits()
                     // timing not yet compatible with slide
                     tempHitQueue[hitQueueIndex].time = adjustedHitTime;
                     tempHitQueue[hitQueueIndex].step = step;
-                    tempHitQueue[hitQueueIndex].velocity = floatVel;
+                    //tempHitQueue[hitQueueIndex].velocity = 1.0;//floatVel;
                     hitQueueIndex++;
                     if (hitQueueIndex == maxQueuedHits)
                         hitQueueIndex = 0;
@@ -250,22 +249,6 @@ bool scheduler(repeating_timer_t *rt)
     }
     return true;
 }
-repeating_timer_t testTimer;
-bool testTimeCallback(repeating_timer_t *rt)
-{
-    testTime += 44100;
-    int diff = (int)testTime - (int)currentTime;
-    printf("%d %lld %d\n", testTime, currentTime, diff);
-    return true;
-}
-alarm_id_t bufferTimeCheckAlarm;
-int missedBuffers = 0;
-bool bufferProblem = false;
-int64_t bufferTimeCheckCallback(alarm_id_t id, void *user_data)
-{
-    bufferProblem = true;
-    return 0;
-}
 
 // main function, obviously
 int main()
@@ -297,8 +280,7 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
-    add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
-    //add_repeating_timer_ms(1000, testTimeCallback, NULL, &testTimer);
+    //add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
 
     // temp
     //beatPlaying = true;
@@ -371,23 +353,16 @@ int main()
             bufferSamples[i + 1] = out2 >> 2;
         }
         buffer->sample_count = buffer->max_sample_count;
-        bool isCancelled = cancel_alarm(bufferTimeCheckAlarm);
-        //if(!isCancelled) printf("oh dear\n");
-        if(bufferProblem) {
-            missedBuffers ++;
-            if(missedBuffers == 5) {
-                printf("BUFFER PROBLEM %lld\n", currentTime);
-            }
-        } else {
-            missedBuffers = 0;
-        }
         give_audio_buffer(ap, buffer);
-        bufferProblem = false;
-        bufferTimeCheckAlarm = add_alarm_in_us(5805, bufferTimeCheckCallback, NULL, true);
-        //printf("alarm id %lld\n", bufferTimeCheckAlarm);
 
         currentTime += timeIncrement;
-        // printf("current time %f\n", currentTime);
+        
+        // scheduler functionality moved to here 16/2/24
+        while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime)
+        {
+            scheduleHits();
+            nextHit();
+        }
 
         if (sdSafeLoadTemp)
         {
@@ -496,7 +471,6 @@ void initBeats()
     beats[1].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
 }
 
-float stressTest = 0.0;
 bool mainTimerLogic(repeating_timer_t *rt)
 {
 

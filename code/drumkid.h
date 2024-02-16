@@ -9,7 +9,7 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-#define SAMPLES_PER_BUFFER 256 // 256 works well
+#define SAMPLES_PER_BUFFER 32 // 256 works well
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19

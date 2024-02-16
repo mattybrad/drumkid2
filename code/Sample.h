@@ -8,6 +8,14 @@ class Sample {
         static int LERP_BITS;
         static int16_t sampleData[MAX_SAMPLE_STORAGE];
         static int pitch;
+
+        // new stuff 16/2/24
+        struct Hit {
+            int64_t time;
+            int16_t velocity;
+        };
+        Hit queuedHits[8];
+
         bool playing = false;
         bool waiting = false;
         float velocity = 1.0;
@@ -34,7 +42,7 @@ class Sample {
                     waiting = false;
                 } else if(playing && delaySamples < 250) {
                     doFade = true;
-                    fadeOut = delaySamples / 250.0; // to do: remove floats from here
+                    //fadeOut = delaySamples / 250.0; // to do: remove floats from here
                 }
             }
             if(playing) {
@@ -43,7 +51,7 @@ class Sample {
                 int y1 = sampleData[position + startPosition];
                 int y2 = sampleData[position + 1 + startPosition];
                 value = y1 + ((y2-y1) * (positionAccurate - (position << LERP_BITS))) / (1<<LERP_BITS);
-                value *= velocity; // temp, should be int not float velocity
+                //value *= velocity; // temp, should be int not float velocity
 
                 //if(doFade) value *= fadeOut; // temporarily disable fade out while figuring out reverse
                 positionAccurate += Sample::pitch;
