@@ -258,6 +258,14 @@ bool testTimeCallback(repeating_timer_t *rt)
     printf("%d %lld %d\n", testTime, currentTime, diff);
     return true;
 }
+alarm_id_t bufferTimeCheckAlarm;
+int missedBuffers = 0;
+bool bufferProblem = false;
+int64_t bufferTimeCheckCallback(alarm_id_t id, void *user_data)
+{
+    bufferProblem = true;
+    return 0;
+}
 
 // main function, obviously
 int main()
@@ -363,7 +371,20 @@ int main()
             bufferSamples[i + 1] = out2 >> 2;
         }
         buffer->sample_count = buffer->max_sample_count;
+        bool isCancelled = cancel_alarm(bufferTimeCheckAlarm);
+        //if(!isCancelled) printf("oh dear\n");
+        if(bufferProblem) {
+            missedBuffers ++;
+            if(missedBuffers == 5) {
+                printf("BUFFER PROBLEM %lld\n", currentTime);
+            }
+        } else {
+            missedBuffers = 0;
+        }
         give_audio_buffer(ap, buffer);
+        bufferProblem = false;
+        bufferTimeCheckAlarm = add_alarm_in_us(5805, bufferTimeCheckCallback, NULL, true);
+        //printf("alarm id %lld\n", bufferTimeCheckAlarm);
 
         currentTime += timeIncrement;
         // printf("current time %f\n", currentTime);

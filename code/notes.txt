@@ -232,3 +232,5 @@ Well, everything still works, but the problem is still there. Anticlimactic. Jus
 AHA! Maybe have found the culprit. "mainTimerLogic"..? I just stripped some stuff out of it and maybe reduced the clicks. Let's see...
 
 Hard to exactly replicate the glitches with mainTimerLogic. Ah, but... it could well be the scheduler callback. This seems to maybe cause more glitches with longer intervals, so more notes are stacked up waiting to be scheduled. Yes! This seems to be it. But... I'm still hitting issues as the tempo goes higher. Maybe I'm just starting to run up against the limit of how much stuff I can schedule...? Maybe I need to go dual-core? Maybe I need to ignore the glitches for now and get it to some testers while I work on the underlying engine? Time for a walk.
+
+Had a walk. Tried adding an alarm to test for buffer underruns or whatever this stupid problem is. Can't figure it out.
