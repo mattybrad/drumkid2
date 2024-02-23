@@ -125,11 +125,10 @@ float getZoomMultiplier(int thisStep)
 }
 
 // temp figuring out proper hit generation
-uint32_t step = 0; 
+uint16_t step = 0; 
 int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
-int scheduleAheadTime = 512; // in samples, was 0.02 seconds
-uint16_t schedulerInterval = 1; // 5 ms
+int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t mainTimerInterval = 100; // us
 struct hit
 {
@@ -143,6 +142,27 @@ const uint maxQueuedHits = 256; // queue fills up at ~300BPM when maxQueuedHits 
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
 void scheduleHits()
+{
+    int64_t adjustedHitTime = nextHitTime;
+
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        if (beats[beatNum].getHit(i, step, tuplet))
+        {
+            //tempHitQueue[hitQueueIndex].channel = i;
+            //tempHitQueue[hitQueueIndex].waiting = true;
+            //tempHitQueue[hitQueueIndex].time = adjustedHitTime;
+            //tempHitQueue[hitQueueIndex].step = step;
+            //tempHitQueue[hitQueueIndex].velocity = 4096; // was 1.0
+            samples[i].queueHit(adjustedHitTime, step, 4096);
+        }
+        else
+        {
+
+        }
+    }
+}
+void scheduleHitsOld()
 {
     // schedule sync out pulses using hit queue, special channel = -1
     if (step % QUARTER_NOTE_STEPS == 0)
@@ -241,15 +261,13 @@ void nextHit()
         step = 0;
     }
 }
-bool scheduler(repeating_timer_t *rt)
+void scheduler()
 {
-    // printf("current time = %f\n", currentTime);
     while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime)
     {
         scheduleHits();
         nextHit();
     }
-    return true;
 }
 
 // main function, obviously
@@ -277,16 +295,12 @@ int main()
     char startString[4] = "abc";
     updateLedDisplayAlpha(startString);
 
-    tempo = 120;
-
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
-    //add_repeating_timer_ms(schedulerInterval, scheduler, NULL, &schedulerTimer);
 
     // temp
     //beatPlaying = true;
-    //float timeIncrement = (float)SAMPLES_PER_BUFFER / sampleRate; // in seconds..?
     int timeIncrement = SAMPLES_PER_BUFFER; // in samples
     int64_t prevTime = 0;
 
@@ -298,7 +312,7 @@ int main()
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
         // before populating buffer, check queue for impending hits and pass timing data to sample objects
-        for (int i = 0; i < maxQueuedHits; i++)
+        /*for (int i = 0; i < maxQueuedHits; i++)
         {
             float delaySeconds;
             int delaySamples;
@@ -334,7 +348,7 @@ int main()
                 }
                 tempHitQueue[i].waiting = false;
             }
-        }
+        }*/
 
         prevTime = currentTime;
 
@@ -346,7 +360,7 @@ int main()
             int out2 = 0;
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
-                samples[j].update();
+                samples[j].update(currentTime + (i>>1)); // could be more efficient
                 if(samples[j].output1) out1 += samples[j].value;
                 if(samples[j].output2) out2 += samples[j].value;
             }
@@ -359,12 +373,8 @@ int main()
 
         currentTime += timeIncrement;
         
-        // scheduler functionality moved to here 16/2/24
-        while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime)
-        {
-            scheduleHits();
-            nextHit();
-        }
+        // scheduler call moved to here 23/2/24
+        scheduler();
 
         if (sdSafeLoadTemp)
         {
@@ -621,7 +631,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 hitQueueIndex = 0;
                 step = 0;
                 nextHitTime = currentTime;
-                scheduler(&schedulerTimer);
+                scheduler();
             }
             else
             {

@@ -9,7 +9,7 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-#define SAMPLES_PER_BUFFER 32 // 256 works well
+#define SAMPLES_PER_BUFFER 128 // 256 works well
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
@@ -88,11 +88,11 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define VAR_TEMPO 36
 
 // Beat variables
-float tempo = 120.0; // BPM
+float tempo = 320; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 3;
+int beatNum = 0;
 Beat beats[8]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 
@@ -141,7 +141,6 @@ uint8_t sevenSegAlphaCharacters[26] = {
 
 // timers and alarms
 repeating_timer_t mainTimer;
-repeating_timer_t schedulerTimer;
 repeating_timer_t syncInTimer;  // temp, wait and see what other LEDs are used for, maybe make a class
 repeating_timer_t syncOutTimer; // temp again probably
 
