@@ -247,3 +247,4 @@ SO the plan is:
 
 Just getting stuck into this, making a mess but making progress. By shrinking the buffer size, I can have a quick fix to the "missing" issue and therefore find how fast I can go before the float processing causes issues. I've disabled a bunch of float stuff without actually replacing it (e.g. just fixing velocity at 100%), and that actually allowed me to go really high (1000BPM+). With very little float processing, the limit is all down to the "missing" issue, which I'm about to fix, hopefully.
 
+N.B. To allow 32PPQN (current max zoom) at 1000BPM (an arbitrary Big Round Number but also sensible because it's a pretty high drone note, nearly top E on a mandolin), a 256-sample buffer would require ~3 hits in the queue, so for a bit of wiggle room let's say 8 hits for now for a 256-sample buffer (or 4 for 128, etc). Shouldn't take much memory so could even be more generous.

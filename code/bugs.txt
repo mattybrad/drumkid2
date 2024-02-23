@@ -2,7 +2,6 @@ BUGS TO FIX
 - Changing tuplet mode causes timing glitch (number of steps not reset at correct time?)
 - Swing is disabled
 - Slide is disabled
-- Glitchy audio above 200BPM at high zoom
 - Fade is disabled (smoothing clicks from retriggering)
 
 FEATURES TO ADD

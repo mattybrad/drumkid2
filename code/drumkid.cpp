@@ -42,10 +42,9 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // move to header file at some point
 int chance = 0;
 int chain = 0;
-float zoom = 0.0;
+int zoom = 0;
 int velRange = 0;
 int velMidpoint = 0;
-float pitch = 1.0;
 int drop = 0;
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[9] = {
@@ -94,7 +93,7 @@ uint8_t tupletMap[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
 uint8_t stepVal[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
 float getZoomMultiplier(int thisStep)
 {
-    uint8_t thisStepVal = stepVal[0][thisStep % (4 * QUARTER_NOTE_STEPS)];
+    int thisStepVal = stepVal[0][thisStep % (4 * QUARTER_NOTE_STEPS)];
     if(numSteps != 4 * QUARTER_NOTE_STEPS) {
         // bit complicated, this, but basically only the 4/4 time signature needs the "2" value (it sounds weird in other time signatures), and we also need to prevent an additional "1" value for 5/4 or 6/4, because it naturally occurs after 4 beats but again sounds wrong (sorry, bad explanation)
         if(thisStep > 0 && thisStepVal <= 2) thisStepVal = 3;
@@ -113,11 +112,14 @@ float getZoomMultiplier(int thisStep)
         }
     }
 
-    float vel = 1.0 + zoom - (float)thisStepVal;
+    /*float vel = 1.0 + zoom - (float)thisStepVal;
     if (vel < 0.0)
         vel = 0.0;
     else if (vel > 1.0)
-        vel = 1.0;
+        vel = 1.0;*/
+    int vel = 4096 + zoom - (thisStepVal<<12);
+    if(vel < 0) vel = 0;
+    else if(vel > 4096) vel = 4096;
     // printf("step %d, vel %f\n", thisStep, vel);
     return vel;
 }
@@ -133,7 +135,7 @@ struct hit
 {
     bool waiting = false;
     int64_t time = 0;
-    float velocity = 1.0;
+    uint16_t velocity = 4096; // was float, 1.0
     int channel = 0;
     uint16_t step = 0;
 };
@@ -180,7 +182,7 @@ void scheduleHits()
             }
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
             tempHitQueue[hitQueueIndex].step = step;
-            tempHitQueue[hitQueueIndex].velocity = 1.0;
+            tempHitQueue[hitQueueIndex].velocity = 4096; // was 1.0
             hitQueueIndex++;
             if (hitQueueIndex == maxQueuedHits)
                 hitQueueIndex = 0;
@@ -191,15 +193,15 @@ void scheduleHits()
             int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
             if (chance > randNum)
             {
-                //float zoomMult = getZoomMultiplier(step);
-                // float zoomMult = step % 4 == 0 ? 1.0 : 0.0;
+                int zoomMult = getZoomMultiplier(step);
                 int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
                 else if (intVel > 4096)
                     intVel = 4096;
                 //float floatVel = zoomMult * (float)intVel / 4096.0;
-                if (true/*floatVel >= 0.01*/)
+                intVel = (intVel * zoomMult) >> 12;
+                if (intVel >= 8/*floatVel >= 0.01*/)
                 {
                     if (tempHitQueue[hitQueueIndex].waiting)
                     {
@@ -210,7 +212,7 @@ void scheduleHits()
                     // timing not yet compatible with slide
                     tempHitQueue[hitQueueIndex].time = adjustedHitTime;
                     tempHitQueue[hitQueueIndex].step = step;
-                    //tempHitQueue[hitQueueIndex].velocity = 1.0;//floatVel;
+                    tempHitQueue[hitQueueIndex].velocity = intVel;//floatVel;
                     hitQueueIndex++;
                     if (hitQueueIndex == maxQueuedHits)
                         hitQueueIndex = 0;
@@ -317,10 +319,10 @@ int main()
                 {
                     //pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
 
-                    //bool dropHit = !bitRead(dropRef[drop], tempHitQueue[i].channel);
+                    bool dropHit = !bitRead(dropRef[drop], tempHitQueue[i].channel);
 
                     // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
-                    if (samples[tempHitQueue[i].channel].delaySamples == 0)
+                    if (!dropHit && samples[tempHitQueue[i].channel].delaySamples == 0)
                     {
                         samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
                         samples[tempHitQueue[i].channel].waiting = true;
@@ -480,7 +482,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     updateSyncIn();
 
     // update effects etc
-    samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
+    //samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
 
     // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
@@ -489,13 +491,13 @@ bool mainTimerLogic(repeating_timer_t *rt)
     else if (chance > 4096)
         chance = 4096;
     //chance = 4096; // temp!
-    int zoomInt = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
-    if (zoomInt < 0)
-        zoomInt = 0;
-    else if (zoomInt > 4096)
-        zoomInt = 4096;
+    zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
+    if (zoom < 0)
+        zoom = 0;
+    else if (zoom > 4096)
+        zoom = 4096;
     //zoomInt = 4096; // temp!
-    zoom = zoomInt / zoomDivisor; // gives range of 0.0 to 7.0 for complicated reasons. to do, define this in relation to maxZoom
+    zoom = zoom * maxZoom;
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
     if (velMidpoint < 0)
@@ -509,7 +511,6 @@ bool mainTimerLogic(repeating_timer_t *rt)
         pitchInt = -2048;
     else if (pitchInt > 2048)
         pitchInt = 2048;
-    pitch = 0.01 + pitchInt / 512.0; // temp values
     Sample::pitch = pitchInt; // temp...
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
 
@@ -521,7 +522,7 @@ struct audio_buffer_pool *init_audio()
 {
 
     static audio_format_t audio_format = {
-        (uint32_t)sampleRate,
+        SAMPLE_RATE,
         AUDIO_BUFFER_FORMAT_PCM_S16,
         2,
     };
@@ -639,11 +640,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_TAP_TEMPO:
             break;
         case BUTTON_INC:
-            nextHoldUpdateInc = currentTime + 1.0;
+            nextHoldUpdateInc = currentTime + SAMPLE_RATE;
             handleIncDec(true);
             break;
         case BUTTON_DEC:
-            nextHoldUpdateDec = currentTime + 1.0;
+            nextHoldUpdateDec = currentTime + SAMPLE_RATE;
             handleIncDec(false);
             break;
         case BUTTON_CONFIRM:
@@ -844,7 +845,7 @@ void updateShiftRegButtons()
     {
         if (currentTime > nextHoldUpdateInc)
         {
-            nextHoldUpdateInc = currentTime + 0.1;
+            nextHoldUpdateInc = currentTime + (SAMPLE_RATE >> 3);
             handleIncDec(true);
         }
     }
@@ -852,7 +853,7 @@ void updateShiftRegButtons()
     {
         if (currentTime > nextHoldUpdateDec)
         {
-            nextHoldUpdateDec = currentTime + 0.1;
+            nextHoldUpdateDec = currentTime + (SAMPLE_RATE >> 3);
             handleIncDec(false);
         }
     }

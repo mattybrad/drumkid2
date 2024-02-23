@@ -18,8 +18,8 @@ class Sample {
 
         bool playing = false;
         bool waiting = false;
-        float velocity = 1.0;
-        float nextVelocity = 1.0;
+        int velocity = 255;
+        int nextVelocity = 255;
         int16_t value = 0;
         int position = 0;
         int positionAccurate = 0;
@@ -52,6 +52,7 @@ class Sample {
                 int y2 = sampleData[position + 1 + startPosition];
                 value = y1 + ((y2-y1) * (positionAccurate - (position << LERP_BITS))) / (1<<LERP_BITS);
                 //value *= velocity; // temp, should be int not float velocity
+                value = (value * velocity) >> 12;
 
                 //if(doFade) value *= fadeOut; // temporarily disable fade out while figuring out reverse
                 positionAccurate += Sample::pitch;

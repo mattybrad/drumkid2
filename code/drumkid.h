@@ -90,9 +90,9 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 // Beat variables
 float tempo = 120.0; // BPM
 int samplesPerStep;  // slower tempos give higher values
-float sampleRate = 44100.0;
+uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 0;
+int beatNum = 3;
 Beat beats[8]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 
