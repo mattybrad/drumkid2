@@ -23,7 +23,7 @@ class Sample {
         bool waiting = false;
         int velocity = 255;
         int nextVelocity = 255;
-        int16_t value = 0;
+        int32_t value = 0;
         int position = 0;
         int positionAccurate = 0;
         int delaySamples = 0;
@@ -47,11 +47,10 @@ class Sample {
                     }
                     position = 0;
                     playing = true;
-                    printf("HIT\n");
                 }
             }
             if(playing) {
-                value = sampleData[position + startPosition];
+                value = (sampleData[position + startPosition] * velocity) >> 12;
                 position ++;
                 if(position >= length) {
                     playing = false;
@@ -110,7 +109,6 @@ class Sample {
             }
         }
         void queueHit(int64_t hitTime, int16_t hitStep, int16_t hitVelocity) {
-            printf("ATTEMPT QUEUE\n");
 
             queuedHits[hitQueueIndex].time = hitTime;
             queuedHits[hitQueueIndex].step = hitStep;
@@ -123,7 +121,6 @@ class Sample {
             for(int i=0; i<HIT_QUEUE_SIZE; i++) {
                 if(queuedHits[i].waiting) {
                     if(queuedHits[i].time < nextHitTime) {
-                        printf("queue!\n");
                         nextHitTime = queuedHits[i].time;
                         nextHitIndex = i;
                     }

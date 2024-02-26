@@ -149,16 +149,25 @@ void scheduleHits()
     {
         if (beats[beatNum].getHit(i, step, tuplet))
         {
-            //tempHitQueue[hitQueueIndex].channel = i;
-            //tempHitQueue[hitQueueIndex].waiting = true;
-            //tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-            //tempHitQueue[hitQueueIndex].step = step;
-            //tempHitQueue[hitQueueIndex].velocity = 4096; // was 1.0
             samples[i].queueHit(adjustedHitTime, step, 4096);
         }
         else
         {
-
+            int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
+            if (chance > randNum)
+            {
+                int zoomMult = getZoomMultiplier(step);
+                int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
+                if (intVel < 0)
+                    intVel = 0;
+                else if (intVel > 4096)
+                    intVel = 4096;
+                intVel = (intVel * zoomMult) >> 12;
+                if (intVel >= 8)
+                {
+                    samples[i].queueHit(adjustedHitTime, step, intVel); // temp vel
+                }
+            }
         }
     }
 }
@@ -352,6 +361,11 @@ int main()
 
         prevTime = currentTime;
 
+        bool dropHit[NUM_SAMPLES];
+        for(int i=0; i<NUM_SAMPLES; i++) {
+            dropHit[i] = !bitRead(dropRef[drop], i);
+        }
+
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
@@ -361,8 +375,10 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 samples[j].update(currentTime + (i>>1)); // could be more efficient
-                if(samples[j].output1) out1 += samples[j].value;
-                if(samples[j].output2) out2 += samples[j].value;
+                if(!dropHit[j]) {
+                    if(samples[j].output1) out1 += samples[j].value;
+                    if(samples[j].output2) out2 += samples[j].value;
+                }
             }
 
             bufferSamples[i] = out1 >> 2;

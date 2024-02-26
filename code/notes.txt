@@ -248,3 +248,9 @@ SO the plan is:
 Just getting stuck into this, making a mess but making progress. By shrinking the buffer size, I can have a quick fix to the "missing" issue and therefore find how fast I can go before the float processing causes issues. I've disabled a bunch of float stuff without actually replacing it (e.g. just fixing velocity at 100%), and that actually allowed me to go really high (1000BPM+). With very little float processing, the limit is all down to the "missing" issue, which I'm about to fix, hopefully.
 
 N.B. To allow 32PPQN (current max zoom) at 1000BPM (an arbitrary Big Round Number but also sensible because it's a pretty high drone note, nearly top E on a mandolin), a 256-sample buffer would require ~3 hits in the queue, so for a bit of wiggle room let's say 8 hits for now for a 256-sample buffer (or 4 for 128, etc). Shouldn't take much memory so could even be more generous.
+
+23/2/24
+Today was the next stage of trying to make the code faster, with the (arbitrary) aim of 1000BPM HZQD. I think the previous slightly messy scheduling system was accidentally quite efficient, because I was previously getting up to 1000BPM+ (with a small buffer size), but the new system (where the sample objects store the scheduled hits and there is no real upper limit to queued hits) is topping out at around 180BPM. Possible culprits are very frequent 64-bit int comparisons (is it time for the next hit?), and inefficient looping through the queue when adding a new hit. Also haven't reimplemented proper velocity/pitch stuff yet, which will only add to the problem. Monday's job is to try and get back to 1000BPM+.
+
+26/2/24
+Absolute cretin, the problem was printf commands. Now back to hit queue size being the only limitation for now. 
