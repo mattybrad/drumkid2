@@ -8,5 +8,6 @@
 #define MAX_TIME_SIGNATURE 8
 #define NUM_TUPLET_MODES 4
 #define HIT_QUEUE_SIZE 8
+#define FADE_OUT 64 // must be smaller than schedule ahead time(?) to work properly
 
 #endif

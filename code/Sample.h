@@ -2,8 +2,6 @@
 #include <stdio.h>
 
 class Sample {
-    private:
-        float fadeOut = 1.0;
     public:
         static int LERP_BITS;
         static int16_t sampleData[MAX_SAMPLE_STORAGE];
@@ -15,6 +13,9 @@ class Sample {
             int16_t step;
             int16_t velocity;
             bool waiting;
+            int64_t fadeTime;
+            int64_t fadeStart;
+            int64_t fadeEnd;
         };
         Hit queuedHits[HIT_QUEUE_SIZE];
         uint8_t hitQueueIndex = 0;
@@ -34,11 +35,13 @@ class Sample {
 
         int64_t nextHitTime = INT64_MAX;
         uint8_t nextHitIndex = 0;
+        uint8_t currentHitIndex = 0;
         void update(int64_t time) {
             if(nextHitTime <= time) {
                 if(queuedHits[nextHitIndex].waiting) {
                     queuedHits[nextHitIndex].waiting = false;
                     velocity = queuedHits[nextHitIndex].velocity;
+                    currentHitIndex = nextHitIndex;
                     nextHitIndex = (nextHitIndex + 1) % HIT_QUEUE_SIZE;
                     if(queuedHits[nextHitIndex].waiting) {
                         nextHitTime = queuedHits[nextHitIndex].time;
@@ -46,65 +49,32 @@ class Sample {
                         nextHitTime = INT64_MAX;
                     }
                     position = 0;
+                    positionAccurate = 0;
                     playing = true;
                 }
             }
             if(playing) {
-                value = (sampleData[position + startPosition] * velocity) >> 12;
-                position ++;
+                int y1 = sampleData[position + startPosition];
+                int y2 = sampleData[position + 1 + startPosition]; // might have a fencepost error thingy here
+                value = y1 + ((y2 - y1) * (positionAccurate - (position << LERP_BITS))) / (1 << LERP_BITS);
+                value = (value * velocity) >> 12;
+
+                // handle fade out if required
+                if(queuedHits[currentHitIndex].fadeTime > 0) {
+                    if(time > queuedHits[currentHitIndex].fadeStart) {
+                        int64_t deltaT = queuedHits[currentHitIndex].fadeEnd - time;
+                        int64_t fadeVel = (deltaT << 12) / queuedHits[currentHitIndex].fadeTime;
+                        value = (value * fadeVel) >> 12;
+                    }
+                }
+
+                positionAccurate += Sample::pitch;
+                position = positionAccurate >> LERP_BITS;
                 if(position >= length) {
                     playing = false;
                     value = 0;
-                }
-            }
-        }
-        void updateOld() {
-            bool doFade = false;
-            if (delaySamples > 0)
-            {
-                delaySamples--;
-                if (delaySamples == 0)
-                {
-                    velocity = nextVelocity;
-                    positionAccurate = Sample::pitch >= 0 ? 0 : length << LERP_BITS;
-                    position = Sample::pitch >= 0 ? 0 : length;
-                    playing = true;
-                    waiting = false;
-                } else if(playing && delaySamples < 250) {
-                    doFade = true;
-                    //fadeOut = delaySamples / 250.0; // to do: remove floats from here
-                }
-            }
-            if(playing) {
-
-                // lerp, not available natively because of old C++ version...
-                int y1 = sampleData[position + startPosition];
-                int y2 = sampleData[position + 1 + startPosition];
-                value = y1 + ((y2-y1) * (positionAccurate - (position << LERP_BITS))) / (1<<LERP_BITS);
-                //value *= velocity; // temp, should be int not float velocity
-                value = (value * velocity) >> 12;
-
-                //if(doFade) value *= fadeOut; // temporarily disable fade out while figuring out reverse
-                positionAccurate += Sample::pitch;
-                position = positionAccurate >> LERP_BITS;
-                if(Sample::pitch > 0) {
-                    // playing forwards
-                    if (position >= length)
-                    {
-                        position = length;
-                        positionAccurate = length << LERP_BITS;
-                        playing = false;
-                        value = 0;
-                    }
-                } else {
-                    // playing reverse
-                    if (position <= 0)
-                    {
-                        position = 0;
-                        positionAccurate = 0;
-                        playing = false;
-                        value = 0;
-                    }
+                    position = length;
+                    positionAccurate = length << LERP_BITS;
                 }
             }
         }
@@ -114,6 +84,23 @@ class Sample {
             queuedHits[hitQueueIndex].step = hitStep;
             queuedHits[hitQueueIndex].velocity = hitVelocity;
             queuedHits[hitQueueIndex].waiting = true;
+            queuedHits[hitQueueIndex].fadeTime = 0;
+            queuedHits[hitQueueIndex].fadeStart = INT64_MAX;
+            queuedHits[hitQueueIndex].fadeEnd = INT64_MAX;
+
+            // calculate fade start/end times
+            uint8_t prevIndex = (hitQueueIndex + HIT_QUEUE_SIZE - 1) % HIT_QUEUE_SIZE;
+            int64_t deltaT = queuedHits[hitQueueIndex].time - queuedHits[prevIndex].time;
+            if (deltaT < (static_cast<uint32_t>(length) << LERP_BITS) / pitch)
+            {
+                // fade out required (really these times should be recalculated at the start of each buffer window in case of pitch changes)
+                int16_t fadeTime = std::min((int)deltaT, FADE_OUT);
+                queuedHits[prevIndex].fadeTime = fadeTime;
+                queuedHits[prevIndex].fadeStart = hitTime - fadeTime;
+                queuedHits[prevIndex].fadeEnd = hitTime;
+            }
+
+            // increment index for next time
             hitQueueIndex = (hitQueueIndex + 1) % HIT_QUEUE_SIZE;
 
             // this can be done more efficiently, but here's a first attempt:

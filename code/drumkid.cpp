@@ -537,6 +537,8 @@ bool mainTimerLogic(repeating_timer_t *rt)
         pitchInt = -2048;
     else if (pitchInt > 2048)
         pitchInt = 2048;
+    else if(pitchInt == 0)
+        pitchInt = 1; // need to do this to prevent division by zero...
     Sample::pitch = pitchInt; // temp...
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
 

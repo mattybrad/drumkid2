@@ -3,5 +3,13 @@ BUGS TO FIX
 - Swing is disabled
 - Slide is disabled
 - Fade is disabled (smoothing clicks from retriggering)
+- Sync out is disabled
+- Sync in is disabled (and bad)
+- Reverse pitch is disabled
 
 FEATURES TO ADD
+- Better pitch lerping
+- Numeric input
+- Beat programming
+- Non-integer tempos
+- Dead zone around pitch = 1.0

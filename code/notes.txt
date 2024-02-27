@@ -253,4 +253,4 @@ N.B. To allow 32PPQN (current max zoom) at 1000BPM (an arbitrary Big Round Numbe
 Today was the next stage of trying to make the code faster, with the (arbitrary) aim of 1000BPM HZQD. I think the previous slightly messy scheduling system was accidentally quite efficient, because I was previously getting up to 1000BPM+ (with a small buffer size), but the new system (where the sample objects store the scheduled hits and there is no real upper limit to queued hits) is topping out at around 180BPM. Possible culprits are very frequent 64-bit int comparisons (is it time for the next hit?), and inefficient looping through the queue when adding a new hit. Also haven't reimplemented proper velocity/pitch stuff yet, which will only add to the problem. Monday's job is to try and get back to 1000BPM+.
 
 26/2/24
-Absolute cretin, the problem was printf commands. Now back to hit queue size being the only limitation for now. 
+Absolute cretin, the problem was printf commands. Now back to hit queue size being the only limitation for now.
