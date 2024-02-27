@@ -2,7 +2,6 @@ BUGS TO FIX
 - Changing tuplet mode causes timing glitch (number of steps not reset at correct time?)
 - Swing is disabled
 - Slide is disabled
-- Sync out is disabled
 - Sync in is disabled (and bad)
 - Reverse pitch is disabled
 
@@ -12,3 +11,5 @@ FEATURES TO ADD
 - Beat programming
 - Non-integer tempos
 - Dead zone around pitch = 1.0
+- "Debouncing"(?) on drop pot, don't allow noisy liminal modes
+- Attempt more than four samples now that performance is much better

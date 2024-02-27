@@ -145,22 +145,28 @@ uint16_t hitQueueIndex = 0;
 void scheduleSyncOut() {
     if(step % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
 }
+int64_t tempOffsets[NUM_SAMPLES] = {0,0,0,0};
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
+    int16_t revStep = step;
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].getHit(i, step, tuplet))
+        if(Sample::pitch < 0) {
+            tempOffsets[i] = (static_cast<int32_t>(samples[i].length) *  QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
+            revStep = (step + tempOffsets[i]) % numSteps;
+        }
+        if (beats[beatNum].getHit(i, revStep, tuplet))
         {
-            samples[i].queueHit(adjustedHitTime, step, 4096);
+            samples[i].queueHit(adjustedHitTime, revStep, 4096);
         }
         else
         {
             int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
             if (chance > randNum)
             {
-                int zoomMult = getZoomMultiplier(step);
+                int zoomMult = getZoomMultiplier(revStep);
                 int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
@@ -169,7 +175,7 @@ void scheduleHits()
                 intVel = (intVel * zoomMult) >> 12;
                 if (intVel >= 8)
                 {
-                    samples[i].queueHit(adjustedHitTime, step, intVel); // temp vel
+                    samples[i].queueHit(adjustedHitTime, revStep, intVel);
                 }
             }
         }
@@ -262,7 +268,7 @@ void nextHit()
     // bit messy right now, hard to account for all the tuplet stuff
 
     //nextHitTime += (60.0 / tempo) / quarterNoteDivision;
-    nextHitTime += (2646000 / tempo) / quarterNoteDivision;
+    nextHitTime += (2646000 / tempo) / quarterNoteDivision; // not very precise?
     step++;
     if (step % QUARTER_NOTE_STEPS >= (int)quarterNoteDivision)
         step += QUARTER_NOTE_STEPS - (step % QUARTER_NOTE_STEPS);
@@ -489,6 +495,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     else if (chance > 4096)
         chance = 4096;
     //chance = 4096; // temp!
+    //chance = 0;
     zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
     if (zoom < 0)
         zoom = 0;
@@ -512,6 +519,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     else if(pitchInt == 0)
         pitchInt = 1; // need to do this to prevent division by zero...
     Sample::pitch = pitchInt; // temp...
+    //Sample::pitch = -1024;
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
 
     return true;

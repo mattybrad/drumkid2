@@ -254,3 +254,8 @@ Today was the next stage of trying to make the code faster, with the (arbitrary)
 
 26/2/24
 Absolute cretin, the problem was printf commands. Now back to hit queue size being the only limitation for now.
+
+27/2/24
+Today's problem: reverse sample playback. It works fine, but what you really want is to trigger reverse samples in advance, so a half-second kick sample should be triggered 500ms (~20000 samples) before it should be "heard" (the end of the sample). The problem is that the whole system is geared towards small windows and near-instant scheduling, to help with CV input responsiveness etc. If I schedule a long way ahead, I can make this work, but it's too much of a sacrifice.
+
+Right, I figured it out to an extent, but it's a mindfuck. Rather than schedule everything really far ahead, I can just work out, for each sample, how for ahead I should be scheduling (basically the length of the sample), then convert that to a number of steps, and instead of requesting the beat hit or zoom/random hit for the current "real" step, you request the offset step. I managed to get it to work at 60BPM, but when I tried to start taking account of the tempo, it all stopped working. It's possible I'm getting integer overflows, at one point I definitely needed more than 32 bits and I don't totally understand all this stuff. Think this is maybe a good place to stop for today.

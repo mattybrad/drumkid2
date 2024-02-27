@@ -50,8 +50,8 @@ class Sample {
                     } else {
                         nextHitTime = INT64_MAX;
                     }
-                    position = 0;
-                    positionAccurate = 0;
+                    positionAccurate = Sample::pitch >= 0 ? 0 : length << LERP_BITS;
+                    position = Sample::pitch >= 0 ? 0 : length;
                     playing = true;
                 }
             }
@@ -72,17 +72,35 @@ class Sample {
 
                 positionAccurate += Sample::pitch;
                 position = positionAccurate >> LERP_BITS;
-                if(position >= length) {
-                    playing = false;
-                    value = 0;
-                    position = length;
-                    positionAccurate = length << LERP_BITS;
+                if(pitch > 0) {
+                    // playing forwards
+                    if (position >= length)
+                    {
+                        playing = false;
+                        value = 0;
+                        position = length;
+                        positionAccurate = length << LERP_BITS;
+                    }
+                } else {
+                    // playing backwards
+                    if (position <= 0)
+                    {
+                        playing = false;
+                        value = 0;
+                        position = 0;
+                        positionAccurate = 0;
+                    }
                 }
             }
             return didTrigger;
         }
         void queueHit(int64_t hitTime, int16_t hitStep, int16_t hitVelocity) {
 
+            /*if(pitch>0) {
+                queuedHits[hitQueueIndex].time = hitTime;
+            } else {
+                queuedHits[hitQueueIndex].time = hitTime + (static_cast<int32_t>(length) << LERP_BITS) / pitch;
+            }*/
             queuedHits[hitQueueIndex].time = hitTime;
             queuedHits[hitQueueIndex].step = hitStep;
             queuedHits[hitQueueIndex].velocity = hitVelocity;
