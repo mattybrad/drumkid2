@@ -36,9 +36,11 @@ class Sample {
         int64_t nextHitTime = INT64_MAX;
         uint8_t nextHitIndex = 0;
         uint8_t currentHitIndex = 0;
-        void update(int64_t time) {
+        bool update(int64_t time) {
+            bool didTrigger = false;
             if(nextHitTime <= time) {
                 if(queuedHits[nextHitIndex].waiting) {
+                    didTrigger = true;
                     queuedHits[nextHitIndex].waiting = false;
                     velocity = queuedHits[nextHitIndex].velocity;
                     currentHitIndex = nextHitIndex;
@@ -77,6 +79,7 @@ class Sample {
                     positionAccurate = length << LERP_BITS;
                 }
             }
+            return didTrigger;
         }
         void queueHit(int64_t hitTime, int16_t hitStep, int16_t hitVelocity) {
 

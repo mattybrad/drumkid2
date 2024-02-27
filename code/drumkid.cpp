@@ -126,6 +126,7 @@ float getZoomMultiplier(int thisStep)
 
 // temp figuring out proper hit generation
 uint16_t step = 0; 
+int64_t nextSyncOut = 0;
 int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
 int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
@@ -141,6 +142,9 @@ struct hit
 const uint maxQueuedHits = 256; // queue fills up at ~300BPM when maxQueuedHits = 64 and everything else maxed out
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
+void scheduleSyncOut() {
+    if(step % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
+}
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
@@ -275,6 +279,7 @@ void scheduler()
     while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime)
     {
         scheduleHits();
+        scheduleSyncOut();
         nextHit();
     }
 }
@@ -320,45 +325,6 @@ int main()
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
-        // before populating buffer, check queue for impending hits and pass timing data to sample objects
-        /*for (int i = 0; i < maxQueuedHits; i++)
-        {
-            float delaySeconds;
-            int delaySamples;
-            if(tempHitQueue[i].waiting && tempHitQueue[i].time <= currentTime + timeIncrement * 2)
-            {
-                // calculate time (in samples) before next hit on same channel
-                delaySeconds = tempHitQueue[i].time - currentTime;
-                if(delaySeconds < 0.0) delaySeconds = 0.0;
-                //delaySamples = delaySeconds * sampleRate;
-                delaySamples = delaySeconds; // temp, cancels out now that's switching to sample-based timing
-                
-                if (tempHitQueue[i].channel == -1)
-                {
-                    pulseGpio(SYNC_OUT, delaySeconds * 1000000);
-                    pulseLed(3, delaySeconds * 1000000);
-                }
-                else
-                {
-                    //pulseGpio(TRIGGER_OUT_PINS[tempHitQueue[i].channel], delaySeconds * 1000000);
-
-                    bool dropHit = !bitRead(dropRef[drop], tempHitQueue[i].channel);
-
-                    // don't pass data to sample if already waiting, should prioritise next hit rather than more distant hits in queue(?)
-                    if (!dropHit && samples[tempHitQueue[i].channel].delaySamples == 0)
-                    {
-                        samples[tempHitQueue[i].channel].delaySamples = delaySamples + 1; // +1 because delaySamples is decremented at start of update (bit hacky, fenceposts, y'know)
-                        samples[tempHitQueue[i].channel].waiting = true;
-                        samples[tempHitQueue[i].channel].nextVelocity = tempHitQueue[i].velocity;
-                    } else {
-                        tempMissingCount ++;
-                        printf("missing %d\n", tempMissingCount);
-                    }
-                }
-                tempHitQueue[i].waiting = false;
-            }
-        }*/
-
         prevTime = currentTime;
 
         bool dropHit[NUM_SAMPLES];
@@ -372,9 +338,15 @@ int main()
             // sample updates go here
             int out1 = 0;
             int out2 = 0;
+            if(currentTime + (i>>1) == nextSyncOut) {
+                pulseGpio(SYNC_OUT, 1000);
+            }
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
-                samples[j].update(currentTime + (i>>1)); // could be more efficient
+                bool didTrigger = samples[j].update(currentTime + (i>>1)); // could be more efficient
+                if(didTrigger) {
+                    pulseGpio(TRIGGER_OUT_PINS[j], 1000);
+                }
                 if(!dropHit[j]) {
                     if(samples[j].output1) out1 += samples[j].value;
                     if(samples[j].output2) out2 += samples[j].value;
@@ -425,10 +397,10 @@ int64_t onGpioPulseHighTimeout(alarm_id_t id, void *user_data)
     return 0;
 }
 
-void pulseGpio(uint gpioNum, uint16_t delayMicros)
+void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros)
 {
-    add_alarm_in_us(delayMicros, onGpioPulseHighTimeout, (void *) gpioNum, true);
-    add_alarm_in_us(delayMicros + 20000, onGpioPulseLowTimeout, (void *) gpioNum, true);
+    gpio_put(gpioNum, 1);
+    add_alarm_in_us(pulseLengthMicros, onGpioPulseLowTimeout, (void *)gpioNum, true);
 }
 
 int64_t onLedPulseLowTimeout(alarm_id_t id, void *user_data)
