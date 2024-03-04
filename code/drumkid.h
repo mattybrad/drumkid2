@@ -78,21 +78,20 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // flash data storage
 #define FLASH_DATA_ADDRESS (1024 * 1024)
-#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE)
+#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 4 * FLASH_SECTOR_SIZE) // was just FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE but think the data overflows when using more than 4 samples?
 const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define CHECK_NUM -123456789
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
-#define SAMPLE_LENGTHS 20
-#define VAR_TEMPO 36
+#define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
 
 // Beat variables
 int tempo = 60; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 0;
+int beatNum = 3;
 Beat beats[8]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 

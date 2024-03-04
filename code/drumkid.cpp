@@ -48,15 +48,15 @@ int velMidpoint = 0;
 int drop = 0;
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[9] = {
-    0b00000000,
-    0b00000001,
-    0b00001001,
-    0b00001101,
-    0b00001111,
-    0b00001110,
-    0b00000110,
-    0b00000100,
-    0b00000000
+    0b11110000,
+    0b11110001,
+    0b11111001,
+    0b11111101,
+    0b11111111,
+    0b11111110,
+    0b11110110,
+    0b11110100,
+    0b11110000
 };
 int timeSignature = 4;
 int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
@@ -71,7 +71,7 @@ float nextHoldUpdateInc = 0;
 float nextHoldUpdateDec = 0;
 
 // SD card stuff
-int sampleFolderNum = 0;
+int sampleFolderNum = 3;
 char sampleFolderName[255];
 
 // tempo/sync stuff
@@ -145,7 +145,7 @@ uint16_t hitQueueIndex = 0;
 void scheduleSyncOut() {
     if(step % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
 }
-int64_t tempOffsets[NUM_SAMPLES] = {0,0,0,0};
+int64_t tempOffsets[NUM_SAMPLES] = {0};
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
@@ -305,7 +305,7 @@ int main()
     initGpio();
 
     // temp...
-    getNthSampleFolder(0);
+    getNthSampleFolder(sampleFolderNum);
     loadSamplesFromSD();
     // ...end temp
 
@@ -350,7 +350,7 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 bool didTrigger = samples[j].update(currentTime + (i>>1)); // could be more efficient
-                if(didTrigger) {
+                if(didTrigger && j<4) {
                     pulseGpio(TRIGGER_OUT_PINS[j], 1000);
                 }
                 if(!dropHit[j]) {
@@ -953,7 +953,8 @@ void loadSamplesFromSD()
     uint totalSize = 0;
     bool dryRun = false;
     int pageNum = 0;
-    const char *sampleNames[NUM_SAMPLES] = {"/kick.wav", "/snare.wav", "/closedhat.wav", "/tom.wav"};
+    //const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav"};
+    const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav", "/5.wav", "/6.wav", "/7.wav", "/8.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
 
@@ -1206,8 +1207,6 @@ void checkFlashData()
         uint8_t buffer[FLASH_PAGE_SIZE];
         int32_t refCheckNum = CHECK_NUM;
         std::memcpy(buffer, &refCheckNum, 4);       // copy check number
-        std::memcpy(buffer + VAR_TEMPO, &tempo, 4); // copy tempo float
-        printf("float bytes written to buffer: %d %d %d %d\n", buffer[VAR_TEMPO], buffer[VAR_TEMPO + 1], buffer[VAR_TEMPO + 2], buffer[VAR_TEMPO + 3]);
         uint32_t dummySampleLength = 1024;
         for (int i = 0; i < NUM_SAMPLES; i++)
         {

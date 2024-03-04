@@ -4,6 +4,7 @@ BUGS TO FIX
 - Slide is disabled
 - Sync in is disabled (and bad)
 - Reverse pitch is disabled
+- No SD card causes crash on boot
 
 FEATURES TO ADD
 - Better pitch lerping
