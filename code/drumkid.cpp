@@ -71,7 +71,7 @@ float nextHoldUpdateInc = 0;
 float nextHoldUpdateDec = 0;
 
 // SD card stuff
-int sampleFolderNum = 3;
+int sampleFolderNum = 0;
 char sampleFolderName[255];
 
 // tempo/sync stuff
@@ -88,7 +88,7 @@ void generateTupletMap();
 
 // convert zoom and step to velocity multiplier
 uint8_t maxZoom = log(4*QUARTER_NOTE_STEPS)/log(2) + 1;
-float zoomDivisor = 4096 / maxZoom;
+float zoomDivisor = 4095 / maxZoom;
 uint8_t tupletMap[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
 uint8_t stepVal[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
 float getZoomMultiplier(int thisStep)
@@ -117,9 +117,9 @@ float getZoomMultiplier(int thisStep)
         vel = 0.0;
     else if (vel > 1.0)
         vel = 1.0;*/
-    int vel = 4096 + zoom - (thisStepVal<<12);
+    int vel = 4095 + zoom - (thisStepVal<<12);
     if(vel < 0) vel = 0;
-    else if(vel > 4096) vel = 4096;
+    else if(vel > 4095) vel = 4095;
     // printf("step %d, vel %f\n", thisStep, vel);
     return vel;
 }
@@ -135,7 +135,7 @@ struct hit
 {
     bool waiting = false;
     int64_t time = 0;
-    uint16_t velocity = 4096; // was float, 1.0
+    uint16_t velocity = 4095;
     int channel = 0;
     uint16_t step = 0;
 };
@@ -159,19 +159,19 @@ void scheduleHits()
         }
         if (beats[beatNum].getHit(i, revStep, tuplet))
         {
-            samples[i].queueHit(adjustedHitTime, revStep, 4096);
+            samples[i].queueHit(adjustedHitTime, revStep, 4095);
         }
         else
         {
-            int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
+            int randNum = rand() % 4095;
             if (chance > randNum)
             {
                 int zoomMult = getZoomMultiplier(revStep);
                 int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
-                else if (intVel > 4096)
-                    intVel = 4096;
+                else if (intVel > 4095)
+                    intVel = 4095;
                 intVel = (intVel * zoomMult) >> 12;
                 if (intVel >= 8)
                 {
@@ -221,7 +221,7 @@ void scheduleHitsOld()
             }
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
             tempHitQueue[hitQueueIndex].step = step;
-            tempHitQueue[hitQueueIndex].velocity = 4096; // was 1.0
+            tempHitQueue[hitQueueIndex].velocity = 4095;
             hitQueueIndex++;
             if (hitQueueIndex == maxQueuedHits)
                 hitQueueIndex = 0;
@@ -478,6 +478,8 @@ void initBeats()
 int64_t prevTimeCheck = 0;
 int performanceThreshold = SAMPLE_RATE - 2 * SAMPLES_PER_BUFFER;
 int performanceErrorTally = 0;
+int tempAnaCheck[1000] = {0};
+int tempAnaIndex = 0;
 bool performanceCheck(repeating_timer_t *rt) {
     int64_t delta = currentTime - prevTimeCheck;
     prevTimeCheck = currentTime;
@@ -491,7 +493,17 @@ bool performanceCheck(repeating_timer_t *rt) {
             performanceErrorTally = 0;
         }
     }
+
+    /*printf("ana check: ");
+    for(int i=0; i<1000; i++) {
+        printf("%d ", tempAnaCheck[i]);
+    }
+    printf("\n");*/
     return true;
+}
+
+void applyDeadZones(int &param) {
+    param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
 }
 
 bool mainTimerLogic(repeating_timer_t *rt)
@@ -502,33 +514,23 @@ bool mainTimerLogic(repeating_timer_t *rt)
     updateAnalog();
     updateSyncIn();
 
-    // update effects etc
-    //samplesPerStep = (int)(sampleRate * 7.5 / tempo); // 7.5 because it's 60/8, 8 subdivisions per quarter note..?
-
     // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
-    if (chance < 0)
-        chance = 0;
-    else if (chance > 4096)
-        chance = 4096;
-    //chance = 4096; // temp!
-    //chance = 0;
+    applyDeadZones(chance);
+
     zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
-    if (zoom < 0)
-        zoom = 0;
-    else if (zoom > 4096)
-        zoom = 4096;
-    //zoomInt = 4096; // temp!
+    applyDeadZones(zoom);
+
     zoom = zoom * maxZoom;
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
     if (velMidpoint < 0)
         velMidpoint = 0;
-    else if (velMidpoint > 4096)
-        velMidpoint = 4096;
+    else if (velMidpoint > 4095)
+        velMidpoint = 4095;
     //velRange = 0; // temp
-    //velMidpoint = 4096; // temp
-    int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 4096; // temp, haven't figured out final range
+    //velMidpoint = 4095; // temp
+    int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 4095; // temp, haven't figured out final range
     if (pitchInt < -2048)
         pitchInt = -2048;
     else if (pitchInt > 2048)
@@ -901,8 +903,12 @@ void updateAnalog()
     {
         adc_select_input(0);
         analogReadings[analogLoopNum] = 4095 - adc_read();
+
+        //analogReadings[analogLoopNum] = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, 4095 - adc_read())) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
+
         adc_select_input(1);
         analogReadings[analogLoopNum + 8] = 4095 - adc_read();
+        //analogReadings[analogLoopNum + 8] = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, 4095 - adc_read())) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
     }
 
     analogPhase++;
@@ -914,14 +920,17 @@ void updateAnalog()
         {
             analogLoopNum = 0;
 
+            tempAnaCheck[tempAnaIndex] = analogReadings[CV_CHANCE];
+            tempAnaIndex = (tempAnaIndex + 1) % 1000;
+
             // temp
-            for (int i = 0; i < 16; i++)
+            /*for (int i = 0; i < 16; i++)
             {
                 if (buttonStableStates[i])
                 {
                     // updateLedDisplay(analogReadings[i]);
                 }
-            }
+            }*/
         }
     }
 }

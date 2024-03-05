@@ -76,6 +76,11 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define TUPLET_QUINTUPLET 2
 #define TUPLET_SEPTUPLET 3
 
+// analog smoothing etc
+#define ANALOG_DEAD_ZONE_LOWER 100
+#define ANALOG_DEAD_ZONE_UPPER (4095-ANALOG_DEAD_ZONE_LOWER)
+#define ANALOG_EFFECTIVE_RANGE (ANALOG_DEAD_ZONE_UPPER - ANALOG_DEAD_ZONE_LOWER)
+
 // flash data storage
 #define FLASH_DATA_ADDRESS (1024 * 1024)
 #define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 4 * FLASH_SECTOR_SIZE) // was just FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE but think the data overflows when using more than 4 samples?
@@ -87,11 +92,11 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
 
 // Beat variables
-int tempo = 1000; // BPM
+int tempo = 120; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 3;
+int beatNum = 0;
 Beat beats[8]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 

@@ -271,3 +271,8 @@ Okay! Solved it. I had only allocated 16 bytes of the "data" flash page for samp
 
 5/3/24
 Added performance monitoring. System now checks once per second how many samples have been processed in that time. If much below sample rate, error is shown. With 8 samples and full zoom, the system can barely keep up even at low tempos, and is running at less than 50% speed at 1000BPM. With 4 samples, 1000BPM is still fine, major problems don't arise until nearly 3000BPM.
+
+Now trying to make the pots/CV work a bit more nicely. There's about 1% of fluctuation in the ADC values, which is mainly an issue at the bottom (we read a lot of zeros but the noise would raise the min value above zero even with smoothing) and the top (can't even reach above 4080 or so, regardless of noise). I may add smoothing at some point, smoothing over last 10 values would improve things quite a bit (3-fold?), but might be unnecessary use of resources. Main problem is trying to implement dead zones at top and bottom of controls where we need a reliable 0% (chance, range, mid, swing, slide) or 100% (chance, zoom). Particularly difficult when combined with CV. Best approach is probably to implement dead zones selectively, not during updateAnalog(). Worst case, CV is 20 above mid, pot is 40(?) above zero, combined reading is 60, so maybe dead zone needs to be pretty big, even 100..?
+
+Yep, that works great. Currently just applying dead zones to chance and zoom, can add others if needed, just being conservative about resources.
+

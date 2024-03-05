@@ -3,14 +3,13 @@ BUGS TO FIX
 - Swing is disabled
 - Slide is disabled
 - Sync in is disabled (and bad)
-- Reverse pitch is disabled
+- Sync out doesn't always trigger on first beat (when hitting play)
 - No SD card causes crash on boot
 
 FEATURES TO ADD
-- Better pitch lerping
+- Better pitch lerping (not correct in reverse..?)
 - Numeric input
 - Beat programming
 - Non-integer tempos
 - Dead zone around pitch = 1.0
 - "Debouncing"(?) on drop pot, don't allow noisy liminal modes
-- Attempt more than four samples now that performance is much better
