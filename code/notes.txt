@@ -276,3 +276,4 @@ Now trying to make the pots/CV work a bit more nicely. There's about 1% of fluct
 
 Yep, that works great. Currently just applying dead zones to chance and zoom, can add others if needed, just being conservative about resources.
 
+Started adding a special dead zone for pitch but haven't finished it (nearly dinner time).

@@ -537,6 +537,23 @@ bool mainTimerLogic(repeating_timer_t *rt)
         pitchInt = 2048;
     else if(pitchInt == 0)
         pitchInt = 1; // need to do this to prevent division by zero...
+    
+    // temp, trying this out
+    int pitchDeadZone = 500;
+    if(pitchInt > 1024 + pitchDeadZone) {
+        // higher than 1024
+    } else if(pitchInt > 1024 - pitchDeadZone) {
+        // dead zone around 1024
+        pitchInt = 1024;
+    } else if(pitchInt > -1024 + pitchDeadZone) {
+        // between dead zones
+    } else if(pitchInt > -1024 - pitchDeadZone) {
+        // dead zone around -1024
+        pitchInt = -1024;
+    } else {
+        // lower than -1024
+    }
+
     Sample::pitch = pitchInt; // temp...
     //Sample::pitch = -1024;
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
