@@ -87,7 +87,7 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
 
 // Beat variables
-int tempo = 60; // BPM
+int tempo = 1000; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
@@ -140,8 +140,7 @@ uint8_t sevenSegAlphaCharacters[26] = {
 
 // timers and alarms
 repeating_timer_t mainTimer;
-repeating_timer_t syncInTimer;  // temp, wait and see what other LEDs are used for, maybe make a class
-repeating_timer_t syncOutTimer; // temp again probably
+repeating_timer_t performanceCheckTimer;
 
 uint analogLoopNum = 0; // 0 to 7
 uint analogPhase = 0;   // 0 or 1
@@ -158,12 +157,13 @@ uint shiftRegInPhase = 0;              // 0 or 1
 
 void initGpio();
 void initBeats();
+bool performanceCheck(repeating_timer_t *rt);
 bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
 void updateLedDisplayAlpha(char* word);
-void handleIncDec(bool isInc);
+void handleIncDec(bool isInc, bool isHold);
 void handleYesNo(bool isYes);
 void displayTempo();
 void displayBeat();

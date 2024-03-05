@@ -318,11 +318,11 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
+    add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
 
     // temp
     //beatPlaying = true;
     int timeIncrement = SAMPLES_PER_BUFFER; // in samples
-    int64_t prevTime = 0;
 
     // audio buffer loop, runs forever
     while (true)
@@ -330,8 +330,6 @@ int main()
         // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
-
-        prevTime = currentTime;
 
         bool dropHit[NUM_SAMPLES];
         for(int i=0; i<NUM_SAMPLES; i++) {
@@ -475,6 +473,25 @@ void initBeats()
     beats[1].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
     beats[1].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
     beats[1].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
+}
+
+int64_t prevTimeCheck = 0;
+int performanceThreshold = SAMPLE_RATE - 2 * SAMPLES_PER_BUFFER;
+int performanceErrorTally = 0;
+bool performanceCheck(repeating_timer_t *rt) {
+    int64_t delta = currentTime - prevTimeCheck;
+    prevTimeCheck = currentTime;
+    if(delta < performanceThreshold && currentTime > SAMPLE_RATE) {
+        printf("performance error, samples processed = %lld/%d\n", delta, SAMPLE_RATE);
+        char perfString[] = "perf";
+        updateLedDisplayAlpha(perfString);
+        performanceErrorTally ++;
+        if(performanceErrorTally >= 3) {
+            beatPlaying = false;
+            performanceErrorTally = 0;
+        }
+    }
+    return true;
 }
 
 bool mainTimerLogic(repeating_timer_t *rt)
@@ -649,11 +666,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_INC:
             nextHoldUpdateInc = currentTime + SAMPLE_RATE;
-            handleIncDec(true);
+            handleIncDec(true, false);
             break;
         case BUTTON_DEC:
             nextHoldUpdateDec = currentTime + SAMPLE_RATE;
-            handleIncDec(false);
+            handleIncDec(false, false);
             break;
         case BUTTON_CONFIRM:
             handleYesNo(true);
@@ -701,12 +718,17 @@ void handleButtonChange(int buttonNum, bool buttonState)
     }
 }
 
-void handleIncDec(bool isInc)
+void handleIncDec(bool isInc, bool isHold)
 {
     switch (activeButton)
     {
     case BUTTON_MANUAL_TEMPO:
-        tempo += isInc ? 1 : -1;
+        if(isHold) {
+            tempo += isInc ? 10 : -10;
+            tempo = 10 * ((tempo + 5) / 10);
+        } else {
+            tempo += isInc ? 1 : -1;
+        }
         if (tempo > 9999)
             tempo = 9999;
         else if (tempo < 10)
@@ -854,7 +876,7 @@ void updateShiftRegButtons()
         if (currentTime > nextHoldUpdateInc)
         {
             nextHoldUpdateInc = currentTime + (SAMPLE_RATE >> 3);
-            handleIncDec(true);
+            handleIncDec(true, true);
         }
     }
     else if (buttonStableStates[BUTTON_DEC])
@@ -862,7 +884,7 @@ void updateShiftRegButtons()
         if (currentTime > nextHoldUpdateDec)
         {
             nextHoldUpdateDec = currentTime + (SAMPLE_RATE >> 3);
-            handleIncDec(false);
+            handleIncDec(false, true);
         }
     }
 }
@@ -953,8 +975,8 @@ void loadSamplesFromSD()
     uint totalSize = 0;
     bool dryRun = false;
     int pageNum = 0;
-    //const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav"};
-    const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav", "/5.wav", "/6.wav", "/7.wav", "/8.wav"};
+    const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav"};
+    //const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav", "/5.wav", "/6.wav", "/7.wav", "/8.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
 

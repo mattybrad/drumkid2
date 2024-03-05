@@ -269,3 +269,5 @@ Okay! Solved it. I had only allocated 16 bytes of the "data" flash page for samp
 1) Should probably stick to 4 samples
 2) The system should somehow know if the calculation time is causing the tempo to slow down, at least during development
 
+5/3/24
+Added performance monitoring. System now checks once per second how many samples have been processed in that time. If much below sample rate, error is shown. With 8 samples and full zoom, the system can barely keep up even at low tempos, and is running at less than 50% speed at 1000BPM. With 4 samples, 1000BPM is still fine, major problems don't arise until nearly 3000BPM.
