@@ -46,6 +46,7 @@ int zoom = 0;
 int velRange = 0;
 int velMidpoint = 0;
 int drop = 0;
+int swing = 0;
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[9] = {
     0b11110000,
@@ -146,10 +147,22 @@ void scheduleSyncOut() {
     if(step % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
 }
 int64_t tempOffsets[NUM_SAMPLES] = {0};
+#define SWING_8TH 0
+#define SWING_16TH 1
+uint8_t swingMode = SWING_16TH;
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
     int16_t revStep = step;
+
+    if (swingMode == SWING_8TH && step % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS >> 1)
+    {
+        adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 14;
+    }
+    else if (swingMode == SWING_16TH && step % (QUARTER_NOTE_STEPS >> 1) == QUARTER_NOTE_STEPS >> 2)
+    {
+        adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 15;
+    }
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
@@ -466,13 +479,26 @@ void initGpio()
 void initBeats()
 {
     // new, simpler beat definition (but also prob temp?)
+    // reminder: kick, snare, hat, misc; 8ppqn
+
+    // quarter note hats
     beats[0].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
     beats[0].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
     beats[0].beatData[2] = 0b0000000100000001000000010000000100000001000000010000000100000001;
 
+    // 8th note hats
     beats[1].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
     beats[1].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
-    beats[1].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
+    beats[1].beatData[2] = 0b0001000100010001000100010001000100010001000100010001000100010001;
+
+    // 16th note hats
+    beats[2].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
+    beats[2].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
+    beats[2].beatData[2] = 0b0101010101010101010101010101010101010101010101010101010101010101;
+
+    beats[3].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
+    beats[3].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
+    beats[3].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
 }
 
 int64_t prevTimeCheck = 0;
@@ -538,8 +564,8 @@ bool mainTimerLogic(repeating_timer_t *rt)
     else if(pitchInt == 0)
         pitchInt = 1; // need to do this to prevent division by zero...
     
-    // temp, trying this out
-    int pitchDeadZone = 500;
+    // temp, trying this out - too tired to write this properly now, finish later
+    /*int pitchDeadZone = 500;
     if(pitchInt > 1024 + pitchDeadZone) {
         // higher than 1024
     } else if(pitchInt > 1024 - pitchDeadZone) {
@@ -552,11 +578,14 @@ bool mainTimerLogic(repeating_timer_t *rt)
         pitchInt = -1024;
     } else {
         // lower than -1024
-    }
+    }*/
 
     Sample::pitch = pitchInt; // temp...
     //Sample::pitch = -1024;
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
+
+    swing = analogReadings[POT_SWING];
+    applyDeadZones(swing);
 
     return true;
 }
@@ -769,8 +798,8 @@ void handleIncDec(bool isInc, bool isHold)
 
     case BUTTON_BEAT:
         beatNum += isInc ? 1 : -1;
-        if (beatNum > 3)
-            beatNum = 3;
+        if (beatNum > NUM_BEATS)
+            beatNum = NUM_BEATS;
         if (beatNum < 0)
             beatNum = 0;
         displayBeat();

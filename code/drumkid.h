@@ -92,6 +92,7 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
 
 // Beat variables
+#define NUM_BEATS 8
 int tempo = 120; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
