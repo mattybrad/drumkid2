@@ -64,8 +64,9 @@ int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
 int numSteps = timeSignature * QUARTER_NOTE_STEPS;
 bool shift = false;
 int tuplet = TUPLET_STRAIGHT;
-float quarterNoteDivisionRef[NUM_TUPLET_MODES] = {QUARTER_NOTE_STEPS, 3*QUARTER_NOTE_STEPS/4, 5*QUARTER_NOTE_STEPS/8, 7*QUARTER_NOTE_STEPS/8}; // to do: calculate this automatically
-float quarterNoteDivision = quarterNoteDivisionRef[tuplet];
+int quarterNoteDivisionRef[NUM_TUPLET_MODES] = {QUARTER_NOTE_STEPS, 3*QUARTER_NOTE_STEPS/4, 5*QUARTER_NOTE_STEPS/8, 7*QUARTER_NOTE_STEPS/8}; // to do: calculate this automatically
+int quarterNoteDivision = quarterNoteDivisionRef[tuplet];
+int nextQuarterNoteDivision = quarterNoteDivision;
 int outputSample = 0;
 int tempMissingCount = 0;
 float nextHoldUpdateInc = 0;
@@ -113,15 +114,9 @@ float getZoomMultiplier(int thisStep)
         }
     }
 
-    /*float vel = 1.0 + zoom - (float)thisStepVal;
-    if (vel < 0.0)
-        vel = 0.0;
-    else if (vel > 1.0)
-        vel = 1.0;*/
     int vel = 4095 + zoom - (thisStepVal<<12);
     if(vel < 0) vel = 0;
     else if(vel > 4095) vel = 4095;
-    // printf("step %d, vel %f\n", thisStep, vel);
     return vel;
 }
 
@@ -278,14 +273,28 @@ void scheduleHitsOld()
 }*/
 void nextHit()
 {
-    // bit messy right now, hard to account for all the tuplet stuff
-
-    //nextHitTime += (60.0 / tempo) / quarterNoteDivision;
-    nextHitTime += (2646000 / tempo) / quarterNoteDivision; // not very precise?
     step++;
-    if (step % QUARTER_NOTE_STEPS >= (int)quarterNoteDivision)
-        step += QUARTER_NOTE_STEPS - (step % QUARTER_NOTE_STEPS);
-    if (step == numSteps)
+    
+    if(nextQuarterNoteDivision != quarterNoteDivision) {
+        // if tuplet mode has changed, remap the step to the same position in the bar
+        int thisQuarterNote = step / QUARTER_NOTE_STEPS;
+        int thisSubStep = step % QUARTER_NOTE_STEPS;
+        int nextSubStep = (thisSubStep * nextQuarterNoteDivision) / quarterNoteDivision + 1;
+        int nextStep = thisQuarterNote * QUARTER_NOTE_STEPS + nextSubStep;
+        step = nextStep;
+        // horrible looking calculation, basically instead of nextHitTime being a single step in the future, it's now the difference between the time of the previous step and the time of the next step, and the code had to be written this way because I'm dealing with ints, so fractions don't really work unless you cross-multiply(?) the stuff you're subtracting
+        int64_t nextHitTimeDelta = (2646000 * (quarterNoteDivision*nextSubStep - nextQuarterNoteDivision*thisSubStep)) / (tempo * quarterNoteDivision * nextQuarterNoteDivision);
+        nextHitTime += nextHitTimeDelta;
+        quarterNoteDivision = nextQuarterNoteDivision;
+    } else {
+        nextHitTime += (2646000 / tempo) / quarterNoteDivision; // not very precise?
+    }
+
+    if (step % QUARTER_NOTE_STEPS >= quarterNoteDivision)
+        // in non-straight tuplet modes, quarterNoteDivision will be less than QUARTER_NOTE_STEPS, so need to skip to next integer multiple of QUARTER_NOTE_STEPS when we go past that point
+        step = (step / QUARTER_NOTE_STEPS + 1) * QUARTER_NOTE_STEPS;
+
+    if (step >= numSteps)
     {
         numSteps = newNumSteps;
         if (activeButton == BUTTON_TIME_SIGNATURE)
@@ -550,12 +559,9 @@ bool mainTimerLogic(repeating_timer_t *rt)
     zoom = zoom * maxZoom;
     velRange = analogReadings[POT_RANGE];
     velMidpoint = analogReadings[POT_MIDPOINT] + analogReadings[CV_MIDPOINT] - 2048;
-    if (velMidpoint < 0)
-        velMidpoint = 0;
-    else if (velMidpoint > 4095)
-        velMidpoint = 4095;
-    //velRange = 0; // temp
-    //velMidpoint = 4095; // temp
+    applyDeadZones(velRange);
+    applyDeadZones(velMidpoint);
+
     int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 4095; // temp, haven't figured out final range
     if (pitchInt < -2048)
         pitchInt = -2048;
@@ -811,7 +817,7 @@ void handleIncDec(bool isInc, bool isHold)
             tuplet = 0;
         else if (tuplet >= NUM_TUPLET_MODES)
             tuplet = NUM_TUPLET_MODES - 1;
-        quarterNoteDivision = quarterNoteDivisionRef[tuplet];
+        nextQuarterNoteDivision = quarterNoteDivisionRef[tuplet];
         displayTuplet();
         break;
 

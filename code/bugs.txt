@@ -1,6 +1,5 @@
 BUGS TO FIX
 - Changing tuplet mode causes timing glitch (number of steps not reset at correct time?)
-- Swing is disabled
 - Slide is disabled
 - Sync in is disabled (and bad)
 - Sync out doesn't always trigger on first beat (when hitting play)
@@ -14,3 +13,4 @@ FEATURES TO ADD
 - Non-integer tempos
 - Dead zone around pitch = 1.0
 - "Debouncing"(?) on drop pot, don't allow noisy liminal modes
+- Finalise swing implementation, see notes

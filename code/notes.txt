@@ -277,3 +277,11 @@ Now trying to make the pots/CV work a bit more nicely. There's about 1% of fluct
 Yep, that works great. Currently just applying dead zones to chance and zoom, can add others if needed, just being conservative about resources.
 
 Started adding a special dead zone for pitch but haven't finished it (nearly dinner time).
+
+8/3/24
+Reinstated swing control, now with dead zone to stop it messing up HZQDs. Current thought for implementation: deadzoned middle point for no swing, turning left increases 8th-note swing, turning right increases 16th-note swing OR single, simple swing knob, with button setting for swing note (would also allow quarter note swing, 32nd-note swing, etc). ALSO probably want a binary option for whether to mute zoom notes beyond the swing setting.
+
+I'm trying to fix this issue where changing the tuplets messes up the timing, but I've run out of time (which ironically is maybe what's happening in the code).
+
+11/3/24
+Okay, finally fixed the tuplet timing issue, at least enough to move on. If you keep changing the tuplet setting 10x/second or something stupid then the timing goes a bit weird/fast but that's officially an edge case now. For the record, the issue was that (say) step 19 in quintuplet mode is nearly at the end of a quarter note, while it's barely past half way in straight time - the steps have to be remapped, otherwise you end up at the wrong place within the quarter-note.
