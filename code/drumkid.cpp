@@ -330,7 +330,7 @@ int main()
     // ...end temp
 
     initSamplesFromFlash();
-    initBeats();
+    loadBeatsFromFlash();
 
     char startString[4] = "abc";
     updateLedDisplayAlpha(startString);
@@ -338,7 +338,7 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
-    add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
+    //add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
 
     // temp
     //beatPlaying = true;
@@ -474,31 +474,6 @@ void initGpio()
         gpio_init(TRIGGER_OUT_PINS[i]);
         gpio_set_dir(TRIGGER_OUT_PINS[i], GPIO_OUT);
     };
-}
-
-void initBeats()
-{
-    // new, simpler beat definition (but also prob temp?)
-    // reminder: kick, snare, hat, misc; 8ppqn
-
-    // quarter note hats
-    beats[0].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
-    beats[0].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
-    beats[0].beatData[2] = 0b0000000100000001000000010000000100000001000000010000000100000001;
-
-    // 8th note hats
-    beats[1].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
-    beats[1].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
-    beats[1].beatData[2] = 0b0001000100010001000100010001000100010001000100010001000100010001;
-
-    // 16th note hats
-    beats[2].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
-    beats[2].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
-    beats[2].beatData[2] = 0b0101010101010101010101010101010101010101010101010101010101010101;
-
-    beats[3].beatData[0] = 0b0000000000000000000000000000000100000000000000000000000000000001;
-    beats[3].beatData[1] = 0b0000000000000001000000000000000000000000000000010000000000000000;
-    beats[3].beatData[2] = 0b0111010101110101011101010111010101110101011101010111010101110101;
 }
 
 int64_t prevTimeCheck = 0;
@@ -751,6 +726,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
             activeButton = BUTTON_EDIT_BEAT;
             displayEditBeat();
             break;
+        case BUTTON_SAVE:
+            writeBeatsToFlash();
+            break;
         default:
             printf("(button not assigned)\n");
         }
@@ -798,8 +776,8 @@ void handleIncDec(bool isInc, bool isHold)
 
     case BUTTON_BEAT:
         beatNum += isInc ? 1 : -1;
-        if (beatNum > NUM_BEATS)
-            beatNum = NUM_BEATS;
+        if (beatNum >= NUM_BEATS)
+            beatNum = NUM_BEATS - 1;
         if (beatNum < 0)
             beatNum = 0;
         displayBeat();
@@ -1205,6 +1183,37 @@ void initSamplesFromFlash()
     }
 }
 
+void loadBeatsFromFlash()
+{
+    int startPos = 0;
+    for (int i = 0; i < NUM_BEATS; i++)
+    {
+        for (int j = 0; j < NUM_SAMPLES; j++)
+        {
+            std::memcpy(&beats[i].beatData[j], &flashUserBeats[8 * (i * NUM_SAMPLES + j)], 8);
+        }
+    }
+}
+
+#define BEAT_SIZE 32
+
+
+void writeBeatsToFlash() {
+    // flash page is 256 bytes
+    // beat is 32 bytes
+    // 8 beats per page
+    uint8_t pageData[FLASH_PAGE_SIZE];
+    int beatsPerPage = FLASH_PAGE_SIZE / BEAT_SIZE;
+    for(int i=0; i<NUM_BEATS/beatsPerPage; i++) { // each page
+        for(int j=0; j<beatsPerPage; j++) { // each beat
+            for(int k=0; k<NUM_SAMPLES; k++) { // each channel
+                std:memcpy(pageData + BEAT_SIZE * j + 8 * k, &beats[i*beatsPerPage+j].beatData[k], 8);
+            }
+        }
+        writePageToFlash(pageData, FLASH_USER_BEATS_ADDRESS + i * FLASH_PAGE_SIZE);
+    }
+}
+
 void updateLeds()
 {
     if (shiftRegOutLoopNum == 0 && shiftRegOutPhase == 0)
@@ -1286,10 +1295,12 @@ void writePageToFlash(const uint8_t *buffer, uint address)
 
 int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
 {
+    // potentially a silly way of doing this, written before I knew about std::memcpy? but it works
     int32_t thisInt = buffer[position] | buffer[position + 1] << 8 | buffer[position + 2] << 16 | buffer[position + 3] << 24;
     return thisInt;
 }
 
+// possibly unnecessary now, not really using floats
 float getFloatFromBuffer(const uint8_t *buffer, uint position)
 {
     union FloatConverter

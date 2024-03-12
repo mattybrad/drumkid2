@@ -1,0 +1,8 @@
+start-stop
+beat
+tempo
+time signature
+tuplet
+kit
+
+shift

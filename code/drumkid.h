@@ -3,10 +3,10 @@
 
 #include "constants.h"
 
-// Borrowing some useful Arduino macros
+// Borrowing some useful Arduino macros, but updating from 1UL to 1ULL for 64-bit compatibility
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
-#define bitSet(value, bit) ((value) |= (1UL << (bit)))
-#define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
+#define bitSet(value, bit) ((value) |= (1ULL << (bit)))
+#define bitClear(value, bit) ((value) &= ~(1ULL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 32 // 256 works well
@@ -35,14 +35,15 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
+#define BUTTON_LOAD_SAMPLES (6 + 16)
 #define BUTTON_SHIFT 7
 #define BUTTON_TUPLET 8
 #define BUTTON_MANUAL_TEMPO 9
 #define BUTTON_TIME_SIGNATURE (BUTTON_MANUAL_TEMPO + 16)
 #define BUTTON_BEAT 10
 #define BUTTON_EDIT_BEAT (BUTTON_BEAT + 16)
-#define BUTTON_OUTPUT (11 + 16)
-#define BUTTON_LOAD_SAMPLES (6 + 16)
+#define BUTTON_SAVE (11 + 16)
+#define BUTTON_OUTPUT (12 + 16)
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_START_STOP 15
 
@@ -79,8 +80,10 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // flash data storage
 #define FLASH_DATA_ADDRESS (1024 * 1024)
-#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 4 * FLASH_SECTOR_SIZE) // was just FLASH_DATA_ADDRESS + FLASH_SECTOR_SIZE but think the data overflows when using more than 4 samples?
+#define FLASH_USER_BEATS_ADDRESS (FLASH_DATA_ADDRESS + 8 * FLASH_SECTOR_SIZE)
+#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 128 * FLASH_SECTOR_SIZE)
 const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
+const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define CHECK_NUM -123456789
 #define DATA_CHECK 0
@@ -88,13 +91,13 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
 
 // Beat variables
-#define NUM_BEATS 8
+#define NUM_BEATS 16
 int tempo = 120; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 4;
-Beat beats[8]; // temp, define max number of beats
+int beatNum = 0;
+Beat beats[NUM_BEATS]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 int editSample = 0;
 int editStep = 0;
@@ -290,7 +293,6 @@ uint shiftRegInLoopNum = 0;            // 0 to 15
 uint shiftRegInPhase = 0;              // 0 or 1
 
 void initGpio();
-void initBeats();
 bool performanceCheck(repeating_timer_t *rt);
 bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
@@ -314,6 +316,8 @@ void updateLeds();
 void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
 void initSamplesFromFlash();
+void loadBeatsFromFlash();
+void writeBeatsToFlash();
 void writePageToFlash(const uint8_t *buffer, uint address);
 void checkFlashData();
 int32_t getIntFromBuffer(const uint8_t *buffer, uint position);

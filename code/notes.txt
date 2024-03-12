@@ -287,3 +287,19 @@ I'm trying to fix this issue where changing the tuplets messes up the timing, bu
 Okay, finally fixed the tuplet timing issue, at least enough to move on. If you keep changing the tuplet setting 10x/second or something stupid then the timing goes a bit weird/fast but that's officially an edge case now. For the record, the issue was that (say) step 19 in quintuplet mode is nearly at the end of a quarter note, while it's barely past half way in straight time - the steps have to be remapped, otherwise you end up at the wrong place within the quarter-note.
 
 Started adding beat editing function.
+
+12/3/24
+Let's set out exactly what goes into the flash memory and where. There are 2MB of flash, and I'm avoid the first 1MB, which should be plenty of room for the code. For future reference, can run this command to check how big the code is:
+
+objdump --all code/build/drumkid.elf | grep flash_binary_end
+
+This gives a hex number (e.g. 100657ac today). Basically get rid of the 100 part (subtract 10000000 hex, aka XIP_BASE) and convert to decimal to see code size, e.g. 657ac = 415660 = ~0.5MB. Could almost certainly start flash storage at, say, 0.6MB now. Audio storage is actually limited by RAM rather than flash - can't fit more than 100k samples (200kB) in RAM, aka about 50 sectors.
+
+Flash memory is divided into pages (256 bytes) and sectors (4096 bytes, 16 pages). You must erase before you write, and you can only erase a whole sector, so data should be grouped by sector. Current schema, leaving gaps because we're not too pushed for space:
+
+Sector  Data
+0       Data check number, sample lengths and start points
+4       Preset beats (128 * 32-byte beats)
+8       User beats (128 * 32-byte beats)
+128     Audio data (space for ~6 seconds, RAM limits us to ~2 seconds)
+
