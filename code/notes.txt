@@ -303,3 +303,6 @@ Sector  Data
 8       User beats (128 * 32-byte beats)
 128     Audio data (space for ~6 seconds, RAM limits us to ~2 seconds)
 
+That all worked! Good! Now for something completely different.
+
+Am rethinking clock input, which I was doing in a stupid way before. I'm going to support a few different PPQN values, starting with 4 and 24 (both common, apparently). Either way (and especially for 4PPQN), I'm going to need to implement an internal clock divider. Okay, this is doable. As long as you're not too fussy about the very first 16th-note having all its subdivisions available (because there's not enough info to divide the clock until we've had two pulses), this should be fine. And we may end up with a reset/start trigger input, too, if that's a standard thing.

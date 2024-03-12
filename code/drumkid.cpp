@@ -70,6 +70,7 @@ int outputSample = 0;
 int tempMissingCount = 0;
 float nextHoldUpdateInc = 0;
 float nextHoldUpdateDec = 0;
+int syncOutPpqn = 1;
 
 // SD card stuff
 int sampleFolderNum = 0;
@@ -357,8 +358,9 @@ int main()
             // sample updates go here
             int out1 = 0;
             int out2 = 0;
-            if(currentTime + (i>>1) == nextSyncOut) {
+            if(currentTime + (i>>1) >= nextSyncOut) {
                 pulseGpio(SYNC_OUT, 1000);
+                nextSyncOut = INT64_MAX;
             }
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
@@ -378,8 +380,7 @@ int main()
 
         currentTime += timeIncrement;
         
-        // scheduler call moved to here 23/2/24
-        scheduler();
+        //scheduler();
 
         if (sdSafeLoadTemp)
         {
@@ -400,44 +401,30 @@ int main()
     return 0;
 }
 
-int64_t onGpioPulseLowTimeout(alarm_id_t id, void *user_data)
+int64_t onGpioPulseTimeout(alarm_id_t id, void *user_data)
 {
     uint gpioNum = (uint)user_data;
     gpio_put(gpioNum, 0);
     return 0;
 }
 
-int64_t onGpioPulseHighTimeout(alarm_id_t id, void *user_data)
-{
-    uint gpioNum = (uint)user_data;
-    gpio_put(gpioNum, 1);
-    return 0;
-}
-
 void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros)
 {
     gpio_put(gpioNum, 1);
-    add_alarm_in_us(pulseLengthMicros, onGpioPulseLowTimeout, (void *)gpioNum, true);
+    add_alarm_in_us(pulseLengthMicros, onGpioPulseTimeout, (void *)gpioNum, true);
 }
 
-int64_t onLedPulseLowTimeout(alarm_id_t id, void *user_data)
+int64_t onLedPulseTimeout(alarm_id_t id, void *user_data)
 {
     uint ledNum = (uint)user_data;
     bitWrite(singleLedData, ledNum, false);
     return 0;
 }
 
-int64_t onLedPulseHighTimeout(alarm_id_t id, void *user_data)
+void pulseLed(uint ledNum, uint16_t pulseLengthMicros)
 {
-    uint ledNum = (uint)user_data;
     bitWrite(singleLedData, ledNum, true);
-    return 0;
-}
-
-void pulseLed(uint gpioNum, uint16_t delayMicros)
-{
-    add_alarm_in_us(delayMicros, onLedPulseHighTimeout, (void *)gpioNum, true);
-    add_alarm_in_us(delayMicros + 50000, onLedPulseLowTimeout, (void *)gpioNum, true);
+    add_alarm_in_us(pulseLengthMicros, onLedPulseTimeout, (void *)ledNum, true);
 }
 
 void initGpio()
@@ -509,11 +496,15 @@ void applyDeadZones(int &param) {
 
 bool mainTimerLogic(repeating_timer_t *rt)
 {
+    //uint64_t testTime = time_us_64();
+    //uint64_t testTimeMs = testTime / 1000;
+    //updateLedDisplay(testTimeMs);
 
     updateLeds();
     updateShiftRegButtons();
     updateAnalog();
-    updateSyncIn();
+    //updateSyncIn();
+    updateSyncInNew();
 
     // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
@@ -832,8 +823,12 @@ void handleYesNo(bool isYes) {
             break;
 
         case BUTTON_EDIT_BEAT:
-            bitWrite(beats[beatNum].beatData[editSample], editStep, isYes);
+            int tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
+            bitWrite(beats[beatNum].beatData[editSample], tupletEditStep, isYes);
             editStep ++;
+            if(editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE >= quarterNoteDivision>>2) {
+                editStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE + 1) * QUARTER_NOTE_STEPS_SEQUENCEABLE;
+            }
             if(editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
                 editStep = 0;
             displayEditBeat();
@@ -1400,7 +1395,50 @@ void updateSyncIn()
     }
     else
     {
-        microsSinceSyncInChange += 100;
+        microsSinceSyncInChange += mainTimerInterval;
+    }
+}
+
+bool syncInReceived = false;
+uint64_t lastSyncInTime;
+int64_t onClockDivideTemp(alarm_id_t id, void *user_data) {
+    pulseLed(2, 50000);
+    return 0;
+}
+void updateSyncInNew() {
+    if (microsSinceSyncInChange > 1000)
+    {
+        bool syncInState = !gpio_get(SYNC_IN);
+        if (syncInState != syncInStableState)
+        {
+            syncInStableState = syncInState;
+            microsSinceSyncInChange = 0;
+            if (syncInState)
+            {
+                // clock divider experiments
+                uint64_t deltaT = time_us_64() - lastSyncInTime;
+                lastSyncInTime = time_us_64();
+                if(syncInReceived) {
+                    add_alarm_in_us(deltaT>>1, onClockDivideTemp, NULL, true);
+                }
+                syncInReceived = true;
+
+                // temp, attempt to trigger notes directly...
+                nextHitTime = currentTime;
+                step ++;
+                if(step == numSteps) step = 0;
+                scheduleHits();
+
+                syncInMode = true; // temp, once a sync signal is received, module stays in "sync in" mode until reboot
+                
+                pulseLed(3, 50000); // temp?
+                pulseLed(2, 50000); // temp?
+            }
+        }
+    }
+    else
+    {
+        microsSinceSyncInChange += mainTimerInterval;
     }
 }
 
