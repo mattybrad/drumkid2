@@ -1,16 +1,18 @@
 BUGS TO FIX
-- Changing tuplet mode causes timing glitch (number of steps not reset at correct time?)
 - Slide is disabled
 - Sync in is disabled (and bad)
 - Sync out doesn't always trigger on first beat (when hitting play)
 - No SD card causes crash on boot
 
 FEATURES TO ADD
+- Beat programming
+    - 
+- Better LED display messages, not just numbers
 - Better pitch lerping (not correct in reverse..?)
 - Prioritise more recent(?) notes in reverse to give expected sound at higher zooms
+- Try separate drop control for random hits
 - Numeric input
-- Beat programming
-- Non-integer tempos
+- Non-integer tempos, or at least higher precision
 - Dead zone around pitch = 1.0
 - "Debouncing"(?) on drop pot, don't allow noisy liminal modes
 - Finalise swing implementation, see notes

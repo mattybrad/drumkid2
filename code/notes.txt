@@ -285,3 +285,5 @@ I'm trying to fix this issue where changing the tuplets messes up the timing, bu
 
 11/3/24
 Okay, finally fixed the tuplet timing issue, at least enough to move on. If you keep changing the tuplet setting 10x/second or something stupid then the timing goes a bit weird/fast but that's officially an edge case now. For the record, the issue was that (say) step 19 in quintuplet mode is nearly at the end of a quarter note, while it's barely past half way in straight time - the steps have to be remapped, otherwise you end up at the wrong place within the quarter-note.
+
+Started adding beat editing function.

@@ -59,9 +59,8 @@ uint8_t dropRef[9] = {
     0b11110100,
     0b11110000
 };
-int timeSignature = 4;
-int newNumSteps = timeSignature * QUARTER_NOTE_STEPS;
-int numSteps = timeSignature * QUARTER_NOTE_STEPS;
+int newNumSteps = 4 * QUARTER_NOTE_STEPS;
+int numSteps = 4 * QUARTER_NOTE_STEPS;
 bool shift = false;
 int tuplet = TUPLET_STRAIGHT;
 int quarterNoteDivisionRef[NUM_TUPLET_MODES] = {QUARTER_NOTE_STEPS, 3*QUARTER_NOTE_STEPS/4, 5*QUARTER_NOTE_STEPS/8, 7*QUARTER_NOTE_STEPS/8}; // to do: calculate this automatically
@@ -86,16 +85,13 @@ int activeButton = -1;
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
 
-void generateTupletMap();
-
 // convert zoom and step to velocity multiplier
 uint8_t maxZoom = log(4*QUARTER_NOTE_STEPS)/log(2) + 1;
 float zoomDivisor = 4095 / maxZoom;
-uint8_t tupletMap[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
-uint8_t stepVal[NUM_TUPLET_MODES][QUARTER_NOTE_STEPS * 4];
+uint8_t stepVal[QUARTER_NOTE_STEPS * 4];
 float getZoomMultiplier(int thisStep)
 {
-    int thisStepVal = stepVal[0][thisStep % (4 * QUARTER_NOTE_STEPS)];
+    int thisStepVal = stepVal[thisStep % (4 * QUARTER_NOTE_STEPS)];
     if(numSteps != 4 * QUARTER_NOTE_STEPS) {
         // bit complicated, this, but basically only the 4/4 time signature needs the "2" value (it sounds weird in other time signatures), and we also need to prevent an additional "1" value for 5/4 or 6/4, because it naturally occurs after 4 beats but again sounds wrong (sorry, bad explanation)
         if(thisStep > 0 && thisStepVal <= 2) thisStepVal = 3;
@@ -161,18 +157,20 @@ void scheduleHits()
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
+        bool dropHit = !bitRead(dropRef[drop], i);
+
         if(Sample::pitch < 0) {
             tempOffsets[i] = (static_cast<int32_t>(samples[i].length) *  QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
             revStep = (step + tempOffsets[i]) % numSteps;
         }
-        if (beats[beatNum].getHit(i, revStep, tuplet))
+        if (!dropHit && beats[beatNum].getHit(i, revStep, tuplet))
         {
             samples[i].queueHit(adjustedHitTime, revStep, 4095);
         }
         else
         {
             int randNum = rand() % 4095;
-            if (chance > randNum)
+            if (!dropHit && chance > randNum)
             {
                 int zoomMult = getZoomMultiplier(revStep);
                 int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
@@ -353,11 +351,6 @@ int main()
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
-        bool dropHit[NUM_SAMPLES];
-        for(int i=0; i<NUM_SAMPLES; i++) {
-            dropHit[i] = !bitRead(dropRef[drop], i);
-        }
-
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
@@ -373,10 +366,8 @@ int main()
                 if(didTrigger && j<4) {
                     pulseGpio(TRIGGER_OUT_PINS[j], 1000);
                 }
-                if(!dropHit[j]) {
-                    if(samples[j].output1) out1 += samples[j].value;
-                    if(samples[j].output2) out2 += samples[j].value;
-                }
+                if(samples[j].output1) out1 += samples[j].value;
+                if(samples[j].output2) out2 += samples[j].value;
             }
 
             bufferSamples[i] = out1 >> 2;
@@ -645,9 +636,14 @@ char getNthDigit(int x, int n)
 
 void updateLedDisplay(int num)
 {
-    for (int i = 0; i < 4; i++)
-    {
-        sevenSegData[3-i] = sevenSegCharacters[getNthDigit(num, i)];
+    int compare = 1;
+    for(int i=0; i<4; i++) {
+        if(i==0||num>=compare) {
+            sevenSegData[3-i] = sevenSegAsciiCharacters[getNthDigit(num, i) + 48];
+        } else {
+            sevenSegData[3-i] = sevenSegAsciiCharacters[' '];
+        }
+        compare *= 10;
     }
 }
 
@@ -655,20 +651,14 @@ void updateLedDisplayAlpha(char* word)
 {
     bool foundWordEnd = false;
     for(int i=0; i<4; i++) {
-        int alphaNum = 0;
         bool skipChar = false;
         if(word[i] == '\0') {
             foundWordEnd = true;
-        } else {
-            alphaNum = word[i] - 97; // temp, only lower case alphabet for now
-            if(alphaNum < 0 || alphaNum > 122) {
-                skipChar = true;
-            }
         }
-        if(foundWordEnd || skipChar) {
+        if(foundWordEnd) {
             sevenSegData[i] = 0b00000000;
         } else {
-            sevenSegData[i] = sevenSegAlphaCharacters[alphaNum];
+            sevenSegData[i] = sevenSegAsciiCharacters[word[i]];
         }
         
     }
@@ -757,6 +747,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
             activeButton = BUTTON_BEAT;
             displayBeat();
             break;
+        case BUTTON_EDIT_BEAT:
+            activeButton = BUTTON_EDIT_BEAT;
+            displayEditBeat();
+            break;
         default:
             printf("(button not assigned)\n");
         }
@@ -811,6 +805,15 @@ void handleIncDec(bool isInc, bool isHold)
         displayBeat();
         break;
 
+    case BUTTON_EDIT_BEAT:
+        editSample += isInc ? 1 : -1;
+        if(editSample < 0)
+            editSample = 0;
+        if(editSample >= NUM_SAMPLES)
+            editSample = NUM_SAMPLES - 1;
+        displayEditBeat();
+        break;
+
     case BUTTON_TUPLET:
         tuplet += isInc ? 1 : -1;
         if (tuplet < 0)
@@ -849,6 +852,14 @@ void handleYesNo(bool isYes) {
         case BUTTON_LOAD_SAMPLES:
             sdSafeLoadTemp = true;
             break;
+
+        case BUTTON_EDIT_BEAT:
+            bitWrite(beats[beatNum].beatData[editSample], editStep, isYes);
+            editStep ++;
+            if(editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
+                editStep = 0;
+            displayEditBeat();
+            break;
     }
 }
 
@@ -859,20 +870,39 @@ void displayTempo()
 
 void displayTimeSignature()
 {
-    int tempTimeSig = 4 + 10 * newNumSteps / QUARTER_NOTE_STEPS;
-    if (newNumSteps != numSteps)
-        tempTimeSig += 8000; // temp, shows that the new signature is not yet active
-    updateLedDisplay(tempTimeSig);
+    char timeSigText[4];
+    timeSigText[0] = newNumSteps / QUARTER_NOTE_STEPS + 48;
+    timeSigText[1] = '-';
+    timeSigText[2] = '4';
+    timeSigText[3] = (newNumSteps != numSteps) ? '_' : ' ';
+    updateLedDisplayAlpha(timeSigText);
 }
 
 void displayTuplet()
 {
-    updateLedDisplay(tuplet*2+1);
+    char tupletNames[NUM_TUPLET_MODES][5] = {
+        "stra",
+        "trip",
+        "quin",
+        "sept"
+    };
+    updateLedDisplayAlpha(tupletNames[tuplet]);
 }
 
 void displayBeat()
 {
     updateLedDisplay(beatNum);
+}
+
+void displayEditBeat()
+{
+    int humanReadableEditStep = editStep + 1;
+    char chars[4];
+    chars[0] = editSample + 49;
+    chars[1] = ' ';
+    chars[2] = (humanReadableEditStep < 10) ? ' ' : humanReadableEditStep / 10 + 48;
+    chars[3] = (humanReadableEditStep % 10) + 48;
+    updateLedDisplayAlpha(chars);
 }
 
 void updateShiftRegButtons()
@@ -1364,7 +1394,6 @@ void updateSyncIn()
 }
 
 void initZoom() {
-    generateTupletMap();
     for (int i = 0; i < QUARTER_NOTE_STEPS * 4; i++)
     {
         bool foundLevel = false;
@@ -1373,24 +1402,9 @@ void initZoom() {
             if ((i % ((QUARTER_NOTE_STEPS * 4) >> j)) == 0)
             {
                 foundLevel = true;
-                stepVal[0][i] = j + 1;
+                stepVal[i] = j + 1;
             }
         }
-        printf("%d ", stepVal[0][i]);
-    }
-}
-
-void generateTupletMap() {
-    printf("\n");
-    for(int q=0; q<4; q++) {
-        for(int i=0; i<NUM_TUPLET_MODES; i++) {
-            float multiplier = QUARTER_NOTE_STEPS / quarterNoteDivisionRef[i];
-            for(int j=0; j<QUARTER_NOTE_STEPS; j++) {
-                int thisStep = static_cast<int>(round(j * multiplier));
-                if(thisStep >= QUARTER_NOTE_STEPS) thisStep = QUARTER_NOTE_STEPS - 1;
-                tupletMap[i][j + q * QUARTER_NOTE_STEPS] = thisStep + q * QUARTER_NOTE_STEPS;
-            }
-            printf("\n");
-        }
+        printf("%d ", stepVal[i]);
     }
 }

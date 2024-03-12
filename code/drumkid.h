@@ -35,20 +35,16 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
-
 #define BUTTON_SHIFT 7
-
 #define BUTTON_TUPLET 8
 #define BUTTON_MANUAL_TEMPO 9
+#define BUTTON_TIME_SIGNATURE (BUTTON_MANUAL_TEMPO + 16)
 #define BUTTON_BEAT 10
-
+#define BUTTON_EDIT_BEAT (BUTTON_BEAT + 16)
+#define BUTTON_OUTPUT (11 + 16)
+#define BUTTON_LOAD_SAMPLES (6 + 16)
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_START_STOP 15
-
-// shifted button numbers..?
-#define BUTTON_LOAD_SAMPLES 22
-#define BUTTON_TIME_SIGNATURE 25
-#define BUTTON_OUTPUT 26
 
 // pot numbers
 #define POT_CHANCE 0
@@ -97,9 +93,11 @@ int tempo = 120; // BPM
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 0;
+int beatNum = 4;
 Beat beats[8]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
+int editSample = 0;
+int editStep = 0;
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
@@ -143,6 +141,136 @@ uint8_t sevenSegAlphaCharacters[26] = {
     0b01101110,
     0b01110110,
     0b11011010};
+uint8_t sevenSegAsciiCharacters[256] = {
+    0b00000000, // 0 NULL
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000, // 32 SPACE
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000010, // -
+    0b00000000,
+    0b00000000,
+    0b11111100, // digit 0
+    0b01100000,
+    0b11011010,
+    0b11110010,
+    0b01100110,
+    0b10110110,
+    0b10111110,
+    0b11100000,
+    0b11111110,
+    0b11110110, // digit 9
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000, // 64
+    0b11101110, // A (a)
+    0b00111110,
+    0b10011100,
+    0b01111010,
+    0b10011110,
+    0b10001110,
+    0b11110110,
+    0b01101110,
+    0b01100000,
+    0b01111000,
+    0b01101110,
+    0b00011100,
+    0b11101100,
+    0b00101010,
+    0b00111010,
+    0b11001110,
+    0b11100110,
+    0b00001010,
+    0b10110110,
+    0b00011110,
+    0b01111100,
+    0b00111000,
+    0b01111100,
+    0b01101110,
+    0b01110110,
+    0b11011010, // Z (z)
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00010000, // _
+    0b00000000, // 96
+    0b11101110, // a
+    0b00111110,
+    0b10011100,
+    0b01111010,
+    0b10011110,
+    0b10001110,
+    0b11110110,
+    0b01101110,
+    0b01100000,
+    0b01111000,
+    0b01101110,
+    0b00011100,
+    0b11101100,
+    0b00101010,
+    0b00111010,
+    0b11001110,
+    0b11100110,
+    0b00001010,
+    0b10110110,
+    0b00011110,
+    0b01111100,
+    0b00111000,
+    0b01111100,
+    0b01101110,
+    0b01110110,
+    0b11011010, // z
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+};
 
 // timers and alarms
 repeating_timer_t mainTimer;
@@ -173,6 +301,7 @@ void handleIncDec(bool isInc, bool isHold);
 void handleYesNo(bool isYes);
 void displayTempo();
 void displayBeat();
+void displayEditBeat();
 void displayTimeSignature();
 void displayTuplet();
 void handleButtonChange(int buttonNum, bool buttonState);
