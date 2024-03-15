@@ -118,7 +118,8 @@ float getZoomMultiplier(int thisStep)
 }
 
 // temp figuring out proper hit generation
-uint16_t step = 0; 
+uint16_t scheduledStep = 0;
+
 int64_t nextSyncOut = 0;
 int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
@@ -136,7 +137,7 @@ const uint maxQueuedHits = 256; // queue fills up at ~300BPM when maxQueuedHits 
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
 void scheduleSyncOut() {
-    if(step % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
+    if(scheduledStep % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
 }
 int64_t tempOffsets[NUM_SAMPLES] = {0};
 #define SWING_8TH 0
@@ -145,15 +146,16 @@ uint8_t swingMode = SWING_16TH;
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
-    int16_t revStep = step;
+    int16_t revStep = scheduledStep;
 
-    if (swingMode == SWING_8TH && step % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS >> 1)
+    if (swingMode == SWING_8TH && scheduledStep % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS >> 1)
     {
-        adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 14;
+        //adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 14;
+        //adjustedHitTime += ((int64_t)swing * stepTime) >> ;
     }
-    else if (swingMode == SWING_16TH && step % (QUARTER_NOTE_STEPS >> 1) == QUARTER_NOTE_STEPS >> 2)
+    else if (swingMode == SWING_16TH && scheduledStep % (QUARTER_NOTE_STEPS >> 1) == QUARTER_NOTE_STEPS >> 2)
     {
-        adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 15;
+        //adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 15;
     }
 
     for (int i = 0; i < NUM_SAMPLES; i++)
@@ -162,7 +164,7 @@ void scheduleHits()
 
         if(Sample::pitch < 0) {
             tempOffsets[i] = (static_cast<int32_t>(samples[i].length) *  QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
-            revStep = (step + tempOffsets[i]) % numSteps;
+            revStep = (scheduledStep + tempOffsets[i]) % numSteps;
         }
         if (!dropHit && beats[beatNum].getHit(i, revStep, tuplet))
         {
@@ -191,12 +193,12 @@ void scheduleHits()
 void scheduleHitsOld()
 {
     // schedule sync out pulses using hit queue, special channel = -1
-    if (step % QUARTER_NOTE_STEPS == 0)
+    if (scheduledStep % QUARTER_NOTE_STEPS == 0)
     {
         tempHitQueue[hitQueueIndex].channel = -1;
         tempHitQueue[hitQueueIndex].waiting = true;
         tempHitQueue[hitQueueIndex].time = nextHitTime;
-        tempHitQueue[hitQueueIndex].step = step;
+        tempHitQueue[hitQueueIndex].step = scheduledStep;
         hitQueueIndex++;
         if (hitQueueIndex == maxQueuedHits)
             hitQueueIndex = 0;
@@ -217,7 +219,7 @@ void scheduleHitsOld()
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].getHit(i, step, tuplet))
+        if (beats[beatNum].getHit(i, scheduledStep, tuplet))
         {
             tempHitQueue[hitQueueIndex].channel = i;
             tempHitQueue[hitQueueIndex].waiting = true;
@@ -227,7 +229,7 @@ void scheduleHitsOld()
                 // adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
             }
             tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-            tempHitQueue[hitQueueIndex].step = step;
+            tempHitQueue[hitQueueIndex].step = scheduledStep;
             tempHitQueue[hitQueueIndex].velocity = 4095;
             hitQueueIndex++;
             if (hitQueueIndex == maxQueuedHits)
@@ -239,7 +241,7 @@ void scheduleHitsOld()
             int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
             if (chance > randNum)
             {
-                int zoomMult = getZoomMultiplier(step);
+                int zoomMult = getZoomMultiplier(scheduledStep);
                 int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
@@ -257,7 +259,7 @@ void scheduleHitsOld()
                     tempHitQueue[hitQueueIndex].waiting = true;
                     // timing not yet compatible with slide
                     tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-                    tempHitQueue[hitQueueIndex].step = step;
+                    tempHitQueue[hitQueueIndex].step = scheduledStep;
                     tempHitQueue[hitQueueIndex].velocity = intVel;//floatVel;
                     hitQueueIndex++;
                     if (hitQueueIndex == maxQueuedHits)
@@ -272,33 +274,34 @@ void scheduleHitsOld()
 }*/
 void nextHit()
 {
-    step++;
+    scheduledStep++;
     
     if(nextQuarterNoteDivision != quarterNoteDivision) {
         // if tuplet mode has changed, remap the step to the same position in the bar
-        int thisQuarterNote = step / QUARTER_NOTE_STEPS;
-        int thisSubStep = step % QUARTER_NOTE_STEPS;
+        int thisQuarterNote = scheduledStep / QUARTER_NOTE_STEPS;
+        int thisSubStep = scheduledStep % QUARTER_NOTE_STEPS;
         int nextSubStep = (thisSubStep * nextQuarterNoteDivision) / quarterNoteDivision + 1;
         int nextStep = thisQuarterNote * QUARTER_NOTE_STEPS + nextSubStep;
-        step = nextStep;
+        scheduledStep = nextStep;
         // horrible looking calculation, basically instead of nextHitTime being a single step in the future, it's now the difference between the time of the previous step and the time of the next step, and the code had to be written this way because I'm dealing with ints, so fractions don't really work unless you cross-multiply(?) the stuff you're subtracting
-        int64_t nextHitTimeDelta = (2646000 * (quarterNoteDivision*nextSubStep - nextQuarterNoteDivision*thisSubStep)) / (tempo * quarterNoteDivision * nextQuarterNoteDivision);
+        int64_t nextHitTimeDelta = (2646000 * (quarterNoteDivision*nextSubStep - nextQuarterNoteDivision*thisSubStep)) / (tempo * quarterNoteDivision * nextQuarterNoteDivision); // todo: change this from tempo to stepTime for better precision
         nextHitTime += nextHitTimeDelta;
         quarterNoteDivision = nextQuarterNoteDivision;
     } else {
-        nextHitTime += (2646000 / tempo) / quarterNoteDivision; // not very precise?
+        //nextHitTime += (2646000 / tempo) / quarterNoteDivision; // not very precise?
+        nextHitTime += stepTime; // todo: handle tuplets
     }
 
-    if (step % QUARTER_NOTE_STEPS >= quarterNoteDivision)
+    if (scheduledStep % QUARTER_NOTE_STEPS >= quarterNoteDivision)
         // in non-straight tuplet modes, quarterNoteDivision will be less than QUARTER_NOTE_STEPS, so need to skip to next integer multiple of QUARTER_NOTE_STEPS when we go past that point
-        step = (step / QUARTER_NOTE_STEPS + 1) * QUARTER_NOTE_STEPS;
+        scheduledStep = (scheduledStep / QUARTER_NOTE_STEPS + 1) * QUARTER_NOTE_STEPS;
 
-    if (step >= numSteps)
+    if (scheduledStep >= numSteps)
     {
         numSteps = newNumSteps;
         if (activeButton == BUTTON_TIME_SIGNATURE)
             displayTimeSignature(); // temp? not 100% sure this is a good idea, maybe OTT, shows new time signature has come into effect
-        step = 0;
+        scheduledStep = 0;
     }
 }
 void scheduler()
@@ -309,6 +312,12 @@ void scheduler()
         scheduleSyncOut();
         nextHit();
     }
+}
+
+bool tempScheduler(repeating_timer_t *rt)
+{
+    scheduler();
+    return true;
 }
 
 // main function, obviously
@@ -339,6 +348,9 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
+    int64_t tempPeriod = 700;
+    repeating_timer_t tempSchedulerTimer;
+    add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
     //add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
 
     // temp
@@ -359,7 +371,7 @@ int main()
             int out1 = 0;
             int out2 = 0;
             if(currentTime + (i>>1) >= nextSyncOut) {
-                pulseGpio(SYNC_OUT, 1000);
+                pulseGpio(SYNC_OUT, 1000); // todo: adjust pulse length based on PPQN, or advanced setting
                 nextSyncOut = INT64_MAX;
             }
             for (int j = 0; j < NUM_SAMPLES; j++)
@@ -654,7 +666,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     tempHitQueue[i].waiting = false;
                 }
                 hitQueueIndex = 0;
-                step = 0;
+                scheduledStep = 0;
                 nextHitTime = currentTime;
                 scheduler();
             }
@@ -1349,56 +1361,8 @@ void checkFlashData()
 
 uint32_t microsSinceSyncInChange = mainTimerInterval;
 bool syncInStableState = false;
-void updateSyncIn()
-{
-    if (microsSinceSyncInChange > 1000)
-    {
-        bool syncInState = !gpio_get(SYNC_IN);
-        if (syncInState != syncInStableState)
-        {
-            syncInStableState = syncInState;
-            microsSinceSyncInChange = 0;
-            if (syncInState)
-            {
-                syncInMode = true; // temp, once a sync signal is received, module stays in "sync in" mode until reboot
-                // doStep();
-                float historyTally = 0.0;
-                int validHistoryCount = 0;
-                for (int i = 7; i >= 1; i--)
-                {
-                    syncInHistory[i] = syncInHistory[i - 1];
-                }
-                syncInHistory[0] = currentTime;
-                for (int i = 0; i < 7; i++)
-                {
-                    if (syncInHistory[i] >= 0 && syncInHistory[i + 1] >= 0)
-                    {
-                        float timeDiff = syncInHistory[i] - syncInHistory[i + 1];
-                        if (timeDiff >= 0 && timeDiff < 10)
-                        {
-                            // arbitrary 10-second limit for now
-                            // printf("%d %f\t", i, timeDiff);
-                            validHistoryCount++;
-                            historyTally += timeDiff;
-                        }
-                    }
-                }
-                if (validHistoryCount > 0)
-                {
-                    float testSyncTempo = 60.0 * validHistoryCount / historyTally;
-                    // printf("test sync tempo %f\n", testSyncTempo);
-                    tempo = testSyncTempo;
-                }
-                pulseLed(3, 50000);
-            }
-        }
-    }
-    else
-    {
-        microsSinceSyncInChange += mainTimerInterval;
-    }
-}
 
+int16_t clockStep = 0;
 bool syncInReceived = false;
 uint64_t lastSyncInTime;
 int64_t onClockDivideTemp(alarm_id_t id, void *user_data) {
@@ -1415,24 +1379,30 @@ void updateSyncInNew() {
             microsSinceSyncInChange = 0;
             if (syncInState)
             {
-                // clock divider experiments
-                uint64_t deltaT = time_us_64() - lastSyncInTime;
-                lastSyncInTime = time_us_64();
-                if(syncInReceived) {
-                    add_alarm_in_us(deltaT>>1, onClockDivideTemp, NULL, true);
+                if(!syncInReceived) {
+                    beatPlaying = true;
+                    clockStep = 0;
+                    scheduledStep = 0;
+                    nextHitTime = currentTime;
+                    scheduler();
+                } else {
+                    // assume 1 PPQN for now
+                    clockStep = (clockStep + 32) % numSteps;
+                    if(clockStep == scheduledStep) {
+                        nextHitTime = currentTime;
+                    } else {
+                        nextHitTime = currentTime + stepTime;
+                        scheduledStep = (clockStep + 1) % numSteps;
+                    }
+                    updateLedDisplay(clockStep);
+                    uint64_t deltaT = time_us_64() - lastSyncInTime;
+                    stepTime = (44100 * deltaT) / 32000000;
                 }
+                lastSyncInTime = time_us_64();
                 syncInReceived = true;
-
-                // temp, attempt to trigger notes directly...
-                nextHitTime = currentTime;
-                step ++;
-                if(step == numSteps) step = 0;
-                scheduleHits();
-
                 syncInMode = true; // temp, once a sync signal is received, module stays in "sync in" mode until reboot
                 
                 pulseLed(3, 50000); // temp?
-                pulseLed(2, 50000); // temp?
             }
         }
     }
