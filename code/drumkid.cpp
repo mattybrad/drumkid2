@@ -70,7 +70,11 @@ int outputSample = 0;
 int tempMissingCount = 0;
 float nextHoldUpdateInc = 0;
 float nextHoldUpdateDec = 0;
-int syncOutPpqn = 1;
+const int NUM_PPQN_VALUES = 6;
+int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 16, 32};
+int syncInPpqnIndex = 0;
+int syncInPpqn = ppqnValues[syncInPpqnIndex];
+int syncOutPpqn = syncInPpqn;
 
 // SD card stuff
 int sampleFolderNum = 0;
@@ -78,8 +82,6 @@ char sampleFolderName[255];
 
 // tempo/sync stuff
 bool syncInMode = false;
-int syncInStep = 0;
-int64_t syncInHistory[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
 
 int activeButton = -1;
 
@@ -137,7 +139,7 @@ const uint maxQueuedHits = 256; // queue fills up at ~300BPM when maxQueuedHits 
 struct hit tempHitQueue[maxQueuedHits];
 uint16_t hitQueueIndex = 0;
 void scheduleSyncOut() {
-    if(scheduledStep % QUARTER_NOTE_STEPS == 0) nextSyncOut = nextHitTime;
+    if(scheduledStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextHitTime;
 }
 int64_t tempOffsets[NUM_SAMPLES] = {0};
 #define SWING_8TH 0
@@ -666,8 +668,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     tempHitQueue[i].waiting = false;
                 }
                 hitQueueIndex = 0;
-                scheduledStep = 0;
-                nextHitTime = currentTime;
+                if(!syncInMode) {
+                    scheduledStep = 0;
+                    nextHitTime = currentTime;
+                }
                 scheduler();
             }
             else
@@ -699,6 +703,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_CANCEL:
             handleYesNo(false);
+            break;
+        case BUTTON_PPQN:
+            activeButton = BUTTON_PPQN;
+            updateLedDisplay(syncInPpqn);
             break;
         case BUTTON_LOAD_SAMPLES:
             activeButton = BUTTON_LOAD_SAMPLES;
@@ -751,6 +759,13 @@ void handleIncDec(bool isInc, bool isHold)
 {
     switch (activeButton)
     {
+    case BUTTON_PPQN:
+        syncInPpqnIndex += isInc ? 1 : -1;
+        syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES-1, syncInPpqnIndex));
+        syncInPpqn = ppqnValues[syncInPpqnIndex];
+        syncOutPpqn = syncInPpqn; // temp
+        updateLedDisplay(syncInPpqn);
+        break;
     case BUTTON_MANUAL_TEMPO:
         if(isHold) {
             tempo += isInc ? 10 : -10;
@@ -1386,17 +1401,16 @@ void updateSyncInNew() {
                     nextHitTime = currentTime;
                     scheduler();
                 } else {
-                    // assume 1 PPQN for now
-                    clockStep = (clockStep + 32) % numSteps;
+                    clockStep = (clockStep + QUARTER_NOTE_STEPS/syncInPpqn) % numSteps;
                     if(clockStep == scheduledStep) {
                         nextHitTime = currentTime;
                     } else {
                         nextHitTime = currentTime + stepTime;
                         scheduledStep = (clockStep + 1) % numSteps;
                     }
-                    updateLedDisplay(clockStep);
+                    //updateLedDisplay(clockStep);
                     uint64_t deltaT = time_us_64() - lastSyncInTime;
-                    stepTime = (44100 * deltaT) / 32000000;
+                    stepTime = (44100 * deltaT * syncInPpqn) / 32000000;
                 }
                 lastSyncInTime = time_us_64();
                 syncInReceived = true;

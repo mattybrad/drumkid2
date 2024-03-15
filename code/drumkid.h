@@ -35,6 +35,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
+#define BUTTON_PPQN (5 + 16)
 #define BUTTON_LOAD_SAMPLES (6 + 16)
 #define BUTTON_SHIFT 7
 #define BUTTON_TUPLET 8
