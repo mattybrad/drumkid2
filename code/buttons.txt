@@ -1,8 +1,50 @@
+BUTTONS
 start-stop
-beat
+BBB
+tap tempo
+BBB
+AAA
+BBB
+AAA
+BBB
+AAA
+save
+beat select
+beat edit
 tempo
 time signature
 tuplet
-kit
-
+BBB
 shift
+AAA
+kit
+AAA
+ppqn
+AAA
+BBB
++
+-
+yes
+no
+
+KNOBS
+chance
+zoom
+range
+velocity
+drop
+pitch
+swing
+
+POSSIBLE KNOBS
+slide
+random drop
+crush
+chain
+volume (hardware)
+
+LEDS
+1
+2
+3
+4

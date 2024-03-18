@@ -47,6 +47,7 @@ int velRange = 0;
 int velMidpoint = 0;
 int drop = 0;
 int swing = 0;
+int crush = 0;
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[9] = {
     0b11110000,
@@ -370,8 +371,8 @@ int main()
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
             // sample updates go here
-            int out1 = 0;
-            int out2 = 0;
+            int32_t out1 = 0;
+            int32_t out2 = 0;
             if(currentTime + (i>>1) >= nextSyncOut) {
                 pulseGpio(SYNC_OUT, 1000); // todo: adjust pulse length based on PPQN, or advanced setting
                 nextSyncOut = INT64_MAX;
@@ -382,11 +383,11 @@ int main()
                 if(didTrigger && j<4) {
                     pulseGpio(TRIGGER_OUT_PINS[j], 1000);
                 }
-                if(samples[j].output1) out1 += samples[j].value;
+                if(samples[j].output1) out1 += (samples[j].value >> crush) << crush;
                 if(samples[j].output2) out2 += samples[j].value;
             }
-
-            bufferSamples[i] = out1 >> 2;
+            bufferSamples[i] = (out1 >> (2 + crush)) << crush;
+            //bufferSamples[i] = out1 >> 2;
             bufferSamples[i + 1] = out2 >> 2;
         }
         buffer->sample_count = buffer->max_sample_count;
@@ -563,6 +564,10 @@ bool mainTimerLogic(repeating_timer_t *rt)
 
     swing = analogReadings[POT_SWING];
     applyDeadZones(swing);
+
+    crush = analogReadings[POT_CRUSH];
+    applyDeadZones(crush);
+    crush = crush >> 8;
 
     return true;
 }
