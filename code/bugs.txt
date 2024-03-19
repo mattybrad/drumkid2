@@ -3,9 +3,9 @@ BUGS TO FIX
 - No SD card causes crash on boot
 
 FEATURES TO ADD
-- Figure out tempo adjustment again and int/ext timing behaviour
 - Restore tuplet/swing
 - Subtractive velocity (vel knob is zero in middle, -100% on left, +100% on right, possible setting to turn off all/random velocities except 0%/100%)
+- Add LEDs (pulse and external clock for now)
 - Save PPQN value to flash
 - Finalise expected folder format
 - Backup beats to SD

@@ -128,14 +128,7 @@ int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
 int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t mainTimerInterval = 100; // us
-/*struct hit
-{
-    bool waiting = false;
-    int64_t time = 0;
-    uint16_t velocity = 4095;
-    int channel = 0;
-    uint16_t step = 0;
-};*/
+
 void scheduleSyncOut() {
     if(scheduledStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextHitTime;
 }
@@ -151,11 +144,12 @@ void scheduleHits()
     if (swingMode == SWING_8TH && scheduledStep % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS >> 1)
     {
         //adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 14;
-        //adjustedHitTime += ((int64_t)swing * stepTime) >> ;
+        adjustedHitTime += ((int64_t)swing * stepTime * QUARTER_NOTE_STEPS) >> 14;
     }
     else if (swingMode == SWING_16TH && scheduledStep % (QUARTER_NOTE_STEPS >> 1) == QUARTER_NOTE_STEPS >> 2)
     {
         //adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 15;
+        adjustedHitTime += ((int64_t)swing * stepTime * QUARTER_NOTE_STEPS) >> 15;
     }
 
     for (int i = 0; i < NUM_SAMPLES; i++)
@@ -208,7 +202,7 @@ void nextHit()
         quarterNoteDivision = nextQuarterNoteDivision;
     } else {
         //nextHitTime += (2646000 / tempo) / quarterNoteDivision; // not very precise?
-        nextHitTime += stepTime; // todo: handle tuplets
+        nextHitTime += (stepTime * QUARTER_NOTE_STEPS) / quarterNoteDivision; // todo: handle tuplets
     }
 
     if (scheduledStep % QUARTER_NOTE_STEPS >= quarterNoteDivision)
@@ -310,8 +304,7 @@ int main()
         give_audio_buffer(ap, buffer);
 
         currentTime += timeIncrement;
-        
-        //scheduler();
+    
 
         if (sdSafeLoadTemp)
         {

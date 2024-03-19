@@ -317,3 +317,5 @@ Step one today, try to go back to having the scheduler function run on a repeati
 
 19/3/23
 Oops, a bunch of stuff happened which I didn't write down. Fixed most of the issues with external clock, working pretty nicely now. Have moved from using tempo directly in timing calculations to using "stepTime", measured in samples, although this is not really accurate enough, because at high tempos, the stepTime for 1000BPM and 1001BPM, say, is identical. Probably a niche issue but will become important if I pursue tempo CV for pitch control over HZQDs.
+
+Think I made a mistake writing the code for external clock timing - it doesn't work easily with tuplets.
