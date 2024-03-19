@@ -596,6 +596,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             break;
         case BUTTON_TAP_TEMPO:
+            updateTapTempo();
             break;
         case BUTTON_CLOCK_MODE:
             activeButton = BUTTON_CLOCK_MODE;
@@ -1361,6 +1362,22 @@ void updateSyncIn() {
     {
         microsSinceSyncInChange += mainTimerInterval;
     }
+}
+
+uint64_t lastTapTempoTime;
+void updateTapTempo()
+{
+    if (!externalClock)
+    {
+        uint64_t deltaT = time_us_64() - lastTapTempoTime;
+        if(deltaT < 5000000) {
+            stepTime = (44100 * deltaT) / 32000000;
+            tempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS);
+            displayTempo();
+        }
+    }
+    lastTapTempoTime = time_us_64();
+
 }
 
 void initZoom() {
