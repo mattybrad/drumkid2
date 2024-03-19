@@ -155,22 +155,27 @@ void scheduleHits()
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
         bool dropHit = !bitRead(dropRef[drop], i);
+        int randNum = rand() % 4096;
+        int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange;
 
         if(Sample::pitch < 0) {
+            // offset sample if reversed so it ends at the correct time
             tempOffsets[i] = (static_cast<int32_t>(samples[i].length) *  QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
             revStep = (scheduledStep + tempOffsets[i]) % numSteps;
         }
         if (!dropHit && beats[beatNum].getHit(i, revStep, tuplet))
         {
-            samples[i].queueHit(adjustedHitTime, revStep, 4095);
+            int thisVel = 4095;
+            if(chance > randNum) thisVel = std::min(4095, std::max(0, 4095 + intVel));
+            samples[i].queueHit(adjustedHitTime, revStep, thisVel);
         }
         else
         {
-            int randNum = rand() % 4095;
+            //int randNum = rand() % 4095;
             if (!dropHit && chance > randNum)
             {
                 int zoomMult = getZoomMultiplier(revStep);
-                int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
+                //int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
                 else if (intVel > 4095)
