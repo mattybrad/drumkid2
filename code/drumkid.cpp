@@ -82,7 +82,7 @@ int sampleFolderNum = 0;
 char sampleFolderName[255];
 
 // tempo/sync stuff
-bool syncInMode = false;
+bool externalClock = false;
 
 int activeButton = -1;
 
@@ -128,17 +128,14 @@ int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
 int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t mainTimerInterval = 100; // us
-struct hit
+/*struct hit
 {
     bool waiting = false;
     int64_t time = 0;
     uint16_t velocity = 4095;
     int channel = 0;
     uint16_t step = 0;
-};
-const uint maxQueuedHits = 256; // queue fills up at ~300BPM when maxQueuedHits = 64 and everything else maxed out
-struct hit tempHitQueue[maxQueuedHits];
-uint16_t hitQueueIndex = 0;
+};*/
 void scheduleSyncOut() {
     if(scheduledStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextHitTime;
 }
@@ -193,88 +190,7 @@ void scheduleHits()
         }
     }
 }
-void scheduleHitsOld()
-{
-    // schedule sync out pulses using hit queue, special channel = -1
-    if (scheduledStep % QUARTER_NOTE_STEPS == 0)
-    {
-        tempHitQueue[hitQueueIndex].channel = -1;
-        tempHitQueue[hitQueueIndex].waiting = true;
-        tempHitQueue[hitQueueIndex].time = nextHitTime;
-        tempHitQueue[hitQueueIndex].step = scheduledStep;
-        hitQueueIndex++;
-        if (hitQueueIndex == maxQueuedHits)
-            hitQueueIndex = 0;
-    }
 
-    // this function is all over the place and inefficient and just sort of proof of concept right now, but this is where the swing and slop (and "slide"..?) will be implemented
-    float adjustedHitTime = nextHitTime;
-    bool isSlide = true;
-    // this next bit is causing issues! messing up nice smooth high-freq wave at high zoom values
-    /*if(step % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS / 2) {
-        adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.25 * (60.0 / tempo);
-    } else if(step % (QUARTER_NOTE_STEPS / 2) == QUARTER_NOTE_STEPS / 4) {
-        adjustedHitTime += ((float)analogReadings[POT_SWING] / 4095.0) * 0.125 * (60.0 / tempo);
-    }*/
-
-    // this is also causing issues, removing for now, causing hiccups due to inconsistent pot readings? need a dead zone and maybe pot reading smoothing/average
-    //if(!isSlide) adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * ((rand() / (double)(RAND_MAX)) * 2 - 1) * (60.0 / tempo);
-
-    for (int i = 0; i < NUM_SAMPLES; i++)
-    {
-        if (beats[beatNum].getHit(i, scheduledStep, tuplet))
-        {
-            tempHitQueue[hitQueueIndex].channel = i;
-            tempHitQueue[hitQueueIndex].waiting = true;
-            if (i==2 && isSlide)
-            {
-                // this is also causing issues, removing for now, causing hiccups due to inconsistent pot readings? need a dead zone and maybe pot reading smoothing/average
-                // adjustedHitTime += ((float)analogReadings[POT_SLOP] / 4095.0) * 0.25;
-            }
-            tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-            tempHitQueue[hitQueueIndex].step = scheduledStep;
-            tempHitQueue[hitQueueIndex].velocity = 4095;
-            hitQueueIndex++;
-            if (hitQueueIndex == maxQueuedHits)
-                hitQueueIndex = 0;
-        }
-        else
-        {
-            // temp? early reimplementation of aleatoric stuff - currently only additive, doesn't remove hits
-            int randNum = rand() % 4070; // a bit less than 4096 in case of imperfect pots that can't quite reach max
-            if (chance > randNum)
-            {
-                int zoomMult = getZoomMultiplier(scheduledStep);
-                int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
-                if (intVel < 0)
-                    intVel = 0;
-                else if (intVel > 4096)
-                    intVel = 4096;
-                //float floatVel = zoomMult * (float)intVel / 4096.0;
-                intVel = (intVel * zoomMult) >> 12;
-                if (intVel >= 8/*floatVel >= 0.01*/)
-                {
-                    if (tempHitQueue[hitQueueIndex].waiting)
-                    {
-                        panic("hit queue full");
-                    }
-                    tempHitQueue[hitQueueIndex].channel = i;
-                    tempHitQueue[hitQueueIndex].waiting = true;
-                    // timing not yet compatible with slide
-                    tempHitQueue[hitQueueIndex].time = adjustedHitTime;
-                    tempHitQueue[hitQueueIndex].step = scheduledStep;
-                    tempHitQueue[hitQueueIndex].velocity = intVel;//floatVel;
-                    hitQueueIndex++;
-                    if (hitQueueIndex == maxQueuedHits)
-                        hitQueueIndex = 0;
-                }
-            }
-        }
-    }
-}
-/*void scheduleHit(channel, time, step, vel) {
-
-}*/
 void nextHit()
 {
     scheduledStep++;
@@ -518,8 +434,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     updateLeds();
     updateShiftRegButtons();
     updateAnalog();
-    //updateSyncIn();
-    updateSyncInNew();
+    updateSyncIn();
 
     // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
@@ -668,12 +583,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             if (beatPlaying)
             {
                 // handle beat start
-                for (int i = 0; i < maxQueuedHits; i++)
-                {
-                    tempHitQueue[i].waiting = false;
-                }
-                hitQueueIndex = 0;
-                if(!syncInMode) {
+                if(!externalClock) {
                     scheduledStep = 0;
                     nextHitTime = currentTime;
                 }
@@ -682,18 +592,16 @@ void handleButtonChange(int buttonNum, bool buttonState)
             else
             {
                 // handle beat stop
-                for (int i = 0; i < maxQueuedHits; i++)
-                {
-                    tempHitQueue[i].waiting = false;
-                }
-                hitQueueIndex = 0;
-
                 numSteps = newNumSteps;
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
             }
             break;
         case BUTTON_TAP_TEMPO:
+            break;
+        case BUTTON_CLOCK_MODE:
+            activeButton = BUTTON_CLOCK_MODE;
+            displayClockMode();
             break;
         case BUTTON_INC:
             nextHoldUpdateInc = currentTime + SAMPLE_RATE;
@@ -771,19 +679,30 @@ void handleIncDec(bool isInc, bool isHold)
         syncOutPpqn = syncInPpqn; // temp
         updateLedDisplay(syncInPpqn);
         break;
-    case BUTTON_MANUAL_TEMPO:
-        if(isHold) {
-            tempo += isInc ? 10 : -10;
-            tempo = 10 * ((tempo + 5) / 10);
+    case BUTTON_CLOCK_MODE:
+        externalClock = !externalClock;
+        if(externalClock) {
+
         } else {
-            tempo += isInc ? 1 : -1;
+            stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
         }
-        if (tempo > 9999)
-            tempo = 9999;
-        else if (tempo < 10)
-            tempo = 10;
-        // todo: press and hold function
-        displayTempo();
+        displayClockMode();
+        break;
+    case BUTTON_MANUAL_TEMPO:
+        if(!externalClock) {
+            if(isHold) {
+                tempo += isInc ? 10 : -10;
+                tempo = 10 * ((tempo + 5) / 10);
+            } else {
+                tempo += isInc ? 1 : -1;
+            }
+            if (tempo > 9999)
+                tempo = 9999;
+            else if (tempo < 10)
+                tempo = 10;
+            stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
+            displayTempo();
+        }
         break;
 
     case BUTTON_TIME_SIGNATURE:
@@ -868,9 +787,20 @@ void handleYesNo(bool isYes) {
     }
 }
 
+void displayClockMode() {
+    char wordInt[] = "int";
+    char wordExt[] = "ext";
+    updateLedDisplayAlpha(externalClock ? wordExt : wordInt);
+}
+
 void displayTempo()
 {
-    updateLedDisplay((int)tempo);
+    if(externalClock) {
+        int calculatedTempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS);
+        updateLedDisplay(calculatedTempo);
+    } else {
+        updateLedDisplay((int)tempo);
+    }
 }
 
 void displayTimeSignature()
@@ -1389,7 +1319,7 @@ int64_t onClockDivideTemp(alarm_id_t id, void *user_data) {
     pulseLed(2, 50000);
     return 0;
 }
-void updateSyncInNew() {
+void updateSyncIn() {
     if (microsSinceSyncInChange > 1000)
     {
         bool syncInState = !gpio_get(SYNC_IN);
@@ -1399,28 +1329,32 @@ void updateSyncInNew() {
             microsSinceSyncInChange = 0;
             if (syncInState)
             {
-                if(!syncInReceived) {
-                    beatPlaying = true;
-                    clockStep = 0;
-                    scheduledStep = 0;
-                    nextHitTime = currentTime;
-                    scheduler();
-                } else {
-                    clockStep = (clockStep + QUARTER_NOTE_STEPS/syncInPpqn) % numSteps;
-                    if(clockStep == scheduledStep) {
+                if(externalClock) {
+                    if(!syncInReceived) {
+                        beatPlaying = true;
+                        clockStep = 0;
+                        scheduledStep = 0;
                         nextHitTime = currentTime;
+                        scheduler();
                     } else {
-                        nextHitTime = currentTime + stepTime;
-                        scheduledStep = (clockStep + 1) % numSteps;
+                        clockStep = (clockStep + QUARTER_NOTE_STEPS/syncInPpqn) % numSteps;
+                        if(clockStep == scheduledStep) {
+                            nextHitTime = currentTime;
+                        } else {
+                            nextHitTime = currentTime + stepTime;
+                            scheduledStep = (clockStep + 1) % numSteps;
+                        }
+                        //updateLedDisplay(clockStep);
+                        uint64_t deltaT = time_us_64() - lastSyncInTime;
+                        stepTime = (44100 * deltaT * syncInPpqn) / 32000000;
                     }
-                    //updateLedDisplay(clockStep);
-                    uint64_t deltaT = time_us_64() - lastSyncInTime;
-                    stepTime = (44100 * deltaT * syncInPpqn) / 32000000;
                 }
                 lastSyncInTime = time_us_64();
                 syncInReceived = true;
-                syncInMode = true; // temp, once a sync signal is received, module stays in "sync in" mode until reboot
                 
+                if(activeButton == BUTTON_MANUAL_TEMPO) {
+                    displayTempo();
+                }
                 pulseLed(3, 50000); // temp?
             }
         }

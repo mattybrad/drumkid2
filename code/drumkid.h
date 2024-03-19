@@ -30,7 +30,7 @@
 #define BUTTON_PIN_TAP_TEMPO 1
 const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
-// button numbers
+// button numbers (shifted buttons are +16)
 #define BUTTON_CANCEL 0
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
@@ -46,7 +46,9 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_SAVE (11 + 16)
 #define BUTTON_OUTPUT (12 + 16)
 #define BUTTON_TAP_TEMPO 14
+#define BUTTON_CLOCK_MODE (14 + 16)
 #define BUTTON_START_STOP 15
+#define BUTTON_RANDOMISE (15 + 16)
 
 // pot numbers
 #define POT_CHANCE 0
@@ -94,7 +96,7 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 // Beat variables
 #define NUM_BEATS 16
 uint16_t tempo = 120; // BPM
-uint64_t stepTime = 60000000 / tempo; // microseconds 
+uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds 
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
@@ -303,6 +305,7 @@ void updateLedDisplay(int num);
 void updateLedDisplayAlpha(char* word);
 void handleIncDec(bool isInc, bool isHold);
 void handleYesNo(bool isYes);
+void displayClockMode();
 void displayTempo();
 void displayBeat();
 void displayEditBeat();
@@ -325,7 +328,6 @@ void checkFlashData();
 int32_t getIntFromBuffer(const uint8_t *buffer, uint position);
 float getFloatFromBuffer(const uint8_t *buffer, uint position);
 void updateSyncIn();
-void updateSyncInNew();
 void doStep();
 void print_buf(const uint8_t *buf, size_t len);
 void initZoom();

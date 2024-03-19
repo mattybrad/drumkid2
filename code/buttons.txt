@@ -1,8 +1,8 @@
 BUTTONS
 start-stop
-BBB
+randomise!
 tap tempo
-BBB
+external clock
 AAA
 BBB
 AAA
@@ -44,7 +44,7 @@ chain
 volume (hardware)
 
 LEDS
-1
-2
-3
-4
+pulse
+external clock
+?
+>

@@ -4,6 +4,8 @@ BUGS TO FIX
 
 FEATURES TO ADD
 - Figure out tempo adjustment again and int/ext timing behaviour
+- Restore tuplet/swing
+- Subtractive velocity (vel knob is zero in middle, -100% on left, +100% on right, possible setting to turn off all/random velocities except 0%/100%)
 - Save PPQN value to flash
 - Finalise expected folder format
 - Backup beats to SD
@@ -14,7 +16,7 @@ FEATURES TO ADD
 - Numeric input
 - Non-integer tempos, or at least higher precision
 - Dead zone around pitch = 1.0
-- Retry crush knob
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Finalise swing implementation, see notes
-- Subtractive velocity (vel knob is zero in middle, -100% on left, +100% on right, possible setting to turn off all/random velocities except 0%/100%)
+- Randomise everything button
+- Tuned (V/8ve) additive tempo CV input
