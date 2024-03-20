@@ -1311,7 +1311,7 @@ void checkFlashData()
 uint32_t microsSinceSyncInChange = mainTimerInterval;
 bool syncInStableState = false;
 
-int16_t clockStep = 0;
+int16_t clockStep = 0; // 8x bigger (<<3) than scheduledStep
 bool syncInReceived = false;
 uint64_t lastSyncInTime;
 int64_t onClockDivideTemp(alarm_id_t id, void *user_data) {
@@ -1336,14 +1336,30 @@ void updateSyncIn() {
                         nextHitTime = currentTime;
                         scheduler();
                     } else {
-                        clockStep = (clockStep + QUARTER_NOTE_STEPS/syncInPpqn) % numSteps;
-                        if(clockStep == scheduledStep) {
-                            nextHitTime = currentTime;
-                        } else {
-                            nextHitTime = currentTime + stepTime;
-                            scheduledStep = (clockStep + 1) % numSteps;
+                        int clockStepsPerPulse = (quarterNoteDivision<<3) / syncInPpqn;
+                        clockStep = clockStep + clockStepsPerPulse;
+
+                        if (clockStep % (QUARTER_NOTE_STEPS<<3) >= (quarterNoteDivision<<3)) {
+                            // in non-straight tuplet modes, quarterNoteDivision will be less than QUARTER_NOTE_STEPS, so need to skip to next integer multiple of QUARTER_NOTE_STEPS when we go past that point
+                            clockStep = (((clockStep>>3) / QUARTER_NOTE_STEPS + 1) * QUARTER_NOTE_STEPS)<<3;
                         }
-                        //updateLedDisplay(clockStep);
+
+                        if(clockStep >= numSteps << 3) {
+                            clockStep = 0;
+                        }
+
+                        if(nextQuarterNoteDivision == quarterNoteDivision) {
+                            if(clockStep % 8 == 0) {
+                                if(clockStep>>3 == scheduledStep) {
+                                    nextHitTime = currentTime;
+                                } else {
+                                    nextHitTime = currentTime + stepTime;
+                                    scheduledStep = ((clockStep>>3) + 1) % numSteps; // might need to do numSteps = newNumSteps here if new scheduledStep is 0?
+                                }
+                            }
+                        } else {
+                            // don't do anything clever with timing on this pulse, it'll already be complicated enough switching between tuplet modes!
+                        }
                         uint64_t deltaT = time_us_64() - lastSyncInTime;
                         stepTime = (44100 * deltaT * syncInPpqn) / 32000000;
                     }
