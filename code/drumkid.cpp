@@ -133,24 +133,46 @@ void scheduleSyncOut() {
     if(scheduledStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextHitTime;
 }
 int64_t tempOffsets[NUM_SAMPLES] = {0};
-#define SWING_8TH 0
-#define SWING_16TH 1
-uint8_t swingMode = SWING_16TH;
+#define SWING_OFF 0
+#define SWING_8TH 1
+#define SWING_16TH 2
+uint8_t swingMode = SWING_OFF;
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
     int16_t revStep = scheduledStep;
 
-    if (swingMode == SWING_8TH && scheduledStep % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS >> 1)
-    {
-        //adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 14;
-        adjustedHitTime += ((int64_t)swing * stepTime * QUARTER_NOTE_STEPS) >> 14;
+    // swing calculations
+    if(tuplet == TUPLET_STRAIGHT) {
+        // currently only implementing swing in straight mode, otherwise too confusing!
+        int thisSwingVal;
+        if(swing < 2048) {
+            // swing 8th notes
+            thisSwingVal = 4095 - swing * 2;
+            swingMode = SWING_8TH;
+        } else {
+            // swing 16th notes
+            thisSwingVal = (swing - 2048) * 2;
+            swingMode = SWING_16TH;
+        }
+        thisSwingVal = (thisSwingVal * 5 - 4096) >> 2; // increase range then offset and clamp, giving dead zone in centre
+        thisSwingVal = std::max(0, std::min(4095, thisSwingVal));
+
+        if(thisSwingVal==0) {
+            swingMode = SWING_OFF;
+        } else {
+            if (swingMode == SWING_8TH && scheduledStep % QUARTER_NOTE_STEPS == QUARTER_NOTE_STEPS >> 1)
+            {
+                adjustedHitTime += ((int64_t)thisSwingVal * stepTime * QUARTER_NOTE_STEPS) >> 14;
+            }
+            else if (swingMode == SWING_16TH && scheduledStep % (QUARTER_NOTE_STEPS >> 1) == QUARTER_NOTE_STEPS >> 2)
+            {
+                adjustedHitTime += ((int64_t)thisSwingVal * stepTime * QUARTER_NOTE_STEPS) >> 15;
+            } 
+        }
+
     }
-    else if (swingMode == SWING_16TH && scheduledStep % (QUARTER_NOTE_STEPS >> 1) == QUARTER_NOTE_STEPS >> 2)
-    {
-        //adjustedHitTime += ((int64_t)swing * (int64_t)2646000 / tempo) >> 15;
-        adjustedHitTime += ((int64_t)swing * stepTime * QUARTER_NOTE_STEPS) >> 15;
-    }
+
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {

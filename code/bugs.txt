@@ -3,7 +3,7 @@ BUGS TO FIX
 - No SD card causes crash on boot
 
 FEATURES TO ADD
-- Restore tuplet/swing (not working well with external clock)
+- Finalise swing implementation, see notes
 - Add LEDs (pulse and external clock for now)
 - Save PPQN value to flash
 - Finalise expected folder format
@@ -15,6 +15,5 @@ FEATURES TO ADD
 - Non-integer tempos, or at least higher precision
 - Dead zone around pitch = 1.0
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
-- Finalise swing implementation, see notes
 - Randomise everything button
 - Tuned (V/8ve) additive tempo CV input
