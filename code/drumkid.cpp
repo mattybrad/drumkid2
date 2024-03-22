@@ -282,9 +282,6 @@ int main()
     initSamplesFromFlash();
     loadBeatsFromFlash();
 
-    char startString[4] = "abc";
-    updateLedDisplayAlpha(startString);
-
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
@@ -303,6 +300,8 @@ int main()
         // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
+
+        displayPulse(); // temp, uses scheduledStep, could be more accurate
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
@@ -615,9 +614,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 numSteps = newNumSteps;
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
+                scheduledStep = 0;
             }
             break;
         case BUTTON_TAP_TEMPO:
+            activeButton = BUTTON_TAP_TEMPO;
             updateTapTempo();
             break;
         case BUTTON_CLOCK_MODE:
@@ -806,6 +807,7 @@ void handleYesNo(bool isYes) {
             displayEditBeat();
             break;
     }
+    if(!isYes) activeButton = -1; // temp, there are probably times when we shouldn't do this
 }
 
 void displayClockMode() {
@@ -1431,5 +1433,19 @@ void initZoom() {
             }
         }
         printf("%d ", stepVal[i]);
+    }
+}
+
+void displayPulse() {
+    if(activeButton == -1) {
+        int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
+        for (int i = 0; i < 4; i++)
+        {
+            if(i == (quarterNote%4)) {
+                sevenSegData[i] = quarterNote < 4 ? 0b10000000 : 0b00000010;
+            } else {
+                sevenSegData[i] = 0b00000000;
+            }
+        }
     }
 }

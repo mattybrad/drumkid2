@@ -332,5 +332,6 @@ void updateTapTempo();
 void doStep();
 void print_buf(const uint8_t *buf, size_t len);
 void initZoom();
+void displayPulse();
 
 #endif
