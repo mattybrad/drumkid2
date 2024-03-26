@@ -638,6 +638,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CANCEL:
             handleYesNo(false);
             break;
+        case BUTTON_SHIFT_CANCEL:
+            activeButton = NO_ACTIVE_BUTTON;
+            break;
         case BUTTON_PPQN:
             activeButton = BUTTON_PPQN;
             updateLedDisplay(syncInPpqn);
@@ -782,9 +785,11 @@ void handleIncDec(bool isInc, bool isHold)
 }
 
 void handleYesNo(bool isYes) {
+    bool useDefaultNoBehaviour = true;
     switch(activeButton)
     {
         case BUTTON_OUTPUT:
+            useDefaultNoBehaviour = false;
             samples[outputSample].output1 = isYes;
             break;
         
@@ -793,6 +798,7 @@ void handleYesNo(bool isYes) {
             break;
 
         case BUTTON_EDIT_BEAT:
+            useDefaultNoBehaviour = false;
             int tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
             bitWrite(beats[beatNum].beatData[editSample], tupletEditStep, isYes);
             editStep ++;
@@ -804,7 +810,7 @@ void handleYesNo(bool isYes) {
             displayEditBeat();
             break;
     }
-    if(!isYes) activeButton = -1; // temp, there are probably times when we shouldn't do this
+    if(!isYes && useDefaultNoBehaviour) activeButton = NO_ACTIVE_BUTTON;
 }
 
 void displayClockMode() {

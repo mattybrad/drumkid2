@@ -32,6 +32,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // button numbers (shifted buttons are +16)
 #define BUTTON_CANCEL 0
+#define BUTTON_SHIFT_CANCEL (0 + 16)
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
