@@ -49,6 +49,8 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CLOCK_MODE (14 + 16)
 #define BUTTON_START_STOP 15
 #define BUTTON_RANDOMISE (15 + 16)
+#define NO_ACTIVE_BUTTON -1
+#define ERROR_DISPLAY -2
 
 // pot numbers
 #define POT_CHANCE 0
@@ -105,6 +107,12 @@ Beat beats[NUM_BEATS]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 int editSample = 0;
 int editStep = 0;
+
+// SD card stuff
+#define MAX_SAMPLE_FOLDERS 16
+char folderNames[MAX_SAMPLE_FOLDERS][5];
+char path[] = "samples/";
+int numSampleFolders = 0;
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
@@ -315,7 +323,7 @@ void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();
 void getNthSampleFolder(int n);
-void listSampleFolders();
+void scanSampleFolders();
 void loadSamplesFromSD();
 void updateLeds();
 void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);

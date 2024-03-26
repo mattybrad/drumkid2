@@ -15,6 +15,7 @@ Aleatoric drum machine
 #include <cstdint>
 #include <stdio.h>
 #include <math.h>
+#include <algorithm>
 
 // Include some stuff for reading/writing SD cards
 #include "f_util.h"
@@ -274,11 +275,6 @@ int main()
     checkFlashData();
     initGpio();
 
-    // temp...
-    getNthSampleFolder(sampleFolderNum);
-    loadSamplesFromSD();
-    // ...end temp
-
     initSamplesFromFlash();
     loadBeatsFromFlash();
 
@@ -340,6 +336,9 @@ int main()
 
         if(sdShowFolderTemp) {
             sdShowFolderTemp = false;
+            scanSampleFolders();
+            if (sampleFolderNum >= numSampleFolders)
+                sampleFolderNum = 0; // just in case card is removed, changed, and reinserted - todo: proper folder names comparison to revert to first folder if any changes
             getNthSampleFolder(sampleFolderNum);
         }
 
@@ -646,8 +645,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_LOAD_SAMPLES:
             activeButton = BUTTON_LOAD_SAMPLES;
             sdShowFolderTemp = true;
-            //displaySamplePack();
-            //sdSafeLoadTemp = true;
             break;
         case BUTTON_MANUAL_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
@@ -777,8 +774,8 @@ void handleIncDec(bool isInc, bool isHold)
         sampleFolderNum += isInc ? 1 : -1;
         if (sampleFolderNum < 0)
             sampleFolderNum = 0;
-        else if (sampleFolderNum > 3)
-            sampleFolderNum = 3;
+        else if (sampleFolderNum > numSampleFolders - 1)
+            sampleFolderNum = numSampleFolders - 1;
         sdShowFolderTemp = true;
         break;
     }
@@ -792,7 +789,7 @@ void handleYesNo(bool isYes) {
             break;
         
         case BUTTON_LOAD_SAMPLES:
-            sdSafeLoadTemp = true;
+            if(isYes) sdSafeLoadTemp = true;
             break;
 
         case BUTTON_EDIT_BEAT:
@@ -977,10 +974,23 @@ void updateAnalog()
 
 void getNthSampleFolder(int n) {
     printf("get nth sample folder...\n");
+    sd_init_driver();
     sd_card_t *pSD = sd_get_by_num(0);
+    if (!pSD->sd_test_com(pSD))
+    {
+        char msg[] = "card";
+        updateLedDisplayAlpha(msg);
+        activeButton = ERROR_DISPLAY;
+        return;
+    }
     FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
-    if (FR_OK != fr)
-        panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+    if (FR_OK != fr) {
+        printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+        char msg[] = "err";
+        updateLedDisplayAlpha(msg);
+        activeButton = ERROR_DISPLAY;
+        return;
+    }
     static FILINFO fno;
     UINT i;
     int foundNum = -1;
@@ -1019,22 +1029,85 @@ void getNthSampleFolder(int n) {
     f_closedir(&dir);
 }
 
+// go through every sample folder and create an alphabetically ordered array of the folder names
+void scanSampleFolders() {
+    printf("scan sample folders...\n");
+    sd_init_driver();
+    sd_card_t *pSD = sd_get_by_num(0);
+    if (!pSD->sd_test_com(pSD))
+    {
+        char msg[] = "card";
+        updateLedDisplayAlpha(msg);
+        activeButton = ERROR_DISPLAY;
+        return;
+    }
+    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+    if (FR_OK != fr)
+    {
+        printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+        char msg[] = "card";
+        updateLedDisplayAlpha(msg);
+        activeButton = ERROR_DISPLAY;
+        return;
+    }
+    static FILINFO fno;
+    int foundNum = -1;
+    DIR dir;
+    fr = f_opendir(&dir, path);
+    if (FR_OK != fr)
+    {
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        char msg[] = "err";
+        updateLedDisplayAlpha(msg);
+        activeButton = ERROR_DISPLAY;
+        return;
+    }
+    for (;;)
+    {
+        fr = f_readdir(&dir, &fno); /* Read a directory item */
+        if (fr != FR_OK || fno.fname[0] == 0)
+            break; /* Break on error or end of dir */
+        if (fno.fattrib & AM_DIR)
+        { /* It is a directory */
+            foundNum++;
+            strcpy(folderNames[foundNum], fno.fname);
+            printf("sample folder %d: %s\n", foundNum, fno.fname);
+            printf("sample folder %d: %s\n", foundNum, folderNames[foundNum]);
+        }
+    }
+    numSampleFolders = foundNum+1;
+    // todo: sort alphabetically here, maybe radix or std::sort
+    f_closedir(&dir);
+}
+
 void loadSamplesFromSD()
 {
     uint totalSize = 0;
     bool dryRun = false;
     int pageNum = 0;
     const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav"};
-    //const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav", "/5.wav", "/6.wav", "/7.wav", "/8.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
 
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
+        sd_init_driver();
         sd_card_t *pSD = sd_get_by_num(0);
+        if (!pSD->sd_test_com(pSD))
+        {
+            char msg[] = "card";
+            updateLedDisplayAlpha(msg);
+            activeButton = ERROR_DISPLAY;
+            return;
+        }
         FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
-        if (FR_OK != fr)
-            panic("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+        if (FR_OK != fr) {
+            printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+            char msg[] = "err";
+            updateLedDisplayAlpha(msg);
+            activeButton = ERROR_DISPLAY;
+            return;
+        }
         FIL fil;
         char filename[255];
         strcpy(filename, "samples/");
@@ -1044,6 +1117,9 @@ void loadSamplesFromSD()
         if (FR_OK != fr)
         {
             printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+            char msg[] = "err";
+            updateLedDisplayAlpha(msg);
+            activeButton = ERROR_DISPLAY;
             return;
         }
 
@@ -1437,7 +1513,7 @@ void initZoom() {
 }
 
 void displayPulse() {
-    if(activeButton == -1) {
+    if(activeButton == NO_ACTIVE_BUTTON) {
         int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
         for (int i = 0; i < 4; i++)
         {

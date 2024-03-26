@@ -307,15 +307,18 @@ That all worked! Good! Now for something completely different.
 
 Am rethinking clock input, which I was doing in a stupid way before. I'm going to support a few different PPQN values, starting with 4 and 24 (both common, apparently). Either way (and especially for 4PPQN), I'm going to need to implement an internal clock divider. Okay, this is doable. As long as you're not too fussy about the very first 16th-note having all its subdivisions available (because there's not enough info to divide the clock until we've had two pulses), this should be fine. And we may end up with a reset/start trigger input, too, if that's a standard thing.
 
-14/3/23
+14/3/24
 My thinking is becoming clearer. It's good to support multiple input PPQN values because people's setups are all different. Some people might want 4PPQN, or even 1PPQN, and that's fine because it's nice and simple to work with for the user, but probably won't do great with tempo changes (or instant starts), so I should probably offer all vaguely sensible values from 1 to, maybe, 96? And I think it's fine to have a "recommended" value, or different ones for different uses.
 
 To do tomorrow: make DK run from 1PPQN, 4PPQN, and 96PPQN (LFO).
 
-15/3/23
+15/3/24
 Step one today, try to go back to having the scheduler function run on a repeating timer, because that's closer to the behaviour needed with clock input. Well, that worked. Having a few issues now with either double hits (when slowing down tempo) or no hits (when speeding up). Need some sort of guarantee of which step has been heard.
 
-19/3/23
+19/3/24
 Oops, a bunch of stuff happened which I didn't write down. Fixed most of the issues with external clock, working pretty nicely now. Have moved from using tempo directly in timing calculations to using "stepTime", measured in samples, although this is not really accurate enough, because at high tempos, the stepTime for 1000BPM and 1001BPM, say, is identical. Probably a niche issue but will become important if I pursue tempo CV for pitch control over HZQDs.
 
 Think I made a mistake writing the code for external clock timing - it doesn't work easily with tuplets.
+
+26/3/24
+Doing some annoying SD card stuff, figuring out how to alphabetise folders, prevent crashes, etc. Figured out how to do card detect with sd_test_com (only after sd_init_driver).

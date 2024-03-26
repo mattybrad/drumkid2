@@ -3,10 +3,12 @@ BUGS TO FIX
 - No SD card causes crash on boot
 
 FEATURES TO ADD
-- Finalise swing implementation, see notes
+- List sample sets in alphabetical order
+- Check total sample size, error if too large
+- Allow stereo samples (load as mono)
+- Finalise expected folder format
 - Add LEDs (pulse and external clock for now)
 - Save PPQN value to flash
-- Finalise expected folder format
 - Backup beats to SD
 - Better pitch lerping (not correct in reverse..?)
 - Prioritise more recent(?) notes in reverse to give expected sound at higher zooms
