@@ -42,7 +42,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 // move to header file at some point
 int chance = 0;
-int chain = 0;
+int cluster = 0;
 int zoom = 0;
 int velRange = 0;
 int velMidpoint = 0;
@@ -138,6 +138,7 @@ int64_t tempOffsets[NUM_SAMPLES] = {0};
 #define SWING_8TH 1
 #define SWING_16TH 2
 uint8_t swingMode = SWING_OFF;
+bool clusterReady[NUM_SAMPLES];
 void scheduleHits()
 {
     int64_t adjustedHitTime = nextHitTime;
@@ -174,11 +175,12 @@ void scheduleHits()
 
     }
 
-
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
         bool dropHit = !bitRead(dropRef[drop], i);
         int randNum = rand() % 4096;
+        int thisChance = chance;
+        if(clusterReady[i]) thisChance = cluster;
         int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange;
 
         if(Sample::pitch < 0) {
@@ -186,18 +188,19 @@ void scheduleHits()
             tempOffsets[i] = (static_cast<int32_t>(samples[i].length) *  QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
             revStep = (scheduledStep + tempOffsets[i]) % numSteps;
         }
+        int zoomMult = getZoomMultiplier(revStep);
         if (!dropHit && beats[beatNum].getHit(i, revStep, tuplet))
         {
             int thisVel = 4095;
-            if(chance > randNum) thisVel = std::min(4095, std::max(0, 4095 + intVel));
+            if(chance > randNum) {
+                thisVel = std::min(4095, std::max(0, 4095 + intVel));
+            }
             samples[i].queueHit(adjustedHitTime, revStep, thisVel);
         }
         else
         {
-            //int randNum = rand() % 4095;
-            if (!dropHit && chance > randNum)
+            if (!dropHit && thisChance > randNum)
             {
-                int zoomMult = getZoomMultiplier(revStep);
                 //int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
                     intVel = 0;
@@ -208,6 +211,17 @@ void scheduleHits()
                 {
                     samples[i].queueHit(adjustedHitTime, revStep, intVel);
                 }
+            }
+        }
+        if (zoomMult > 0)
+        {
+            if (thisChance > randNum)
+            {
+                clusterReady[i] = true;
+            }
+            else
+            {
+                clusterReady[i] = false;
             }
         }
     }
@@ -457,6 +471,9 @@ bool mainTimerLogic(repeating_timer_t *rt)
     // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
     applyDeadZones(chance);
+
+    cluster = analogReadings[POT_CLUSTER];
+    applyDeadZones(cluster);
 
     zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
     applyDeadZones(zoom);

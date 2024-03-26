@@ -322,3 +322,5 @@ Think I made a mistake writing the code for external clock timing - it doesn't w
 
 26/3/24
 Doing some annoying SD card stuff, figuring out how to alphabetise folders, prevent crashes, etc. Figured out how to do card detect with sd_test_com (only after sd_init_driver).
+
+"Cluster" works okay. Might be interesting. Might need tweaking. Certainly needs to be optional.
