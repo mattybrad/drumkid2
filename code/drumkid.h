@@ -65,7 +65,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define POT_DROP 8
 #define POT_PITCH 9
 #define POT_CRUSH 10
-#define POT_VOLUME 11
+#define POT_DROP_RANDOM 11
 
 // CV input numbers
 #define CV_CHANCE 12

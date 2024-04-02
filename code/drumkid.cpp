@@ -47,6 +47,7 @@ int zoom = 0;
 int velRange = 0;
 int velMidpoint = 0;
 int drop = 0;
+int dropRandom = 0;
 int swing = 0;
 int crush = 0;
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
@@ -178,6 +179,7 @@ void scheduleHits()
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
         bool dropHit = !bitRead(dropRef[drop], i);
+        bool dropHitRandom = !bitRead(dropRef[dropRandom], i);
         int randNum = rand() % 4096;
         int thisChance = chance;
         if(clusterReady[i]) thisChance = cluster;
@@ -199,7 +201,7 @@ void scheduleHits()
         }
         else
         {
-            if (!dropHit && thisChance > randNum)
+            if (!dropHit && !dropHitRandom && thisChance > randNum)
             {
                 //int intVel = (rand() % velRange) + velMidpoint - velRange / 2;
                 if (intVel < 0)
@@ -511,6 +513,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
     Sample::pitch = pitchInt; // temp...
     //Sample::pitch = -1024;
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
+    dropRandom = analogReadings[POT_DROP_RANDOM] / 456; // gives range of 0 to 8
 
     swing = analogReadings[POT_SWING];
     applyDeadZones(swing);

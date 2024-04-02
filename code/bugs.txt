@@ -5,6 +5,7 @@ BUGS TO FIX
 FEATURES TO ADD
 - Chain/cluster control
 - Try separate drop control for random hits
+- Option to disable zoom velocity (no crossfade between zoom levels)
 - Check total sample size, error if too large
 - Allow stereo samples (load as mono)
 - Finalise expected folder format
