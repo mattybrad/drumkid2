@@ -44,6 +44,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 int chance = 0;
 int cluster = 0;
 int zoom = 0;
+bool useZoomVelocityGradient = true;
 int velRange = 0;
 int velMidpoint = 0;
 int drop = 0;
@@ -118,7 +119,7 @@ float getZoomMultiplier(int thisStep)
 
     int vel = 4095 + zoom - (thisStepVal<<12);
     if(vel < 0) vel = 0;
-    else if(vel > 4095) vel = 4095;
+    else if(vel > 4095 || (!useZoomVelocityGradient && vel > 0)) vel = 4095;
     return vel;
 }
 
@@ -182,7 +183,7 @@ void scheduleHits()
         bool dropHitRandom = !bitRead(dropRef[dropRandom], i);
         int randNum = rand() % 4096;
         int thisChance = chance;
-        if(clusterReady[i]) thisChance = cluster;
+        if(clusterReady[i]) thisChance = std::max(cluster, chance);
         int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange;
 
         if(Sample::pitch < 0) {
@@ -300,7 +301,7 @@ int main()
     int64_t tempPeriod = 700;
     repeating_timer_t tempSchedulerTimer;
     add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
-    //add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
+    add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
 
     // temp
     //beatPlaying = true;

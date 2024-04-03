@@ -1,11 +1,9 @@
 BUGS TO FIX
+- HZQD no longer stable at 500BPM+
 - Slide is disabled
 - No SD card causes crash on boot
 
 FEATURES TO ADD
-- Chain/cluster control
-- Try separate drop control for random hits
-- Option to disable zoom velocity (no crossfade between zoom levels)
 - Check total sample size, error if too large
 - Allow stereo samples (load as mono)
 - Finalise expected folder format

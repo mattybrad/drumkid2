@@ -9,7 +9,7 @@
 #define bitClear(value, bit) ((value) &= ~(1ULL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
-#define SAMPLES_PER_BUFFER 32 // 256 works well
+#define SAMPLES_PER_BUFFER 32 // 32 works well
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
@@ -98,7 +98,7 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 
 // Beat variables
 #define NUM_BEATS 16
-uint16_t tempo = 120; // BPM
+uint16_t tempo = 2000; // BPM
 uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds 
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
