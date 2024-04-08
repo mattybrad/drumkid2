@@ -327,3 +327,7 @@ Doing some annoying SD card stuff, figuring out how to alphabetise folders, prev
 
 2/4/24
 Added random drop, does a decent job. Removed zoom velocity gradient, temporarily for now but not sure it should even be an option to add it back in, it feels cleaner this way.
+
+8/4/24
+Going somewhat insane tracking down performance issues (glitches). Found one satisfying one: turns out that max "chance" didn't guarantee 100% probability, edge case of rand()%4096 = 4095 would fail to trigger a hit, hence cause an audible glitch. 
+However, I'm still getting some glitches (buffer underruns?), especially at very high tempos. Might be time to be sensible and just accept that maybe 500BPM is a good max, or 1000BPM with occasional glitches is okay if it's a known thing.

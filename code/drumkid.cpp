@@ -181,10 +181,10 @@ void scheduleHits()
     {
         bool dropHit = !bitRead(dropRef[drop], i);
         bool dropHitRandom = !bitRead(dropRef[dropRandom], i);
-        int randNum = rand() % 4096;
+        int randNum = rand() % 4095; // range of 0 to 4094, allowing a chance value of 4095 (maximum) to act as "100% probability" (always bigger)
         int thisChance = chance;
         if(clusterReady[i]) thisChance = std::max(cluster, chance);
-        int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange;
+        int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange; // outside chance that this line is causing issues, fenceposts etc, check if having problems
 
         if(Sample::pitch < 0) {
             // offset sample if reversed so it ends at the correct time
@@ -272,12 +272,31 @@ void scheduler()
     }
 }
 
+int64_t codeStartTime = 0;
+int64_t worstTime = 0;
+void startCodeTimer() {
+    codeStartTime = time_us_64();
+}
+void stopCodeTimer(bool showNow) {
+    int64_t codeTime = time_us_64() - codeStartTime;
+    if(codeTime > worstTime) {
+        printf("worst t=%lld\n", codeTime);
+        worstTime = codeTime;
+    }
+    if(showNow) {
+        printf("t=%lld\n", codeTime);
+    }
+}
+
 bool tempScheduler(repeating_timer_t *rt)
 {
+    //startCodeTimer();
     scheduler();
+    //stopCodeTimer();
     return true;
 }
 
+int64_t prevTime = 0;
 // main function, obviously
 int main()
 {
@@ -298,10 +317,10 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_us(mainTimerInterval, mainTimerLogic, NULL, &mainTimer);
-    int64_t tempPeriod = 700;
+    int64_t tempPeriod = 500;
     repeating_timer_t tempSchedulerTimer;
     add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
-    add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
+    //add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
 
     // temp
     //beatPlaying = true;
@@ -310,6 +329,8 @@ int main()
     // audio buffer loop, runs forever
     while (true)
     {
+        //startCodeTimer();
+
         // something to do with audio that i don't fully understand
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
@@ -343,7 +364,6 @@ int main()
         give_audio_buffer(ap, buffer);
 
         currentTime += timeIncrement;
-    
 
         if (sdSafeLoadTemp)
         {
@@ -363,6 +383,8 @@ int main()
         {
             //bitWrite(singleLedData, i, samples[i].playing);
         }
+
+        //stopCodeTimer(true);
     }
     return 0;
 }
@@ -432,8 +454,6 @@ void initGpio()
 int64_t prevTimeCheck = 0;
 int performanceThreshold = SAMPLE_RATE - 2 * SAMPLES_PER_BUFFER;
 int performanceErrorTally = 0;
-int tempAnaCheck[1000] = {0};
-int tempAnaIndex = 0;
 bool performanceCheck(repeating_timer_t *rt) {
     int64_t delta = currentTime - prevTimeCheck;
     prevTimeCheck = currentTime;
@@ -447,12 +467,6 @@ bool performanceCheck(repeating_timer_t *rt) {
             performanceErrorTally = 0;
         }
     }
-
-    /*printf("ana check: ");
-    for(int i=0; i<1000; i++) {
-        printf("%d ", tempAnaCheck[i]);
-    }
-    printf("\n");*/
     return true;
 }
 
@@ -462,9 +476,7 @@ void applyDeadZones(int &param) {
 
 bool mainTimerLogic(repeating_timer_t *rt)
 {
-    //uint64_t testTime = time_us_64();
-    //uint64_t testTimeMs = testTime / 1000;
-    //updateLedDisplay(testTimeMs);
+    //startCodeTimer();
 
     updateLeds();
     updateShiftRegButtons();
@@ -511,6 +523,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
         // lower than -1024
     }*/
 
+    //pitchInt = 1024; // temp
     Sample::pitch = pitchInt; // temp...
     //Sample::pitch = -1024;
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
@@ -522,6 +535,8 @@ bool mainTimerLogic(repeating_timer_t *rt)
     crush = analogReadings[POT_CRUSH];
     applyDeadZones(crush);
     crush = crush >> 8;
+
+    //stopCodeTimer();
 
     return true;
 }
@@ -983,18 +998,6 @@ void updateAnalog()
         if (analogLoopNum == 8)
         {
             analogLoopNum = 0;
-
-            tempAnaCheck[tempAnaIndex] = analogReadings[CV_CHANCE];
-            tempAnaIndex = (tempAnaIndex + 1) % 1000;
-
-            // temp
-            /*for (int i = 0; i < 16; i++)
-            {
-                if (buttonStableStates[i])
-                {
-                    // updateLedDisplay(analogReadings[i]);
-                }
-            }*/
         }
     }
 }
