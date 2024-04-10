@@ -331,3 +331,15 @@ Added random drop, does a decent job. Removed zoom velocity gradient, temporaril
 8/4/24
 Going somewhat insane tracking down performance issues (glitches). Found one satisfying one: turns out that max "chance" didn't guarantee 100% probability, edge case of rand()%4096 = 4095 would fail to trigger a hit, hence cause an audible glitch. 
 However, I'm still getting some glitches (buffer underruns?), especially at very high tempos. Might be time to be sensible and just accept that maybe 500BPM is a good max, or 1000BPM with occasional glitches is okay if it's a known thing.
+
+9/4/24
+Went some way down the rabbit hole of controlling the tempo melodically with a volt/octave CV signal. Think this is probably a step too far for a few reasons:
+- Already starting to hit some performance issues before this
+- Voltage readings not currently stable enough for smooth notes
+- Tuning issues arising from measuring time in samples throughout the code (big adjustment to change this now)
+- Probably a very niche feature anyway
+
+If I do choose to come back to the feature, here are some thoughts:
+- Could maybe use a lookup table to speed up calculation
+- Analog readings might be better with next PCB
+- Could average last few PCB readings

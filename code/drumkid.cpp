@@ -44,7 +44,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 int chance = 0;
 int cluster = 0;
 int zoom = 0;
-bool useZoomVelocityGradient = true;
+bool useZoomVelocityGradient = false;
 int velRange = 0;
 int velMidpoint = 0;
 int drop = 0;
@@ -77,8 +77,9 @@ float nextHoldUpdateDec = 0;
 const int NUM_PPQN_VALUES = 6;
 int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 16, 32};
 int syncInPpqnIndex = 0;
+int syncOutPpqnIndex = 0;
 int syncInPpqn = ppqnValues[syncInPpqnIndex];
-int syncOutPpqn = syncInPpqn;
+int syncOutPpqn = ppqnValues[syncOutPpqnIndex];
 
 // SD card stuff
 int sampleFolderNum = 0;
@@ -260,7 +261,14 @@ void nextHit()
         if (activeButton == BUTTON_TIME_SIGNATURE)
             displayTimeSignature(); // temp? not 100% sure this is a good idea, maybe OTT, shows new time signature has come into effect
         scheduledStep = 0;
+
     }
+
+    // temp, v/oct CV tempo (commenting out for now - see notes)
+    //float cvTempo = 825.0 * pow(2.0, ((float)analogReadings[CV_TBC] - 3517.0) / 409.5);
+    //tempo = cvTempo;
+    //stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
+    //printf("cv in %d %f\n", analogReadings[CV_TBC], cvTempo);
 }
 void scheduler()
 {
@@ -525,7 +533,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
 
     //pitchInt = 1024; // temp
     Sample::pitch = pitchInt; // temp...
-    //Sample::pitch = -1024;
+
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
     dropRandom = analogReadings[POT_DROP_RANDOM] / 456; // gives range of 0 to 8
 
@@ -677,9 +685,13 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_SHIFT_CANCEL:
             activeButton = NO_ACTIVE_BUTTON;
             break;
-        case BUTTON_PPQN:
-            activeButton = BUTTON_PPQN;
+        case BUTTON_PPQN_IN:
+            activeButton = BUTTON_PPQN_IN;
             updateLedDisplay(syncInPpqn);
+            break;
+        case BUTTON_PPQN_OUT:
+            activeButton = BUTTON_PPQN_OUT;
+            updateLedDisplay(syncOutPpqn);
             break;
         case BUTTON_LOAD_SAMPLES:
             activeButton = BUTTON_LOAD_SAMPLES;
@@ -703,6 +715,13 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_BEAT:
             activeButton = BUTTON_BEAT;
             displayBeat();
+            break;
+        case BUTTON_CLEAR:
+            if(activeButton == BUTTON_EDIT_BEAT) {
+                for(int i=0; i<NUM_SAMPLES; i++) {
+                    beats[beatNum].beatData[i] = 0;
+                }
+            }
             break;
         case BUTTON_EDIT_BEAT:
             activeButton = BUTTON_EDIT_BEAT;
@@ -730,12 +749,17 @@ void handleIncDec(bool isInc, bool isHold)
 {
     switch (activeButton)
     {
-    case BUTTON_PPQN:
+    case BUTTON_PPQN_IN:
         syncInPpqnIndex += isInc ? 1 : -1;
         syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES-1, syncInPpqnIndex));
         syncInPpqn = ppqnValues[syncInPpqnIndex];
-        syncOutPpqn = syncInPpqn; // temp
         updateLedDisplay(syncInPpqn);
+        break;
+    case BUTTON_PPQN_OUT:
+        syncOutPpqnIndex += isInc ? 1 : -1;
+        syncOutPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncOutPpqnIndex));
+        syncOutPpqn = ppqnValues[syncOutPpqnIndex];
+        updateLedDisplay(syncOutPpqn);
         break;
     case BUTTON_CLOCK_MODE:
         externalClock = !externalClock;

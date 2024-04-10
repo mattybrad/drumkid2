@@ -36,7 +36,9 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
-#define BUTTON_PPQN (5 + 16)
+#define BUTTON_OUTPUT (4 + 16)
+#define BUTTON_PPQN_IN 5
+#define BUTTON_PPQN_OUT (5 + 16)
 #define BUTTON_LOAD_SAMPLES (6 + 16)
 #define BUTTON_SHIFT 7
 #define BUTTON_TUPLET 8
@@ -45,7 +47,8 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_BEAT 10
 #define BUTTON_EDIT_BEAT (BUTTON_BEAT + 16)
 #define BUTTON_SAVE (11 + 16)
-#define BUTTON_OUTPUT (12 + 16)
+#define BUTTON_RANDOM 12
+#define BUTTON_CLEAR (12 + 16)
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_CLOCK_MODE (14 + 16)
 #define BUTTON_START_STOP 15
@@ -98,7 +101,7 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 
 // Beat variables
 #define NUM_BEATS 16
-uint16_t tempo = 1500; // BPM
+uint16_t tempo = 120; // BPM
 uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds 
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
