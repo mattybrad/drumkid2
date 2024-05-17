@@ -51,12 +51,15 @@ int drop = 0;
 int dropRandom = 0;
 int swing = 0;
 int crush = 0;
+
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
-uint8_t dropRef[9] = {
+uint8_t dropRef[11] = {
     0b11110000,
     0b11110001,
     0b11111001,
     0b11111101,
+    0b11111111,
+    0b11111111, // extra copies of full (no drop) value to provide deadzone
     0b11111111,
     0b11111110,
     0b11110110,
@@ -180,18 +183,21 @@ void scheduleHits()
 
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
+        if (Sample::pitch < 0)
+        {
+            // offset sample if reversed so it ends at the correct time
+            tempOffsets[i] = (static_cast<int32_t>(samples[i].length) * QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
+            revStep = (scheduledStep + tempOffsets[i]) % numSteps;
+        }
+
         bool dropHit = !bitRead(dropRef[drop], i);
         bool dropHitRandom = !bitRead(dropRef[dropRandom], i);
         int randNum = rand() % 4095; // range of 0 to 4094, allowing a chance value of 4095 (maximum) to act as "100% probability" (always bigger)
-        int thisChance = chance;
+        int chanceAtten = (4095 - chance) >> (1*(5-std::max((int)stepVal[revStep] - 3, 0))); // decreases probability of hit on lower stepVals (smaller time intervals, e.g. 128th-notes), 
+        int thisChance = chance - chanceAtten;
         if(clusterReady[i]) thisChance = std::max(cluster, chance);
         int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange; // outside chance that this line is causing issues, fenceposts etc, check if having problems
 
-        if(Sample::pitch < 0) {
-            // offset sample if reversed so it ends at the correct time
-            tempOffsets[i] = (static_cast<int32_t>(samples[i].length) *  QUARTER_NOTE_STEPS << Sample::LERP_BITS) / (SAMPLE_RATE * -Sample::pitch);
-            revStep = (scheduledStep + tempOffsets[i]) % numSteps;
-        }
         int zoomMult = getZoomMultiplier(revStep);
         if (!dropHit && beats[beatNum].getHit(i, revStep, tuplet))
         {
@@ -528,8 +534,8 @@ bool mainTimerLogic(repeating_timer_t *rt)
 
     Sample::pitch = pitchInt; // temp...
 
-    drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
-    dropRandom = analogReadings[POT_DROP_RANDOM] / 456; // gives range of 0 to 8
+    drop = analogReadings[POT_DROP] / 373; // gives range of 0 to 10
+    dropRandom = analogReadings[POT_DROP_RANDOM] / 373; // gives range of 0 to 10
 
     swing = analogReadings[POT_SWING];
     applyDeadZones(swing);

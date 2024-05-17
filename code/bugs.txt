@@ -2,14 +2,13 @@ BUGS TO FIX
 - HZQD no longer stable at 500BPM+
 
 FEATURES TO ADD
-- Pitch should be normal at 50%
+- Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
 - Quick preset/pad buttons (A B C D?)
 - Metronome for direct beat entry
 - Confirm save slot before finally saving
 - Adjust chance implementation so large subdivisions (quarter note, 8th note) are more likely than smaller ones (more musical)
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
-- "Drop" should be neutral/full at 50%, probably with dead zone (could just duplicate the full setting a few times)
 - Check total sample size, error if too large
 - Allow stereo samples (load as mono)
 - Finalise expected folder format

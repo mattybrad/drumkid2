@@ -384,4 +384,8 @@ Back in the game after time off! Red film ordered for LED display. Display will 
 
 Lengthened sync/trigger output pulse to 15ms after realising it wasn't always triggering the Division 6 Dual Mini Sequencer clock input. This should be adjustable in settings I guess.
 
+Improved pitch knob. 12 o'clock now corresponds to 1x playback speed, with a deadzone. Weirdly, it turns out the pots don't seem to be very symmetrical, meaning they seem to turn further CW than they do CCW, which means the 12 o'clock point is not 2048 in the code, annoyingly. If this is the same for every pot, I can just tweak the centre value in the code where 12 o'clock matters. If it's a random variation between pots, I might just have to increase the deadzones. The datasheet suggests a +/- 5 deg range (i.e. 10 deg total). Looking at the knobs in a row now, it does seem like there is variation. Could be a soldering issue..? I guess I'll just increase/check the deadzones.
 
+Am also considering a calibration function, mainly for CV inputs but could also work for knobs in their 12 o'clock positions.
+
+First stab at "magnet" or whatever I wanted to call it - decreasing hit probability for weirder notes (128th notes etc) while still allowing 100% probability with chance knob at full. Next step, try making this magnet effect knob-controlled, at least to see if it's helpful.
