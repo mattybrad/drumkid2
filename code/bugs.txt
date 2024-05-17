@@ -1,11 +1,11 @@
 BUGS TO FIX
 - HZQD no longer stable at 500BPM+
-- Slide is disabled
-- No SD card causes crash on boot
 
 FEATURES TO ADD
-- Confirm save slot before finally saving
 - Pitch should be normal at 50%
+- Quick preset/pad buttons (A B C D?)
+- Metronome for direct beat entry
+- Confirm save slot before finally saving
 - Adjust chance implementation so large subdivisions (quarter note, 8th note) are more likely than smaller ones (more musical)
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
@@ -25,6 +25,7 @@ FEATURES TO ADD
 - List sample sets in alphabetical order
 - Revert beat
 - Cool bootup visuals
+- Output pulse length setting (sync/trigger)
 
 POST-BETA FEATURES (non-essential)
 - Fractional tempos (e.g. 120.1BPM)

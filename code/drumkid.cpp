@@ -352,14 +352,14 @@ int main()
             int32_t out1 = 0;
             int32_t out2 = 0;
             if(currentTime + (i>>1) >= nextSyncOut) {
-                pulseGpio(SYNC_OUT, 1000); // todo: adjust pulse length based on PPQN, or advanced setting
+                pulseGpio(SYNC_OUT, 15000); // todo: adjust pulse length based on PPQN, or advanced setting
                 nextSyncOut = INT64_MAX;
             }
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 bool didTrigger = samples[j].update(currentTime + (i>>1)); // could be more efficient
                 if(didTrigger && j<4) {
-                    pulseGpio(TRIGGER_OUT_PINS[j], 1000);
+                    pulseGpio(TRIGGER_OUT_PINS[j], 15000);
                 }
                 if(samples[j].output1) out1 += (samples[j].value >> crush) << crush;
                 if(samples[j].output2) out2 += samples[j].value;
@@ -507,31 +507,25 @@ bool mainTimerLogic(repeating_timer_t *rt)
     applyDeadZones(velRange);
     applyDeadZones(velMidpoint);
 
-    int pitchInt = analogReadings[POT_PITCH] + analogReadings[CV_TBC] - 4095; // temp, haven't figured out final range
-    if (pitchInt < -2048)
-        pitchInt = -2048;
-    else if (pitchInt > 2048)
-        pitchInt = 2048;
-    else if(pitchInt == 0)
-        pitchInt = 1; // need to do this to prevent division by zero...
-    
-    // temp, trying this out - too tired to write this properly now, finish later
-    /*int pitchDeadZone = 500;
-    if(pitchInt > 1024 + pitchDeadZone) {
-        // higher than 1024
-    } else if(pitchInt > 1024 - pitchDeadZone) {
-        // dead zone around 1024
-        pitchInt = 1024;
-    } else if(pitchInt > -1024 + pitchDeadZone) {
-        // between dead zones
-    } else if(pitchInt > -1024 - pitchDeadZone) {
-        // dead zone around -1024
-        pitchInt = -1024;
+    // pitch knob maths - looks horrible! the idea is for the knob to have a deadzone at 12 o'clock which corresponds to normal playback speed (1024). to keep the maths efficient (ish), i'm trying to avoid division, because apart from the deadzone section, it doesn't matter too much what the exact values are, so i'm just using bitwise operators to crank up the range until it feels right. CV adjustment happens after the horrible maths, because otherwise CV control (e.g. a sine LFO pitch sweep) would sound weird and disjointed
+    int pitchInt = analogReadings[POT_PITCH];
+    int pitchDeadZone = 500;
+    if(pitchInt > 2048 + pitchDeadZone) {
+        // speed above 100%
+        pitchInt = ((pitchInt - 2048 - pitchDeadZone)<<1) + 1024;
+    } else if(pitchInt < 2048 - pitchDeadZone) {
+        // speed below 100%, and reverse
+        pitchInt = pitchInt - 2048 + pitchDeadZone + 1024;
+        if(pitchInt < 0) {
+            pitchInt = pitchInt << 3;
+        }
     } else {
-        // lower than -1024
-    }*/
+        // speed exactly 100%, in deadzone
+        pitchInt = 1024;
+    }
+    pitchInt += analogReadings[CV_TBC] - 2048;
+    if(pitchInt == 0) pitchInt = 1; // seems sensible, prevents sample getting stuck
 
-    //pitchInt = 1024; // temp
     Sample::pitch = pitchInt; // temp...
 
     drop = analogReadings[POT_DROP] / 456; // gives range of 0 to 8
@@ -1569,6 +1563,7 @@ void initZoom() {
 void displayPulse() {
     if(activeButton == NO_ACTIVE_BUTTON) {
         int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
+        if(!beatPlaying) quarterNote = 0;
         for (int i = 0; i < 4; i++)
         {
             if(i == (quarterNote%4)) {

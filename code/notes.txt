@@ -342,4 +342,46 @@ Went some way down the rabbit hole of controlling the tempo melodically with a v
 If I do choose to come back to the feature, here are some thoughts:
 - Could maybe use a lookup table to speed up calculation
 - Analog readings might be better with next PCB
-- Could average last few PCB readings
+- Could average last few analog readings
+
+10/4/24
+There are some settings which should be stored in the flash automatically because it's likely that users are just setting things for their system and then leaving them alone. Examples:
+- PPQN values (in/out)
+- Clock source (internal/external)
+
+Found some cheap slim knobs: https://www.ebay.co.uk/itm/385602579126
+
+Some notes about design before the next PCB:
+- Assume slim knobs, approx 11mm diameter
+- Don't both with big chunky buttons, smaller ones are more responsive and cheaper and could actually have some extra buttons
+
+15/4/24
+Turns out cheap knobs are 270-degree, not 180, but also seems like that's maybe standard for these slim knobs, and they are cheap, so I'm just going to rotate the pots on the next PCB (carefully!).
+
+Fine tuning the PCB design, will probably move to 11mm standoffs on the top layer and no standoffs on the bottom. Need to source longer tactile buttons, maybe TS02-66-140-BK-160-LCR-D (or SCR-D? check) or similar, 14mm above PCB, hence about 1.4mm proud of top panel.
+
+18/4/24
+Making a quick list of things that I know need changing for the next PCB:
+BOTTOM PCB:
+- holes not needed
+- PCB can be smaller without holes (if needed)
+- breakout pins for Pico
+- AP7333 pinout has been wrong twice now!
+- Supply ADC VREF from AP7333 via jumper
+- Serial debug pins
+- Remove tap tempo and start/stop buttons (all buttons now 6mm not 12mm)
+TOP PCB
+- Remove tap tempo and start/stop buttons
+- Add more buttons and another shift reg (probably)
+- Pots rotated 90 degrees LEFT (CCW)
+- Reduce 7-seg resistor values
+PANEL
+- Pots rotated 90 degrees LEFT (CCW)
+- Keep copper intact (looks better)
+
+17/5/24
+Back in the game after time off! Red film ordered for LED display. Display will be mounted below/flush with top surface, not proud. Keep same cutout in front panel for now, probably just solder in place with some 3mm shims then remove.
+
+Lengthened sync/trigger output pulse to 15ms after realising it wasn't always triggering the Division 6 Dual Mini Sequencer clock input. This should be adjustable in settings I guess.
+
+
