@@ -193,14 +193,22 @@ void scheduleHits()
         bool dropHit = !bitRead(dropRef[drop], i);
         bool dropHitRandom = !bitRead(dropRef[dropRandom], i);
         int randNum = rand() % 4095; // range of 0 to 4094, allowing a chance value of 4095 (maximum) to act as "100% probability" (always bigger)
-        int chanceAtten = (4095 - chance) >> (1*(5-std::max((int)stepVal[revStep] - 3, 0))); // decreases probability of hit on lower stepVals (smaller time intervals, e.g. 128th-notes), 
-        int thisChance = chance - chanceAtten;
-        if(clusterReady[i]) thisChance = std::max(cluster, chance);
+        //int chanceAtten = (4095 - chance) >> (2*(5-std::max((int)stepVal[revStep] - 3, 0))); // decreases probability of hit on lower stepVals (smaller time intervals, e.g. 128th-notes)
+        int thisStepVal = std::max((int)stepVal[revStep] - 3, 0); // step values from 0 (quarter note) to 5 (128th note)
+        int thisChance;
+        if(chance<2048) {
+            thisChance = chance >> 3 * thisStepVal;
+        } else {
+            int intercept = 2048 >> 3 * thisStepVal;
+            thisChance = (((4095 - intercept) * (chance - 2048)) >> 11) + intercept;
+        }
+        if(clusterReady[i]) thisChance = std::max(cluster, thisChance);
         int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange; // outside chance that this line is causing issues, fenceposts etc, check if having problems
 
         int zoomMult = getZoomMultiplier(revStep);
         if (!dropHit && beats[beatNum].getHit(i, revStep, tuplet))
         {
+            // if current beat contains a hit on this step, calculate the velocity and queue the hit
             int thisVel = 4095;
             if(chance > randNum) {
                 thisVel = std::min(4095, std::max(0, 4095 + intVel));

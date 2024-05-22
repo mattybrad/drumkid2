@@ -106,7 +106,7 @@ uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds
 int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 0;
+int beatNum = 2;
 Beat beats[NUM_BEATS]; // temp, define max number of beats
 Sample samples[NUM_SAMPLES];
 int editSample = 0;
