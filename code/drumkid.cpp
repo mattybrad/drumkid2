@@ -43,6 +43,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // move to header file at some point
 int chance = 0;
 int cluster = 0;
+int magnet = 0;
 int zoom = 0;
 bool useZoomVelocityGradient = false;
 int velRange = 0;
@@ -51,6 +52,7 @@ int drop = 0;
 int dropRandom = 0;
 int swing = 0;
 int crush = 0;
+int magnetCurve[6][32];
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[11] = {
@@ -193,14 +195,14 @@ void scheduleHits()
         bool dropHit = !bitRead(dropRef[drop], i);
         bool dropHitRandom = !bitRead(dropRef[dropRandom], i);
         int randNum = rand() % 4095; // range of 0 to 4094, allowing a chance value of 4095 (maximum) to act as "100% probability" (always bigger)
-        //int chanceAtten = (4095 - chance) >> (2*(5-std::max((int)stepVal[revStep] - 3, 0))); // decreases probability of hit on lower stepVals (smaller time intervals, e.g. 128th-notes)
         int thisStepVal = std::max((int)stepVal[revStep] - 3, 0); // step values from 0 (quarter note) to 5 (128th note)
         int thisChance;
-        if(chance<2048) {
-            thisChance = chance >> 3 * thisStepVal;
+        if(thisStepVal == 0 || chance == 4095) {
+            thisChance = chance;
+        } else if(magnet < 2048) {
+            thisChance = (magnet * magnetCurve[thisStepVal][chance>>7] + (2048-magnet) * ((chance*chance)>>12)) >> 11;
         } else {
-            int intercept = 2048 >> 3 * thisStepVal;
-            thisChance = (((4095 - intercept) * (chance - 2048)) >> 11) + intercept;
+            thisChance = ((4095 - magnet) * magnetCurve[thisStepVal][chance >> 7]) >> 11;
         }
         if(clusterReady[i]) thisChance = std::max(cluster, thisChance);
         int intVel = 2*velMidpoint - 4095 + (rand() % std::max(1,velRange*2)) - velRange; // outside chance that this line is causing issues, fenceposts etc, check if having problems
@@ -343,6 +345,17 @@ int main()
     repeating_timer_t tempSchedulerTimer;
     add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
     //add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
+
+    // temp, populating magnet curve
+    printf("magnet curve:\n");
+    for(int i=0; i<6; i++) {
+        for(int j=0; j<32; j++) {
+            float accurateValue = pow(((float)j * 1.0) / 31.0, 4.0 * (float)i + 1.0);
+            magnetCurve[i][j] = 4095.0 * accurateValue;
+            printf("%d ", magnetCurve[i][j]);
+        }
+        printf("\n");
+    }
 
     // temp
     //beatPlaying = true;
@@ -514,6 +527,9 @@ bool mainTimerLogic(repeating_timer_t *rt)
 
     zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
     applyDeadZones(zoom);
+
+    magnet = analogReadings[POT_MAGNET];
+    applyDeadZones(magnet);
 
     zoom = zoom * maxZoom;
     velRange = analogReadings[POT_RANGE];

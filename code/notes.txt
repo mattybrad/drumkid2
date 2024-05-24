@@ -389,3 +389,17 @@ Improved pitch knob. 12 o'clock now corresponds to 1x playback speed, with a dea
 Am also considering a calibration function, mainly for CV inputs but could also work for knobs in their 12 o'clock positions.
 
 First stab at "magnet" or whatever I wanted to call it - decreasing hit probability for weirder notes (128th notes etc) while still allowing 100% probability with chance knob at full. Next step, try making this magnet effect knob-controlled, at least to see if it's helpful.
+
+22/5/24
+Good progress on the magnet paramater. Basically raising the chance param value to a higher power as stepVal increases seems to feel good. Current issue is how exactly to fade from zero magnet to half to full. At the moment the transition is quite sudden, it either feels fully random or fully biased. Might be overkill, but thinking of this:
+m = 0: fully random, not dependent on stepVal
+m = 0.5: exponent is proportional to stepVal
+m = 1: only quarter notes (adheres to the philosophy of full max value being properly extreme)
+Also probably need to be careful with the transition between these functions/lookups.
+
+There's a conflict of two behaviours with the above idea. At 100% chance, should the magnet "win" and only quarter notes be heard? Or should 100% chance mean exactly that, and overcome the magnet? Feels like the latter makes more sense, because if you wanted constant quarter notes, you could just reduce the zoom anyway. 
+
+Tried to implement this 5 minutes before I have to leave, which was silly, as I've messed it up.
+
+24/5/24
+Magnet control good enough for now.

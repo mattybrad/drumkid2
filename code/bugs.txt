@@ -2,6 +2,7 @@ BUGS TO FIX
 - HZQD no longer stable at 500BPM+
 
 FEATURES TO ADD
+- Beat pulse displays even during other messages (flip the relevant bit)
 - Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
 - Quick preset/pad buttons (A B C D?)
 - Metronome for direct beat entry
