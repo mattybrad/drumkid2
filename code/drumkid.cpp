@@ -101,7 +101,7 @@ bool sdShowFolderTemp = false;
 // metronome temp
 bool metronomeActive = true;
 int metronomeWaveHigh = true;
-int metronomeLengthTally = 0;
+int metronomeLengthTally = INT32_MAX;
 int metronomeBarStart = true;
 int64_t nextMetronome = INT64_MAX;
 
@@ -678,6 +678,12 @@ void updateLedDisplayAlpha(char* word)
     }
 }
 
+void doLiveHit(int sampleNum) {
+    samples[sampleNum].queueHit(currentTime, scheduledStep, 4095);
+    int adjustedStep = (scheduledStep+1) % numSteps; // offset by 2 to allow some leeway either side , not sure if the maths is right there... then reduce granularity to match beat data
+    bitWrite(beats[beatNum].beatData[sampleNum], (adjustedStep>>3)<<1, true);
+}
+
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if (shift && buttonNum != BUTTON_SHIFT)
@@ -716,23 +722,44 @@ void handleButtonChange(int buttonNum, bool buttonState)
             activeButton = BUTTON_TAP_TEMPO;
             updateTapTempo();
             break;
+        case BUTTON_LIVE_EDIT:
+            activeButton = BUTTON_LIVE_EDIT;
+            //char tempWord2[] = "live";
+            //updateLedDisplayAlpha(tempWord2);
+            break;
         case BUTTON_CLOCK_MODE:
             activeButton = BUTTON_CLOCK_MODE;
             displayClockMode();
             break;
         case BUTTON_INC:
-            nextHoldUpdateInc = currentTime + SAMPLE_RATE;
-            handleIncDec(true, false);
+            if(activeButton == BUTTON_LIVE_EDIT) {
+                doLiveHit(0);
+            } else {
+                nextHoldUpdateInc = currentTime + SAMPLE_RATE;
+                handleIncDec(true, false);
+            }
             break;
         case BUTTON_DEC:
-            nextHoldUpdateDec = currentTime + SAMPLE_RATE;
-            handleIncDec(false, false);
+            if(activeButton == BUTTON_LIVE_EDIT) {
+                doLiveHit(1);
+            } else {
+                nextHoldUpdateDec = currentTime + SAMPLE_RATE;
+                handleIncDec(false, false);
+            }
             break;
         case BUTTON_CONFIRM:
-            handleYesNo(true);
+            if(activeButton == BUTTON_LIVE_EDIT) {
+                doLiveHit(2);
+            } else {
+                handleYesNo(true);
+            }
             break;
         case BUTTON_CANCEL:
-            handleYesNo(false);
+            if(activeButton == BUTTON_LIVE_EDIT) {
+                doLiveHit(3);
+            } else {
+                handleYesNo(false);
+            }
             break;
         case BUTTON_SHIFT_CANCEL:
             activeButton = NO_ACTIVE_BUTTON;
@@ -769,7 +796,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             displayBeat();
             break;
         case BUTTON_CLEAR:
-            if(activeButton == BUTTON_EDIT_BEAT) {
+            if(activeButton == BUTTON_EDIT_BEAT || activeButton == BUTTON_LIVE_EDIT) {
                 for(int i=0; i<NUM_SAMPLES; i++) {
                     beats[beatNum].beatData[i] = 0;
                 }

@@ -2,9 +2,8 @@ BUGS TO FIX
 - HZQD no longer stable at 500BPM+
 
 FEATURES TO ADD
-- Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
+- Direct beat input
 - Quick preset/pad buttons (A B C D?)
-- Metronome for direct beat entry
 - Confirm save slot before finally saving
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
@@ -20,9 +19,10 @@ FEATURES TO ADD
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Randomise everything button
 - List sample sets in alphabetical order
-- Revert beat
+- Revert beat (store flash beat in RAM then restore when changing beat)
 - Cool bootup visuals
 - Output pulse length setting (sync/trigger)
+- Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
 
 POST-BETA FEATURES (non-essential)
 - Fractional tempos (e.g. 120.1BPM)

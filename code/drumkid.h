@@ -49,6 +49,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_SAVE (11 + 16)
 #define BUTTON_RANDOM 12
 #define BUTTON_CLEAR (12 + 16)
+#define BUTTON_LIVE_EDIT 13
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_CLOCK_MODE (14 + 16)
 #define BUTTON_START_STOP 15
