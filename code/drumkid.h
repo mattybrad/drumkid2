@@ -108,7 +108,8 @@ int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
 int beatNum = 2;
-Beat beats[NUM_BEATS]; // temp, define max number of beats
+Beat beats[NUM_BEATS];
+Beat beatBackup; // copy of current beat before editing, to allow easy revert if not saving new version
 Sample samples[NUM_SAMPLES];
 int editSample = 0;
 int editStep = 0;
@@ -346,5 +347,7 @@ void doStep();
 void print_buf(const uint8_t *buf, size_t len);
 void initZoom();
 void displayPulse();
+void revertBeat(int revertBeatNum);
+void backupBeat(int backupBeatNum);
 
 #endif

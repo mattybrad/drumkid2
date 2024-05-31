@@ -99,7 +99,6 @@ bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
 
 // metronome temp
-bool metronomeActive = true;
 int metronomeWaveHigh = true;
 int metronomeLengthTally = INT32_MAX;
 int metronomeBarStart = true;
@@ -150,7 +149,7 @@ void scheduleSyncOut() {
 }
 void scheduleMetronome()
 {
-    if (scheduledStep % QUARTER_NOTE_STEPS == 0) {
+    if (activeButton == BUTTON_LIVE_EDIT && scheduledStep % QUARTER_NOTE_STEPS == 0) {
         nextMetronome = nextHitTime;
         metronomeBarStart = (scheduledStep == 0);
     }
@@ -826,6 +825,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
 
 void handleIncDec(bool isInc, bool isHold)
 {
+    // have to declare stuff up here because of switch statement
+    int prevBeatNum;
+
     switch (activeButton)
     {
     case BUTTON_PPQN_IN:
@@ -878,11 +880,16 @@ void handleIncDec(bool isInc, bool isHold)
         break;
 
     case BUTTON_BEAT:
+        prevBeatNum = beatNum;
         beatNum += isInc ? 1 : -1;
         if (beatNum >= NUM_BEATS)
             beatNum = NUM_BEATS - 1;
         if (beatNum < 0)
             beatNum = 0;
+        if(beatNum != prevBeatNum) {
+            revertBeat(prevBeatNum);
+            backupBeat(beatNum);
+        }
         displayBeat();
         break;
 
@@ -1381,6 +1388,19 @@ void loadBeatsFromFlash()
         {
             std::memcpy(&beats[i].beatData[j], &flashUserBeats[8 * (i * NUM_SAMPLES + j)], 8);
         }
+    }
+    backupBeat(beatNum);
+}
+
+void backupBeat(int backupBeatNum) {
+    for(int i=0; i<NUM_SAMPLES; i++) {
+        beatBackup.beatData[i] = beats[backupBeatNum].beatData[i];
+    }
+}
+
+void revertBeat(int revertBeatNum) {
+    for(int i=0; i<NUM_SAMPLES; i++) {
+        beats[revertBeatNum].beatData[i] = beatBackup.beatData[i];
     }
 }
 
