@@ -2,12 +2,10 @@ BUGS TO FIX
 - HZQD no longer stable at 500BPM+
 
 FEATURES TO ADD
-- Beat pulse displays even during other messages (flip the relevant bit)
 - Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
 - Quick preset/pad buttons (A B C D?)
 - Metronome for direct beat entry
 - Confirm save slot before finally saving
-- Adjust chance implementation so large subdivisions (quarter note, 8th note) are more likely than smaller ones (more musical)
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
 - Check total sample size, error if too large
@@ -19,7 +17,6 @@ FEATURES TO ADD
 - Better pitch lerping (not correct in reverse..?)
 - Prioritise more recent(?) notes in reverse to give expected sound at higher zooms
 - Numeric input
-- Dead zone around pitch = 1.0
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Randomise everything button
 - List sample sets in alphabetical order

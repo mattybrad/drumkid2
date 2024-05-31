@@ -98,6 +98,13 @@ int activeButton = -1;
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
 
+// metronome temp
+bool metronomeActive = true;
+int metronomeWaveHigh = true;
+int metronomeLengthTally = 0;
+int metronomeBarStart = true;
+int64_t nextMetronome = INT64_MAX;
+
 // convert zoom and step to velocity multiplier
 uint8_t maxZoom = log(4*QUARTER_NOTE_STEPS)/log(2) + 1;
 float zoomDivisor = 4095 / maxZoom;
@@ -140,6 +147,13 @@ uint16_t mainTimerInterval = 100; // us
 
 void scheduleSyncOut() {
     if(scheduledStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextHitTime;
+}
+void scheduleMetronome()
+{
+    if (scheduledStep % QUARTER_NOTE_STEPS == 0) {
+        nextMetronome = nextHitTime;
+        metronomeBarStart = (scheduledStep == 0);
+    }
 }
 int64_t tempOffsets[NUM_SAMPLES] = {0};
 #define SWING_OFF 0
@@ -292,6 +306,7 @@ void scheduler()
     {
         scheduleHits();
         scheduleSyncOut();
+        scheduleMetronome();
         nextHit();
     }
 }
@@ -382,6 +397,12 @@ int main()
                 pulseGpio(SYNC_OUT, 15000); // todo: adjust pulse length based on PPQN, or advanced setting
                 nextSyncOut = INT64_MAX;
             }
+            if (currentTime + (i >> 1) >= nextMetronome)
+            {
+                metronomeWaveHigh = true;
+                metronomeLengthTally = 0;
+                nextMetronome = INT64_MAX;
+            }
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 bool didTrigger = samples[j].update(currentTime + (i>>1)); // could be more efficient
@@ -390,6 +411,13 @@ int main()
                 }
                 if(samples[j].output1) out1 += (samples[j].value >> crush) << crush;
                 if(samples[j].output2) out2 += samples[j].value;
+            }
+            if(metronomeLengthTally < 2000) {
+                metronomeLengthTally ++;
+                if(metronomeLengthTally % (metronomeBarStart ? 50 : 100) == 0) {
+                    metronomeWaveHigh = !metronomeWaveHigh;
+                }
+                if(metronomeWaveHigh) out1 += 5000;
             }
             bufferSamples[i] = (out1 >> (2 + crush)) << crush;
             //bufferSamples[i] = out1 >> 2;
@@ -1356,6 +1384,7 @@ void updateLeds()
         for (int i = 0; i < 4; i++)
         {
             storedLedData[i] = (sevenSegData[3-i] << 8) + 0b11110000 + singleLedData;
+
             bitWrite(storedLedData[i], 4 + i, 0);
         }
         gpio_put(LATCH_595, 0);
@@ -1593,12 +1622,16 @@ void initZoom() {
 void displayPulse() {
     if(activeButton == NO_ACTIVE_BUTTON) {
         int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
+        bool showPulse = scheduledStep % QUARTER_NOTE_STEPS < (QUARTER_NOTE_STEPS >> 2);
         if(!beatPlaying) quarterNote = 0;
         for (int i = 0; i < 4; i++)
         {
-            if(i == (quarterNote%4)) {
+            if (i == (quarterNote % 4) && showPulse)
+            {
                 sevenSegData[i] = quarterNote < 4 ? 0b10000000 : 0b00000010;
-            } else {
+            }
+            else
+            {
                 sevenSegData[i] = 0b00000000;
             }
         }
