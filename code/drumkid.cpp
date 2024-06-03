@@ -15,6 +15,7 @@ Aleatoric drum machine
 #include <cstdint>
 #include <stdio.h>
 #include <math.h>
+#include <array>
 #include <algorithm>
 
 // Include some stuff for reading/writing SD cards
@@ -88,7 +89,6 @@ int syncOutPpqn = ppqnValues[syncOutPpqnIndex];
 
 // SD card stuff
 int sampleFolderNum = 0;
-char sampleFolderName[255];
 
 // tempo/sync stuff
 bool externalClock = false;
@@ -438,7 +438,10 @@ int main()
             scanSampleFolders();
             if (sampleFolderNum >= numSampleFolders)
                 sampleFolderNum = 0; // just in case card is removed, changed, and reinserted - todo: proper folder names comparison to revert to first folder if any changes
-            getNthSampleFolder(sampleFolderNum);
+            //getNthSampleFolder(sampleFolderNum);
+            char ledFolderName[5];
+            strncpy(ledFolderName, folderNames[sampleFolderNum], 5);
+            updateLedDisplayAlpha(ledFolderName);
         }
 
         for (int i = 0; i < NUM_SAMPLES; i++)
@@ -1112,61 +1115,31 @@ void updateAnalog()
     }
 }
 
-void getNthSampleFolder(int n) {
-    printf("get nth sample folder...\n");
-    sd_init_driver();
-    sd_card_t *pSD = sd_get_by_num(0);
-    if (!pSD->sd_test_com(pSD))
-    {
-        char msg[] = "card";
-        updateLedDisplayAlpha(msg);
-        activeButton = ERROR_DISPLAY;
-        return;
+void resetSampleFolderList() {
+    char nullString[MAX_FOLDER_NAME_LENGTH] = "";
+    for(int i=0; i<MAX_SAMPLE_FOLDERS; i++) {
+        strncpy(folderNames[i], nullString, MAX_FOLDER_NAME_LENGTH);
     }
-    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
-    if (FR_OK != fr) {
-        printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-        char msg[] = "err";
-        updateLedDisplayAlpha(msg);
-        activeButton = ERROR_DISPLAY;
-        return;
-    }
-    static FILINFO fno;
-    UINT i;
-    int foundNum = -1;
-    char path[256];
-    strcpy(path, "samples/");
-    DIR dir;
-    fr = f_opendir(&dir, path);
-    if (FR_OK != fr)
-    {
-        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-        return;
-    }
-    for (;;)
-    {
-        fr = f_readdir(&dir, &fno); /* Read a directory item */
-        if (fr != FR_OK || fno.fname[0] == 0)
-            break; /* Break on error or end of dir */
-        if (fno.fattrib & AM_DIR)
-        { /* It is a directory */
-            foundNum ++;
-            i = strlen(path);
-            sprintf(&path[i], "/%s", fno.fname); // don't totally understand this
-            path[i] = 0;
-            if(foundNum == n) {
-                printf("sample folder: %s\n", fno.fname);
-                strcpy(sampleFolderName, fno.fname);
-                updateLedDisplayAlpha(fno.fname);
-                break;
-            }
-        }
-        else
-        { /* It is a file. */
-            printf("%s/%s\n", path, fno.fname);
+}
+
+// not the most beautiful function, but this adds a sample folder at the right point in the alphabetical list
+void addSampleFolder(char* newFolderPointer) {
+    int insertPoint = 0;
+    bool done = false;
+
+    for(int i=0; i<MAX_SAMPLE_FOLDERS && !done; i++) {
+        int res = strncmp(newFolderPointer, folderNames[i], MAX_FOLDER_NAME_LENGTH);
+        if(res < 0 || folderNames[i][0] == 0) {
+            insertPoint = i;
+            done = true;
         }
     }
-    f_closedir(&dir);
+
+    done = false;
+    for(int i=MAX_SAMPLE_FOLDERS-1; i>insertPoint && i>0; i--) {
+        strncpy(folderNames[i], folderNames[i - 1], MAX_FOLDER_NAME_LENGTH);
+    }
+    strncpy(folderNames[insertPoint], newFolderPointer, MAX_FOLDER_NAME_LENGTH);
 }
 
 // go through every sample folder and create an alphabetically ordered array of the folder names
@@ -1202,6 +1175,7 @@ void scanSampleFolders() {
         activeButton = ERROR_DISPLAY;
         return;
     }
+    resetSampleFolderList();
     for (;;)
     {
         fr = f_readdir(&dir, &fno); /* Read a directory item */
@@ -1210,13 +1184,11 @@ void scanSampleFolders() {
         if (fno.fattrib & AM_DIR)
         { /* It is a directory */
             foundNum++;
-            strcpy(folderNames[foundNum], fno.fname);
-            printf("sample folder %d: %s\n", foundNum, fno.fname);
-            printf("sample folder %d: %s\n", foundNum, folderNames[foundNum]);
+            addSampleFolder(fno.fname);
         }
     }
     numSampleFolders = foundNum+1;
-    // todo: sort alphabetically here, maybe radix or std::sort
+
     f_closedir(&dir);
 }
 
@@ -1251,7 +1223,7 @@ void loadSamplesFromSD()
         FIL fil;
         char filename[255];
         strcpy(filename, "samples/");
-        strcpy(filename+strlen(filename), sampleFolderName);
+        strcpy(filename + strlen(filename), folderNames[sampleFolderNum]);
         strcpy(filename+strlen(filename), sampleNames[n]);
         fr = f_open(&fil, filename, FA_READ);
         if (FR_OK != fr)

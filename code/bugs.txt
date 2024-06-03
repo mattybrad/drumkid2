@@ -4,6 +4,7 @@ BUGS TO FIX
 - Rogue random hits with chance=0 and magnet>0 with time signatures>4?
 
 FEATURES TO ADD
+- Warn if no card inserted when pressing kit button
 - Live input undo?
 - Confirm save slot before finally saving
 - Program selection of default beats
@@ -14,14 +15,13 @@ FEATURES TO ADD
 - Numeric input
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Randomise everything button
-- List sample sets in alphabetical order
 - Cool bootup visuals
 - Niche settings menu
     - Output pulse length setting (sync/trigger)
     - Live input quantize
     - Move PPQN settings here
     - Save niche settings to flash
-
+    - Bootup visuals on/off
 POST-BETA FEATURES (non-essential)
 - Fractional tempos (e.g. 120.1BPM)
 - Allow stereo samples (load as mono)

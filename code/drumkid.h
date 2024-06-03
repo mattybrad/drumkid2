@@ -116,7 +116,8 @@ int editStep = 0;
 
 // SD card stuff
 #define MAX_SAMPLE_FOLDERS 16
-char folderNames[MAX_SAMPLE_FOLDERS][5];
+#define MAX_FOLDER_NAME_LENGTH 16
+char folderNames[MAX_SAMPLE_FOLDERS][MAX_FOLDER_NAME_LENGTH];
 char path[] = "samples/";
 int numSampleFolders = 0;
 
