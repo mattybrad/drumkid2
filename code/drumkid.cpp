@@ -823,7 +823,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
             displayEditBeat();
             break;
         case BUTTON_SAVE:
-            writeBeatsToFlash();
+            saveBeatLocation = beatNum;
+            activeButton = BUTTON_SAVE;
+            updateLedDisplay(saveBeatLocation);
             break;
         default:
             printf("(button not assigned)\n");
@@ -919,6 +921,15 @@ void handleIncDec(bool isInc, bool isHold)
         displayEditBeat();
         break;
 
+    case BUTTON_SAVE:
+        saveBeatLocation += isInc ? 1 : -1;
+        if(saveBeatLocation < 0)
+            saveBeatLocation = 0;
+        if(saveBeatLocation >= NUM_BEATS)
+            saveBeatLocation = NUM_BEATS - 1;
+        updateLedDisplay(saveBeatLocation);
+        break;
+
     case BUTTON_TUPLET:
         tuplet += isInc ? 1 : -1;
         if (tuplet < 0)
@@ -948,6 +959,9 @@ void handleIncDec(bool isInc, bool isHold)
 }
 
 void handleYesNo(bool isYes) {
+    // have to declare stuff up here because of switch statement
+    int tupletEditStep;
+
     bool useDefaultNoBehaviour = true;
     switch(activeButton)
     {
@@ -962,7 +976,7 @@ void handleYesNo(bool isYes) {
 
         case BUTTON_EDIT_BEAT:
             useDefaultNoBehaviour = false;
-            int tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
+            tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
             bitWrite(beats[beatNum].beatData[editSample], tupletEditStep, isYes);
             editStep ++;
             if(editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE >= quarterNoteDivision>>2) {
@@ -971,6 +985,11 @@ void handleYesNo(bool isYes) {
             if(editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
                 editStep = 0;
             displayEditBeat();
+            break;
+
+        case BUTTON_SAVE:
+            if(isYes) writeBeatsToFlash();
+            activeButton = NO_ACTIVE_BUTTON;
             break;
     }
     if(!isYes && useDefaultNoBehaviour) {
@@ -1396,6 +1415,16 @@ void revertBeat(int revertBeatNum) {
 
 
 void writeBeatsToFlash() {
+    if(beatNum != saveBeatLocation) {
+        for (int i = 0; i < NUM_SAMPLES; i++)
+        {
+            beats[saveBeatLocation].beatData[i] = beats[beatNum].beatData[i];
+        }
+        revertBeat(beatNum);
+        beatNum = saveBeatLocation;
+    }
+    backupBeat(beatNum);
+
     // flash page is 256 bytes
     // beat is 32 bytes
     // 8 beats per page
@@ -1664,6 +1693,18 @@ void displayPulse() {
             else
             {
                 sevenSegData[i] = 0b00000000;
+            }
+        }
+    } else if(activeButton == BUTTON_LIVE_EDIT) {
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == (quarterNote % 4) && showPulse)
+            {
+                sevenSegData[i] = quarterNote < 4 ? 0b10010000 : 0b00010010;
+            }
+            else
+            {
+                sevenSegData[i] = 0b00010000;
             }
         }
     }

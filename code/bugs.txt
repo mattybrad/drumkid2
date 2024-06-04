@@ -4,12 +4,10 @@ BUGS TO FIX
 - Rogue random hits with chance=0 and magnet>0 with time signatures>4?
 
 FEATURES TO ADD
+- Crop
 - Live input undo?
-- Confirm save slot before finally saving
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
-- Decide LEDs (pulse and external clock for now)
-- Numeric input
 - Niche settings menu
     - Output pulse length setting (sync/trigger)
     - Live input quantize

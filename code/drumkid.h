@@ -109,6 +109,7 @@ int samplesPerStep;  // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
 int beatNum = 2;
+int saveBeatLocation;
 Beat beats[NUM_BEATS];
 Beat beatBackup; // copy of current beat before editing, to allow easy revert if not saving new version
 Sample samples[NUM_SAMPLES];
