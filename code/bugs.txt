@@ -4,7 +4,8 @@ BUGS TO FIX
 - Rogue random hits with chance=0 and magnet>0 with time signatures>4?
 
 FEATURES TO ADD
-- Crop
+- Better curve for crush control
+- Crop in reverse
 - Live input undo?
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
@@ -22,6 +23,7 @@ POST-BETA FEATURES (non-essential)
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Fractional tempos (e.g. 120.1BPM)
 - Allow stereo samples (load as mono)
+- Allow other sample rates
 - Backup beats to SD
 - Better pitch lerping (not correct in reverse..?)
 - Prioritise more recent(?) notes in reverse to give expected sound at higher zooms

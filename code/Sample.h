@@ -6,6 +6,7 @@ class Sample {
         static int LERP_BITS;
         static int16_t sampleData[MAX_SAMPLE_STORAGE];
         static int pitch;
+        static int crop;
 
         // new stuff 16/2/24
         struct Hit {
@@ -74,7 +75,7 @@ class Sample {
                 position = positionAccurate >> LERP_BITS;
                 if(pitch > 0) {
                     // playing forwards
-                    if (position >= length)
+                    if (position >= length || position >= Sample::crop) // temp crop test
                     {
                         playing = false;
                         value = 0;
@@ -140,3 +141,4 @@ class Sample {
 int Sample::LERP_BITS = 10;
 int16_t Sample::sampleData[MAX_SAMPLE_STORAGE];
 int Sample::pitch = 1<<LERP_BITS;
+int Sample::crop = MAX_SAMPLE_STORAGE;
