@@ -6,7 +6,7 @@ class Sample {
         static int LERP_BITS;
         static int16_t sampleData[MAX_SAMPLE_STORAGE];
         static int pitch;
-        static int crop;
+        static uint crop;
 
         // new stuff 16/2/24
         struct Hit {
@@ -51,8 +51,8 @@ class Sample {
                     } else {
                         nextHitTime = INT64_MAX;
                     }
-                    positionAccurate = Sample::pitch >= 0 ? 0 : length << LERP_BITS;
-                    position = Sample::pitch >= 0 ? 0 : length;
+                    positionAccurate = Sample::pitch >= 0 ? 0 : std::min(length, Sample::crop) << LERP_BITS;
+                    position = Sample::pitch >= 0 ? 0 : std::min(length, Sample::crop);
                     playing = true;
                 }
             }
@@ -141,4 +141,4 @@ class Sample {
 int Sample::LERP_BITS = 10;
 int16_t Sample::sampleData[MAX_SAMPLE_STORAGE];
 int Sample::pitch = 1<<LERP_BITS;
-int Sample::crop = MAX_SAMPLE_STORAGE;
+uint Sample::crop = MAX_SAMPLE_STORAGE;

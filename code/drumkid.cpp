@@ -604,10 +604,11 @@ bool mainTimerLogic(repeating_timer_t *rt)
 
     Sample::pitch = pitchInt; // temp...
 
-    Sample::crop = analogReadings[POT_CROP];
-    applyDeadZones(Sample::crop);
-    if(Sample::crop == 4095) Sample::crop = MAX_SAMPLE_STORAGE;
-    else Sample::crop = (Sample::crop * Sample::crop) >> 11; // should be 11
+    int crop = analogReadings[POT_CROP];
+    applyDeadZones(crop);
+    if(crop == 4095) crop = MAX_SAMPLE_STORAGE;
+    else crop = (crop * crop) >> 11; // should be 11
+    Sample::crop = crop;
 
     drop = analogReadings[POT_DROP] / 373; // gives range of 0 to 10
     dropRandom = analogReadings[POT_DROP_RANDOM] / 373; // gives range of 0 to 10

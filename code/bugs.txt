@@ -5,7 +5,6 @@ BUGS TO FIX
 
 FEATURES TO ADD
 - Better curve for crush control
-- Crop in reverse
 - Live input undo?
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
