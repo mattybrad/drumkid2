@@ -36,7 +36,8 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
-#define BUTTON_OUTPUT (4 + 16)
+#define BUTTON_OUTPUT_1 4
+#define BUTTON_OUTPUT_2 (4 + 16)
 #define BUTTON_PPQN_IN 5
 #define BUTTON_PPQN_OUT (5 + 16)
 #define BUTTON_LOAD_SAMPLES (6 + 16)
@@ -328,6 +329,7 @@ void displayBeat();
 void displayEditBeat();
 void displayTimeSignature();
 void displayTuplet();
+void displayOutput(int outputNum);
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();

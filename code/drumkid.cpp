@@ -800,8 +800,13 @@ void handleButtonChange(int buttonNum, bool buttonState)
             activeButton = BUTTON_TIME_SIGNATURE;
             displayTimeSignature();
             break;
-        case BUTTON_OUTPUT:
-            activeButton = BUTTON_OUTPUT;
+        case BUTTON_OUTPUT_1:
+            activeButton = BUTTON_OUTPUT_1;
+            displayOutput(1);
+            break;
+        case BUTTON_OUTPUT_2:
+            activeButton = BUTTON_OUTPUT_2;
+            displayOutput(2);
             break;
         case BUTTON_TUPLET:
             activeButton = BUTTON_TUPLET;
@@ -940,11 +945,12 @@ void handleIncDec(bool isInc, bool isHold)
         displayTuplet();
         break;
 
-    case BUTTON_OUTPUT:
+    case BUTTON_OUTPUT_1:
+    case BUTTON_OUTPUT_2:
         outputSample += isInc ? 1 : -1;
         if(outputSample < 0) outputSample = 0;
         else if(outputSample > NUM_SAMPLES-1) outputSample = NUM_SAMPLES-1;
-        updateLedDisplay(outputSample);
+        displayOutput(activeButton == BUTTON_OUTPUT_1 ? 1 : 2);
         break;
 
     case BUTTON_LOAD_SAMPLES:
@@ -965,9 +971,15 @@ void handleYesNo(bool isYes) {
     bool useDefaultNoBehaviour = true;
     switch(activeButton)
     {
-        case BUTTON_OUTPUT:
+        case BUTTON_OUTPUT_1:
+        case BUTTON_OUTPUT_2:
             useDefaultNoBehaviour = false;
-            samples[outputSample].output1 = isYes;
+            if(activeButton == BUTTON_OUTPUT_1) {
+                samples[outputSample].output1 = isYes;
+            } else {
+                samples[outputSample].output2 = isYes;
+            }
+            displayOutput(activeButton == BUTTON_OUTPUT_1 ? 1 : 2);
             break;
         
         case BUTTON_LOAD_SAMPLES:
@@ -1047,6 +1059,17 @@ void displayEditBeat()
     chars[2] = (humanReadableEditStep < 10) ? ' ' : humanReadableEditStep / 10 + 48;
     chars[3] = (humanReadableEditStep % 10) + 48;
     updateLedDisplayAlpha(chars);
+}
+
+void displayOutput(int outputNum) {
+    for(int i=0; i<4 && i<NUM_SAMPLES; i++) {
+        if(outputNum == 1) {
+            sevenSegData[i] = samples[i].output1 ? 0b10000000 : 0b00000000;
+        } else if(outputNum == 2) {
+            sevenSegData[i] = samples[i].output2 ? 0b10000000 : 0b00000000;
+        }
+    }
+    bitWrite(sevenSegData[outputSample], 4, true);
 }
 
 void updateShiftRegButtons()
@@ -1378,7 +1401,7 @@ void initSamplesFromFlash()
 
         // temp
         samples[n].output1 = true;
-        samples[n].output2 = n == 2;
+        samples[n].output2 = true;
     }
 
     if(storageOverflow) {

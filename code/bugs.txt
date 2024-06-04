@@ -8,6 +8,8 @@ FEATURES TO ADD
 - Live input undo?
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
+- Dedicated back button?
+- Same pulse lengths for all LEDs
 - Niche settings menu
     - Output pulse length setting (sync/trigger)
     - Live input quantize
@@ -15,6 +17,7 @@ FEATURES TO ADD
     - Save niche settings to flash
     - Bootup visuals on/off
     - Pitch deadzone disable
+    - Glitch channel (both, 1, 2, none)
 POST-BETA FEATURES (non-essential)
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Fractional tempos (e.g. 120.1BPM)
