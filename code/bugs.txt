@@ -4,7 +4,6 @@ BUGS TO FIX
 - Rogue random hits with chance=0 and magnet>0 with time signatures>4?
 
 FEATURES TO ADD
-- Better curve for crush control
 - Live input undo?
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers

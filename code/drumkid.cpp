@@ -53,6 +53,7 @@ int drop = 0;
 int dropRandom = 0;
 int swing = 0;
 int crush = 0;
+uint8_t crushVolume[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,10,8};
 int magnetCurve[6][32];
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
@@ -424,7 +425,7 @@ int main()
                 if(didTrigger && j<4) {
                     pulseGpio(TRIGGER_OUT_PINS[j], 15000);
                 }
-                if(samples[j].output1) out1 += (samples[j].value >> crush) << crush;
+                if(samples[j].output1) out1 += (samples[j].value >> crush) << crushVolume[crush];
                 if(samples[j].output2) out2 += samples[j].value;
             }
             if(metronomeLengthTally < 2000) {
@@ -618,6 +619,7 @@ bool mainTimerLogic(repeating_timer_t *rt)
 
     crush = analogReadings[POT_CRUSH];
     applyDeadZones(crush);
+    crush = 4095 - (((4095 - crush) * (4095 - crush))>>12);
     crush = crush >> 8;
 
     //stopCodeTimer();
