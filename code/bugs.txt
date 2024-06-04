@@ -4,28 +4,25 @@ BUGS TO FIX
 - Rogue random hits with chance=0 and magnet>0 with time signatures>4?
 
 FEATURES TO ADD
-- Warn if no card inserted when pressing kit button
 - Live input undo?
 - Confirm save slot before finally saving
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
-- Check total sample size, error if too large
-- Finalise expected folder format
 - Decide LEDs (pulse and external clock for now)
 - Numeric input
-- "Debouncing"(?) on drop pot, stays in current mode until definite change
-- Randomise everything button
-- Cool bootup visuals
 - Niche settings menu
     - Output pulse length setting (sync/trigger)
     - Live input quantize
     - Move PPQN settings here
     - Save niche settings to flash
     - Bootup visuals on/off
+    - Pitch deadzone disable
 POST-BETA FEATURES (non-essential)
+- "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Fractional tempos (e.g. 120.1BPM)
 - Allow stereo samples (load as mono)
 - Backup beats to SD
 - Better pitch lerping (not correct in reverse..?)
 - Prioritise more recent(?) notes in reverse to give expected sound at higher zooms
 - Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
+- Randomise everything button (maybe not compatible with dedicated knobs? or would have to rewrite the whole knob system)

@@ -56,6 +56,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_RANDOMISE (15 + 16)
 #define NO_ACTIVE_BUTTON -1
 #define ERROR_DISPLAY -2
+#define BOOTUP_VISUALS -3
 
 // pot numbers
 #define POT_CHANCE 0
@@ -317,7 +318,7 @@ bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
 void updateLedDisplay(int num);
-void updateLedDisplayAlpha(char* word);
+void updateLedDisplayAlpha(const char* word);
 void handleIncDec(bool isInc, bool isHold);
 void handleYesNo(bool isYes);
 void displayClockMode();
@@ -350,5 +351,6 @@ void initZoom();
 void displayPulse();
 void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
+void showError(const char* msgx);
 
 #endif

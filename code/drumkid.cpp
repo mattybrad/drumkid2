@@ -93,7 +93,7 @@ int sampleFolderNum = 0;
 // tempo/sync stuff
 bool externalClock = false;
 
-int activeButton = -1;
+int activeButton = BOOTUP_VISUALS;
 
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
@@ -334,6 +334,19 @@ bool tempScheduler(repeating_timer_t *rt)
     return true;
 }
 
+bool bootupVisualFrame(repeating_timer_t *rt) {
+    sevenSegData[0] = rand() % 256;
+    sevenSegData[1] = rand() % 256;
+    sevenSegData[2] = rand() % 256;
+    sevenSegData[3] = rand() % 256;
+    if(time_us_32() > 1000000) {
+        activeButton = NO_ACTIVE_BUTTON;
+        return false;
+    } else {
+        return true;
+    }
+}
+
 int64_t prevTime = 0;
 // main function, obviously
 int main()
@@ -359,6 +372,8 @@ int main()
     repeating_timer_t tempSchedulerTimer;
     add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
     //add_repeating_timer_ms(1000, performanceCheck, NULL, &performanceCheckTimer);
+    repeating_timer_t bootupVisualTimer;
+    add_repeating_timer_ms(60, bootupVisualFrame, NULL, &bootupVisualTimer);
 
     // temp, populating magnet curve
     printf("magnet curve:\n");
@@ -394,6 +409,7 @@ int main()
             int32_t out2 = 0;
             if(currentTime + (i>>1) >= nextSyncOut) {
                 pulseGpio(SYNC_OUT, 15000); // todo: adjust pulse length based on PPQN, or advanced setting
+                pulseLed(0, 50000);
                 nextSyncOut = INT64_MAX;
             }
             if (currentTime + (i >> 1) >= nextMetronome)
@@ -436,12 +452,13 @@ int main()
         if(sdShowFolderTemp) {
             sdShowFolderTemp = false;
             scanSampleFolders();
-            if (sampleFolderNum >= numSampleFolders)
-                sampleFolderNum = 0; // just in case card is removed, changed, and reinserted - todo: proper folder names comparison to revert to first folder if any changes
-            //getNthSampleFolder(sampleFolderNum);
-            char ledFolderName[5];
-            strncpy(ledFolderName, folderNames[sampleFolderNum], 5);
-            updateLedDisplayAlpha(ledFolderName);
+            if(activeButton != ERROR_DISPLAY) {
+                if (sampleFolderNum >= numSampleFolders)
+                    sampleFolderNum = 0; // just in case card is removed, changed, and reinserted - todo: proper folder names comparison to revert to first folder if any changes
+                char ledFolderName[5];
+                strncpy(ledFolderName, folderNames[sampleFolderNum], 5);
+                updateLedDisplayAlpha(ledFolderName);
+            }
         }
 
         for (int i = 0; i < NUM_SAMPLES; i++)
@@ -524,8 +541,7 @@ bool performanceCheck(repeating_timer_t *rt) {
     prevTimeCheck = currentTime;
     if(delta < performanceThreshold && currentTime > SAMPLE_RATE) {
         printf("performance error, samples processed = %lld/%d\n", delta, SAMPLE_RATE);
-        char perfString[] = "perf";
-        updateLedDisplayAlpha(perfString);
+        showError("perf");
         performanceErrorTally ++;
         if(performanceErrorTally >= 3) {
             beatPlaying = false;
@@ -663,7 +679,7 @@ void updateLedDisplay(int num)
     }
 }
 
-void updateLedDisplayAlpha(char* word)
+void updateLedDisplayAlpha(const char* word)
 {
     bool foundWordEnd = false;
     for(int i=0; i<4; i++) {
@@ -726,8 +742,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_LIVE_EDIT:
             activeButton = BUTTON_LIVE_EDIT;
-            //char tempWord2[] = "live";
-            //updateLedDisplayAlpha(tempWord2);
             break;
         case BUTTON_CLOCK_MODE:
             activeButton = BUTTON_CLOCK_MODE;
@@ -959,13 +973,14 @@ void handleYesNo(bool isYes) {
             displayEditBeat();
             break;
     }
-    if(!isYes && useDefaultNoBehaviour) activeButton = NO_ACTIVE_BUTTON;
+    if(!isYes && useDefaultNoBehaviour) {
+        activeButton = NO_ACTIVE_BUTTON;
+        bitWrite(singleLedData, 3, false); // clear error LED
+    }
 }
 
 void displayClockMode() {
-    char wordInt[] = "int";
-    char wordExt[] = "ext";
-    updateLedDisplayAlpha(externalClock ? wordExt : wordInt);
+    updateLedDisplayAlpha(externalClock ? "ext" : "int");
 }
 
 void displayTempo()
@@ -1149,18 +1164,14 @@ void scanSampleFolders() {
     sd_card_t *pSD = sd_get_by_num(0);
     if (!pSD->sd_test_com(pSD))
     {
-        char msg[] = "card";
-        updateLedDisplayAlpha(msg);
-        activeButton = ERROR_DISPLAY;
+        showError("card");
         return;
     }
     FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
     if (FR_OK != fr)
     {
         printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-        char msg[] = "card";
-        updateLedDisplayAlpha(msg);
-        activeButton = ERROR_DISPLAY;
+        showError("card");
         return;
     }
     static FILINFO fno;
@@ -1170,9 +1181,7 @@ void scanSampleFolders() {
     if (FR_OK != fr)
     {
         printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-        char msg[] = "err";
-        updateLedDisplayAlpha(msg);
-        activeButton = ERROR_DISPLAY;
+        showError("err");
         return;
     }
     resetSampleFolderList();
@@ -1207,17 +1216,13 @@ void loadSamplesFromSD()
         sd_card_t *pSD = sd_get_by_num(0);
         if (!pSD->sd_test_com(pSD))
         {
-            char msg[] = "card";
-            updateLedDisplayAlpha(msg);
-            activeButton = ERROR_DISPLAY;
+            showError("card");
             return;
         }
         FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
         if (FR_OK != fr) {
             printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-            char msg[] = "err";
-            updateLedDisplayAlpha(msg);
-            activeButton = ERROR_DISPLAY;
+            showError("err");
             return;
         }
         FIL fil;
@@ -1229,9 +1234,7 @@ void loadSamplesFromSD()
         if (FR_OK != fr)
         {
             printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-            char msg[] = "err";
-            updateLedDisplayAlpha(msg);
-            activeButton = ERROR_DISPLAY;
+            showError("err");
             return;
         }
 
@@ -1327,6 +1330,7 @@ void loadSamplesFromSD()
 void initSamplesFromFlash()
 {
     int startPos = 0;
+    int storageOverflow = false;
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
         uint sampleStart = getIntFromBuffer(flashData, SAMPLE_START_POINTS + n * 4);
@@ -1335,19 +1339,31 @@ void initSamplesFromFlash()
 
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
         samples[n].startPosition = sampleStart / 2;
+        if(samples[n].startPosition + samples[n].length >= MAX_SAMPLE_STORAGE) {
+            samples[n].startPosition = 0;
+            samples[n].length = 1000;
+            storageOverflow = true;
+        }
         printf("sample %d, start %d, length %d\n",n,samples[n].startPosition,samples[n].length);
         samples[n].position = samples[n].length;
         samples[n].positionAccurate = samples[n].length << Sample::LERP_BITS;
 
-        for (int i = 0; i < samples[n].length && i < sampleLength / 2; i++)
-        {
-            int16_t thisSample = flashAudio[i * 2 + 1 + sampleStart] << 8 | flashAudio[i * 2 + sampleStart];
-            Sample::sampleData[sampleStart/2+i] = thisSample;
+        if(!storageOverflow) {
+            for (int i = 0; i < samples[n].length && i < sampleLength / 2; i++)
+            {
+                int pos = i * 2 + sampleStart;
+                int16_t thisSample = flashAudio[pos + 1] << 8 | flashAudio[pos];
+                Sample::sampleData[sampleStart/2+i] = thisSample;
+            }
         }
 
         // temp
         samples[n].output1 = true;
         samples[n].output2 = n == 2;
+    }
+
+    if(storageOverflow) {
+        showError("size");
     }
 }
 
@@ -1540,10 +1556,6 @@ bool syncInStableState = false;
 int16_t clockStep = 0; // 8x bigger (<<3) than scheduledStep
 bool syncInReceived = false;
 uint64_t lastSyncInTime;
-int64_t onClockDivideTemp(alarm_id_t id, void *user_data) {
-    pulseLed(2, 50000);
-    return 0;
-}
 void updateSyncIn() {
     if (microsSinceSyncInChange > 1000)
     {
@@ -1596,7 +1608,7 @@ void updateSyncIn() {
                 if(activeButton == BUTTON_MANUAL_TEMPO) {
                     displayTempo();
                 }
-                pulseLed(3, 50000); // temp?
+                pulseLed(1, 50000); // temp?
             }
         }
     }
@@ -1639,10 +1651,10 @@ void initZoom() {
 }
 
 void displayPulse() {
+    int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
+    bool showPulse = scheduledStep % QUARTER_NOTE_STEPS < (QUARTER_NOTE_STEPS >> 2);
+    if(!beatPlaying) quarterNote = 0;
     if(activeButton == NO_ACTIVE_BUTTON) {
-        int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
-        bool showPulse = scheduledStep % QUARTER_NOTE_STEPS < (QUARTER_NOTE_STEPS >> 2);
-        if(!beatPlaying) quarterNote = 0;
         for (int i = 0; i < 4; i++)
         {
             if (i == (quarterNote % 4) && showPulse)
@@ -1655,4 +1667,11 @@ void displayPulse() {
             }
         }
     }
+    bitWrite(singleLedData, 2, showPulse && beatPlaying);
+}
+
+void showError(const char* msgx) {
+    updateLedDisplayAlpha("err");
+    activeButton = ERROR_DISPLAY;
+    bitWrite(singleLedData, 3, true);
 }
