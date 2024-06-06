@@ -125,6 +125,7 @@ char path[] = "samples/";
 int numSampleFolders = 0;
 
 // temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
+#define LED_PULSE_LENGTH 10000
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
 uint8_t singleLedData = 0b0000; // 4 x 3mm LEDs
 uint16_t storedLedData[4] = {0, 0, 0, 0};

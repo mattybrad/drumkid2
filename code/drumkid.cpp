@@ -410,7 +410,7 @@ int main()
             int32_t out2 = 0;
             if(currentTime + (i>>1) >= nextSyncOut) {
                 pulseGpio(SYNC_OUT, 15000); // todo: adjust pulse length based on PPQN, or advanced setting
-                pulseLed(0, 50000);
+                pulseLed(0, LED_PULSE_LENGTH);
                 nextSyncOut = INT64_MAX;
             }
             if (currentTime + (i >> 1) >= nextMetronome)
@@ -1668,7 +1668,7 @@ void updateSyncIn() {
                 if(activeButton == BUTTON_MANUAL_TEMPO) {
                     displayTempo();
                 }
-                pulseLed(1, 50000); // temp?
+                pulseLed(1, LED_PULSE_LENGTH); // temp?
             }
         }
     }
@@ -1710,6 +1710,7 @@ void initZoom() {
     }
 }
 
+bool prevPulseLed = false;
 void displayPulse() {
     int quarterNote = scheduledStep / QUARTER_NOTE_STEPS;
     bool showPulse = scheduledStep % QUARTER_NOTE_STEPS < (QUARTER_NOTE_STEPS >> 2);
@@ -1739,7 +1740,11 @@ void displayPulse() {
             }
         }
     }
-    bitWrite(singleLedData, 2, showPulse && beatPlaying);
+    bool currentPulseLed = showPulse && beatPlaying;
+    if(!prevPulseLed && currentPulseLed) {
+        pulseLed(2, LED_PULSE_LENGTH);
+    }
+    prevPulseLed = currentPulseLed;
 }
 
 void showError(const char* msgx) {
