@@ -53,7 +53,8 @@ int drop = 0;
 int dropRandom = 0;
 int swing = 0;
 int crush = 0;
-uint8_t crushVolume[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,10,8};
+//uint8_t crushVolume[16] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,10,8};
+uint8_t crushVolume[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 13};
 int magnetCurve[6][32];
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
@@ -95,6 +96,11 @@ int sampleFolderNum = 0;
 bool externalClock = false;
 
 int activeButton = BOOTUP_VISUALS;
+int activeSetting = 0;
+int settingsMenuLevel = 0;
+int glitchChannel = GLITCH_CHANNEL_BOTH;
+bool glitch1 = true;
+bool glitch2 = true;
 
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
@@ -409,7 +415,7 @@ int main()
             int32_t out1 = 0;
             int32_t out2 = 0;
             if(currentTime + (i>>1) >= nextSyncOut) {
-                pulseGpio(SYNC_OUT, 15000); // todo: adjust pulse length based on PPQN, or advanced setting
+                pulseGpio(SYNC_OUT, outputPulseLength); // todo: adjust pulse length based on PPQN, or advanced setting
                 pulseLed(0, LED_PULSE_LENGTH);
                 nextSyncOut = INT64_MAX;
             }
@@ -423,9 +429,9 @@ int main()
             {
                 bool didTrigger = samples[j].update(currentTime + (i>>1)); // could be more efficient
                 if(didTrigger && j<4) {
-                    pulseGpio(TRIGGER_OUT_PINS[j], 15000);
+                    pulseGpio(TRIGGER_OUT_PINS[j], outputPulseLength);
                 }
-                if(samples[j].output1) out1 += (samples[j].value >> crush) << crushVolume[crush];
+                if(samples[j].output1) out1 += samples[j].value;
                 if(samples[j].output2) out2 += samples[j].value;
             }
             if(metronomeLengthTally < 2000) {
@@ -435,9 +441,14 @@ int main()
                 }
                 if(metronomeWaveHigh) out1 += 5000;
             }
-            bufferSamples[i] = (out1 >> (2 + crush)) << crush;
-            //bufferSamples[i] = out1 >> 2;
-            bufferSamples[i + 1] = out2 >> 2;
+            if(glitch1)
+                bufferSamples[i] = (out1 >> (2 + crush)) << crushVolume[crush];
+            else
+                bufferSamples[i] = out1 >> 2;
+            if (glitch2)
+                bufferSamples[i+1] = (out2 >> (2 + crush)) << crushVolume[crush];
+            else
+                bufferSamples[i+1] = out2 >> 2;
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
@@ -479,10 +490,10 @@ int64_t onGpioPulseTimeout(alarm_id_t id, void *user_data)
     return 0;
 }
 
-void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros)
+void pulseGpio(uint gpioNum, uint16_t pulseLengthMillis)
 {
     gpio_put(gpioNum, 1);
-    add_alarm_in_us(pulseLengthMicros, onGpioPulseTimeout, (void *)gpioNum, true);
+    add_alarm_in_ms(pulseLengthMillis, onGpioPulseTimeout, (void *)gpioNum, true);
 }
 
 int64_t onLedPulseTimeout(alarm_id_t id, void *user_data)
@@ -744,6 +755,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 scheduledStep = 0;
             }
             break;
+        case BUTTON_SETTINGS:
+            activeButton = BUTTON_SETTINGS;
+            displaySettings();
+            break;
         case BUTTON_TAP_TEMPO:
             activeButton = BUTTON_TAP_TEMPO;
             updateTapTempo();
@@ -855,6 +870,47 @@ void handleButtonChange(int buttonNum, bool buttonState)
     }
 }
 
+void handleSubSettingIncDec(bool isInc) {
+    // could probably do this with pointers to make it neater but it's hot today so that's not happening
+    int thisInc = isInc ? 1 : -1;
+    switch(activeSetting) {
+        case SETTING_GLITCH_CHANNEL:
+            glitchChannel += thisInc;
+            glitchChannel = std::max(0, std::min(3, glitchChannel));
+            glitch1 = !bitRead(glitchChannel, 1);
+            glitch2 = !bitRead(glitchChannel, 0);
+            break;
+
+        case SETTING_OUTPUT_PULSE_LENGTH:
+            outputPulseLength += thisInc;
+            outputPulseLength = std::max(10, std::min(200, outputPulseLength));
+            break;
+
+        case SETTING_OUTPUT_PPQN:
+            syncOutPpqnIndex += thisInc;
+            syncOutPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncOutPpqnIndex));
+            syncOutPpqn = ppqnValues[syncOutPpqnIndex];
+            break;
+
+        case SETTING_INPUT_PPQN:
+            syncInPpqnIndex += thisInc;
+            syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
+            syncInPpqn = ppqnValues[syncInPpqnIndex];
+            break;
+
+        case SETTING_PITCH_CURVE:
+            pitchCurve += thisInc;
+            pitchCurve = std::max(0, std::min(PITCH_CURVE_FORWARDS, pitchCurve));
+            break;
+
+        case SETTING_INPUT_QUANTIZE:
+            inputQuantizeIndex += thisInc;
+            inputQuantizeIndex = std::max(0, std::min(NUM_QUANTIZE_VALUES - 1, inputQuantizeIndex));
+            inputQuantize = quantizeValues[inputQuantizeIndex];
+            break;
+    }
+}
+
 void handleIncDec(bool isInc, bool isHold)
 {
     // have to declare stuff up here because of switch statement
@@ -934,6 +990,19 @@ void handleIncDec(bool isInc, bool isHold)
         displayEditBeat();
         break;
 
+    case BUTTON_SETTINGS:
+        if(settingsMenuLevel == 0) {
+            activeSetting += isInc ? 1 : -1;
+            if(activeSetting < 0)
+                activeSetting = 0;
+            if(activeSetting >= NUM_SETTINGS)
+                activeSetting = NUM_SETTINGS - 1;
+        } else if(settingsMenuLevel == 1) {
+            handleSubSettingIncDec(isInc);
+        }
+        displaySettings();
+        break;
+
     case BUTTON_SAVE:
         saveBeatLocation += isInc ? 1 : -1;
         if(saveBeatLocation < 0)
@@ -1007,6 +1076,15 @@ void handleYesNo(bool isYes) {
             displayEditBeat();
             break;
 
+        case BUTTON_SETTINGS:
+            if(settingsMenuLevel == 0 && isYes) settingsMenuLevel = 1;
+            else if(settingsMenuLevel == 1) {
+                // handle new chosen option
+                settingsMenuLevel = 0;
+            }
+            displaySettings();
+            break;
+
         case BUTTON_SAVE:
             if(isYes) writeBeatsToFlash();
             activeButton = NO_ACTIVE_BUTTON;
@@ -1078,6 +1156,74 @@ void displayOutput(int outputNum) {
         }
     }
     bitWrite(sevenSegData[outputSample], 4, true);
+}
+
+void displaySettings() {
+    if(settingsMenuLevel == 0) {
+        switch(activeSetting) {
+            case SETTING_GLITCH_CHANNEL:
+                updateLedDisplayAlpha("glit");
+                break;
+
+            case SETTING_OUTPUT_PULSE_LENGTH:
+                updateLedDisplayAlpha("plso");
+                break;
+
+            case SETTING_OUTPUT_PPQN:
+                updateLedDisplayAlpha("pqno");
+                break;
+
+            case SETTING_INPUT_PPQN:
+                updateLedDisplayAlpha("pqni");
+                break;
+
+            case SETTING_PITCH_CURVE:
+                updateLedDisplayAlpha("ptch");
+                break;
+
+            case SETTING_INPUT_QUANTIZE:
+                updateLedDisplayAlpha("qntz");
+                break;
+        }
+    } else if(settingsMenuLevel == 1) {
+        switch(activeSetting) {
+            case SETTING_GLITCH_CHANNEL:
+                if(glitchChannel == GLITCH_CHANNEL_BOTH)
+                    updateLedDisplayAlpha("both");
+                else if (glitchChannel == GLITCH_CHANNEL_1)
+                    updateLedDisplayAlpha("1");
+                else if (glitchChannel == GLITCH_CHANNEL_2)
+                    updateLedDisplayAlpha("2");
+                else if (glitchChannel == GLITCH_CHANNEL_NONE)
+                    updateLedDisplayAlpha("none");
+                break;
+
+            case SETTING_OUTPUT_PULSE_LENGTH:
+                updateLedDisplay(outputPulseLength);
+                break;
+
+            case SETTING_OUTPUT_PPQN:
+                updateLedDisplay(syncOutPpqn);
+                break;
+
+            case SETTING_INPUT_PPQN:
+                updateLedDisplay(syncInPpqn);
+                break;
+
+            case SETTING_PITCH_CURVE:
+                if (pitchCurve == PITCH_CURVE_DEFAULT)
+                    updateLedDisplayAlpha("dflt");
+                else if (pitchCurve == PITCH_CURVE_LINEAR)
+                    updateLedDisplayAlpha("linr");
+                else if (pitchCurve == PITCH_CURVE_FORWARDS)
+                    updateLedDisplayAlpha("fwds");
+                break;
+
+            case SETTING_INPUT_QUANTIZE:
+                updateLedDisplay(inputQuantize);
+                break;
+        }
+    }
 }
 
 void updateShiftRegButtons()

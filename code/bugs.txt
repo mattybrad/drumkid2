@@ -9,12 +9,12 @@ FEATURES TO ADD
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
 - Dedicated back button?
+- "Clear" moves to shift+X or hold X etc
 - Niche settings menu
     - Output pulse length setting (sync/trigger)
     - Live input quantize
     - Move PPQN settings here
     - Save niche settings to flash
-    - Bootup visuals on/off
     - Pitch deadzone disable
     - Glitch channel (both, 1, 2, none)
 POST-BETA FEATURES (non-essential)

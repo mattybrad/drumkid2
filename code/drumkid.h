@@ -48,16 +48,32 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_BEAT 10
 #define BUTTON_EDIT_BEAT (BUTTON_BEAT + 16)
 #define BUTTON_SAVE (11 + 16)
-#define BUTTON_RANDOM 12
+#define BUTTON_SETTINGS 12
 #define BUTTON_CLEAR (12 + 16)
 #define BUTTON_LIVE_EDIT 13
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_CLOCK_MODE (14 + 16)
 #define BUTTON_START_STOP 15
-#define BUTTON_RANDOMISE (15 + 16)
 #define NO_ACTIVE_BUTTON -1
 #define ERROR_DISPLAY -2
 #define BOOTUP_VISUALS -3
+
+#define NUM_SETTINGS 6
+#define SETTING_GLITCH_CHANNEL 0
+#define SETTING_OUTPUT_PULSE_LENGTH 1
+#define SETTING_OUTPUT_PPQN 2
+#define SETTING_INPUT_PPQN 3
+#define SETTING_PITCH_CURVE 4
+#define SETTING_INPUT_QUANTIZE 5
+
+#define GLITCH_CHANNEL_BOTH 0
+#define GLITCH_CHANNEL_1 1
+#define GLITCH_CHANNEL_2 2
+#define GLITCH_CHANNEL_NONE 3
+
+#define PITCH_CURVE_DEFAULT 0
+#define PITCH_CURVE_LINEAR 1
+#define PITCH_CURVE_FORWARDS 2
 
 // pot numbers
 #define POT_CHANCE 0
@@ -315,6 +331,13 @@ uint32_t microsSinceChange[18] = {0};  // milliseconds since state change
 uint shiftRegInLoopNum = 0;            // 0 to 15
 uint shiftRegInPhase = 0;              // 0 or 1
 
+int outputPulseLength = 15;
+int pitchCurve = PITCH_CURVE_DEFAULT;
+const int NUM_QUANTIZE_VALUES = 4;
+int quantizeValues[NUM_QUANTIZE_VALUES] = {4, 8, 16, 32};
+int inputQuantizeIndex = 0;
+uint inputQuantize = quantizeValues[inputQuantizeIndex];
+
 void initGpio();
 bool performanceCheck(repeating_timer_t *rt);
 bool mainTimerLogic(repeating_timer_t *rt);
@@ -331,6 +354,7 @@ void displayEditBeat();
 void displayTimeSignature();
 void displayTuplet();
 void displayOutput(int outputNum);
+void displaySettings();
 void handleButtonChange(int buttonNum, bool buttonState);
 void updateShiftRegButtons();
 void updateAnalog();
