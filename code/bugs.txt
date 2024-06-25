@@ -6,17 +6,15 @@ BUGS TO FIX
 
 FEATURES TO ADD
 - Live input undo?
+- Inc/dec should adjust tempo in tap mode
+- Separate trigger pulse length setting
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
 - Dedicated back button?
 - "Clear" moves to shift+X or hold X etc
-- Niche settings menu
-    - Output pulse length setting (sync/trigger)
-    - Live input quantize
-    - Move PPQN settings here
-    - Save niche settings to flash
-    - Pitch deadzone disable
-    - Glitch channel (both, 1, 2, none)
+- Pitch deadzone setting working
+- Live input quantize setting working
+- Save all non-knob settings to flash (w/ wear levelling)
 POST-BETA FEATURES (non-essential)
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Fractional tempos (e.g. 120.1BPM)

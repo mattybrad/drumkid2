@@ -58,13 +58,21 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define ERROR_DISPLAY -2
 #define BOOTUP_VISUALS -3
 
-#define NUM_SETTINGS 6
+// menu settings
+#define NUM_MENU_SETTINGS 6
 #define SETTING_GLITCH_CHANNEL 0
 #define SETTING_OUTPUT_PULSE_LENGTH 1
 #define SETTING_OUTPUT_PPQN 2
 #define SETTING_INPUT_PPQN 3
 #define SETTING_PITCH_CURVE 4
 #define SETTING_INPUT_QUANTIZE 5
+
+// non-menu settings
+#define SETTING_BEAT 6
+#define SETTING_TEMPO 7
+#define SETTING_TUPLET 8
+#define SETTING_TIME_SIG 9
+#define SETTING_OUTPUT 10
 
 #define GLITCH_CHANNEL_BOTH 0
 #define GLITCH_CHANNEL_1 1
@@ -108,12 +116,14 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // flash data storage
 #define FLASH_DATA_ADDRESS (1024 * 1024)
-#define FLASH_USER_BEATS_ADDRESS (FLASH_DATA_ADDRESS + 8 * FLASH_SECTOR_SIZE)
+#define FLASH_USER_BEATS_ADDRESS (FLASH_DATA_ADDRESS + 64 * FLASH_SECTOR_SIZE)
+#define FLASH_AUDIO_METADATA_ADDRESS (FLASH_DATA_ADDRESS + 127 * FLASH_SECTOR_SIZE)
 #define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 128 * FLASH_SECTOR_SIZE)
 const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
-#define CHECK_NUM -123456789
+const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
+#define CHECK_NUM -923456789
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
@@ -326,7 +336,7 @@ uint shiftRegOutLoopNum = 0; // 0 to 15
 uint shiftRegOutPhase = 0;   // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
-bool buttonStableStates[18] = {false}; // array of bools not good use of space, change
+bool buttonStableStates[18] = {false}; // array of bools not good use of space, change if running out of space
 uint32_t microsSinceChange[18] = {0};  // milliseconds since state change
 uint shiftRegInLoopNum = 0;            // 0 to 15
 uint shiftRegInPhase = 0;              // 0 or 1
@@ -380,5 +390,8 @@ void displayPulse();
 void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
 void showError(const char* msgx);
+void findCurrentFlashSettingsSector();
+void saveSettings();
+void loadSettings();
 
 #endif

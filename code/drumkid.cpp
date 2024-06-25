@@ -366,7 +366,9 @@ int main()
     printf("Drumkid V2\n");
     printf("zoom %d\n", maxZoom);
 
-    checkFlashData();
+    //checkFlashData();
+    findCurrentFlashSettingsSector();
+    loadSettings();
     initGpio();
 
     initSamplesFromFlash();
@@ -753,6 +755,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
                 scheduledStep = 0;
+
+                // temp! testing settings write
+                saveSettings();
             }
             break;
         case BUTTON_SETTINGS:
@@ -995,8 +1000,8 @@ void handleIncDec(bool isInc, bool isHold)
             activeSetting += isInc ? 1 : -1;
             if(activeSetting < 0)
                 activeSetting = 0;
-            if(activeSetting >= NUM_SETTINGS)
-                activeSetting = NUM_SETTINGS - 1;
+            if(activeSetting >= NUM_MENU_SETTINGS)
+                activeSetting = NUM_MENU_SETTINGS - 1;
         } else if(settingsMenuLevel == 1) {
             handleSubSettingIncDec(isInc);
         }
@@ -1517,7 +1522,7 @@ void loadSamplesFromSD()
             std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
             std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
         }
-        writePageToFlash(metadataBuffer, FLASH_DATA_ADDRESS);
+        writePageToFlash(metadataBuffer, FLASH_AUDIO_METADATA_ADDRESS);
 
         initSamplesFromFlash();
     }
@@ -1529,8 +1534,8 @@ void initSamplesFromFlash()
     int storageOverflow = false;
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
-        uint sampleStart = getIntFromBuffer(flashData, SAMPLE_START_POINTS + n * 4);
-        uint sampleLength = getIntFromBuffer(flashData, SAMPLE_LENGTHS + n * 4);
+        uint sampleStart = getIntFromBuffer(flashAudioMetadata, SAMPLE_START_POINTS + n * 4);
+        uint sampleLength = getIntFromBuffer(flashAudioMetadata, SAMPLE_LENGTHS + n * 4);
         printf("start %d, length %d\n", sampleStart, sampleLength);
 
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
@@ -1756,6 +1761,56 @@ void checkFlashData()
     }
 }
 
+#define FLASH_SETTINGS_START 0
+#define FLASH_SETTINGS_END 63
+int currentSettingsSector = 0;
+void findCurrentFlashSettingsSector() {
+    bool foundValidSector = false;
+    int mostRecentValidSector = 0;
+    int highestWriteNum = 0;
+    for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
+        int testInt = getIntFromBuffer(flashData + i*FLASH_SECTOR_SIZE, DATA_CHECK);
+        if(testInt == CHECK_NUM) {
+            foundValidSector = true;
+            int writeNum = getIntFromBuffer(flashData + i * FLASH_SECTOR_SIZE, 4);
+            if(writeNum >= highestWriteNum) {
+                highestWriteNum = writeNum;
+                mostRecentValidSector = i;
+            }
+        }
+    }
+    if(!foundValidSector) {
+        // no valid sectors, which means the flash needs to be initialised:
+        uint8_t buffer[FLASH_PAGE_SIZE];
+        int32_t refCheckNum = CHECK_NUM;
+        std::memcpy(buffer, &refCheckNum, 4); // copy check number
+        int32_t refZero = 0;
+        std::memcpy(buffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
+        uint32_t dummySampleLength = 1024;
+        for (int i = 0; i < NUM_SAMPLES; i++)
+        {
+            uint32_t dummySampleStart = i * dummySampleLength * 2;
+            std::memcpy(buffer + SAMPLE_START_POINTS + 4 * i, &dummySampleStart, 4);
+            std::memcpy(buffer + SAMPLE_LENGTHS + 4 * i, &dummySampleLength, 4);
+        }
+        writePageToFlash(buffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
+
+        // fill audio buffer with random noise
+        for (int i = 0; i < dummySampleLength * 2 * NUM_SAMPLES; i += FLASH_PAGE_SIZE)
+        {
+            for (int j = 0; j < FLASH_PAGE_SIZE; j++)
+            {
+                buffer[j] = rand() % 256; // random byte
+            }
+            writePageToFlash(buffer, FLASH_AUDIO_ADDRESS + i);
+        }
+
+        saveSettings();
+    } else {
+        currentSettingsSector = mostRecentValidSector;
+    }
+}
+
 uint32_t microsSinceSyncInChange = mainTimerInterval;
 bool syncInStableState = false;
 
@@ -1897,4 +1952,48 @@ void showError(const char* msgx) {
     updateLedDisplayAlpha("err");
     activeButton = ERROR_DISPLAY;
     bitWrite(singleLedData, 3, true);
+}
+
+void saveSettings() {
+    uint saveNum = currentSettingsSector + 1;
+    uint saveSector = FLASH_SETTINGS_START  + (saveNum % (FLASH_SETTINGS_END - FLASH_SETTINGS_START + 1));
+    currentSettingsSector = saveSector;
+
+    uint8_t buffer[FLASH_PAGE_SIZE];
+    int32_t refCheckNum = CHECK_NUM;
+    std::memcpy(buffer, &refCheckNum, 4);
+    std::memcpy(buffer + 4, &saveNum, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4); // temp
+    std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
+    std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 2);
+    std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+    std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT, &refCheckNum, 4); // temp
+
+    writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+}
+
+// should be called after current sector has been found
+void loadSettings() {
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
+    glitchChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_GLITCH_CHANNEL);
+    outputPulseLength = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH);
+    syncOutPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN);
+    syncInPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN);
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
+    beatNum = getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT);
+    tempo = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO);
+    stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
+    tuplet = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TUPLET);
+    quarterNoteDivision = quarterNoteDivisionRef[tuplet];
+    nextQuarterNoteDivision = quarterNoteDivision;
+    newNumSteps = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG);
+    numSteps = newNumSteps;
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT);
 }
