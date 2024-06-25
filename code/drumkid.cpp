@@ -765,7 +765,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             displaySettings();
             break;
         case BUTTON_TAP_TEMPO:
-            activeButton = BUTTON_TAP_TEMPO;
+            activeButton = BUTTON_MANUAL_TEMPO;
             updateTapTempo();
             break;
         case BUTTON_LIVE_EDIT:
@@ -1955,9 +1955,10 @@ void showError(const char* msgx) {
 }
 
 void saveSettings() {
-    uint saveNum = currentSettingsSector + 1;
-    uint saveSector = FLASH_SETTINGS_START  + (saveNum % (FLASH_SETTINGS_END - FLASH_SETTINGS_START + 1));
+    uint saveNum = getIntFromBuffer(flashData, currentSettingsSector*FLASH_SECTOR_SIZE + 4) + 1;
+    uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
     currentSettingsSector = saveSector;
+    printf("save settings to sector %d\n", currentSettingsSector);
 
     uint8_t buffer[FLASH_PAGE_SIZE];
     int32_t refCheckNum = CHECK_NUM;
@@ -1980,6 +1981,7 @@ void saveSettings() {
 
 // should be called after current sector has been found
 void loadSettings() {
+    printf("load settings from sector %d\n", currentSettingsSector);
     int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
     glitchChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_GLITCH_CHANNEL);
     outputPulseLength = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH);

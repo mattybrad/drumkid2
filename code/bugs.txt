@@ -5,6 +5,7 @@ BUGS TO FIX
 - Output settings get reset when loading new kit
 
 FEATURES TO ADD
+- Figure out exactly when to save settings
 - Live input undo?
 - Inc/dec should adjust tempo in tap mode
 - Separate trigger pulse length setting
@@ -14,8 +15,8 @@ FEATURES TO ADD
 - "Clear" moves to shift+X or hold X etc
 - Pitch deadzone setting working
 - Live input quantize setting working
-- Save all non-knob settings to flash (w/ wear levelling)
 POST-BETA FEATURES (non-essential)
+- Reinitializing flash seems to leave vestige of old samples
 - "Debouncing"(?) on drop pot, stays in current mode until definite change
 - Fractional tempos (e.g. 120.1BPM)
 - Allow stereo samples (load as mono)
@@ -24,4 +25,3 @@ POST-BETA FEATURES (non-essential)
 - Better pitch lerping (not correct in reverse..?)
 - Prioritise more recent(?) notes in reverse to give expected sound at higher zooms
 - Use true midpoint of bizarrely asymmetrical pots! Like 1900/2000 rather than 2048?
-- Randomise everything button (maybe not compatible with dedicated knobs? or would have to rewrite the whole knob system)
