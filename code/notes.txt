@@ -403,3 +403,6 @@ Tried to implement this 5 minutes before I have to leave, which was silly, as I'
 
 24/5/24
 Magnet control good enough for now.
+
+25/6/24
+Have implemented a wear levelling algorithm to allow all settings to be saved regularly without (hopefully) wearing out the flash memory. Currently am saving all settings every time the beat stops. This should change, at the very least, to every time the beat stops AND there are no settings to change. Should also probably save periodically if settings are changed when beat is not playing..? Also currently am writing to a whole new sector each time. Could potentially keep writing to sequential pages for a 16x improvement in wear levelling.

@@ -7,7 +7,6 @@ BUGS TO FIX
 FEATURES TO ADD
 - Figure out exactly when to save settings
 - Live input undo?
-- Inc/dec should adjust tempo in tap mode
 - Separate trigger pulse length setting
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers

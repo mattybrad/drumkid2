@@ -1986,7 +1986,9 @@ void loadSettings() {
     glitchChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_GLITCH_CHANNEL);
     outputPulseLength = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH);
     syncOutPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN);
+    syncOutPpqn = ppqnValues[syncOutPpqnIndex];
     syncInPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN);
+    syncInPpqn = ppqnValues[syncInPpqnIndex];
     // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
     // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
     beatNum = getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT);
