@@ -36,8 +36,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_CONFIRM 1
 #define BUTTON_DEC 2
 #define BUTTON_INC 3
-#define BUTTON_OUTPUT_1 4
-#define BUTTON_OUTPUT_2 (4 + 16)
+#define BUTTON_CLEAR 4
 #define BUTTON_PPQN_IN 5
 #define BUTTON_PPQN_OUT (5 + 16)
 #define BUTTON_LOAD_SAMPLES (6 + 16)
@@ -49,7 +48,6 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BUTTON_EDIT_BEAT (BUTTON_BEAT + 16)
 #define BUTTON_SAVE (11 + 16)
 #define BUTTON_SETTINGS 12
-#define BUTTON_CLEAR (12 + 16)
 #define BUTTON_LIVE_EDIT 13
 #define BUTTON_TAP_TEMPO 14
 #define BUTTON_CLOCK_MODE (14 + 16)
@@ -59,20 +57,21 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BOOTUP_VISUALS -3
 
 // menu settings
-#define NUM_MENU_SETTINGS 6
-#define SETTING_GLITCH_CHANNEL 0
-#define SETTING_OUTPUT_PULSE_LENGTH 1
-#define SETTING_OUTPUT_PPQN 2
-#define SETTING_INPUT_PPQN 3
-#define SETTING_PITCH_CURVE 4
-#define SETTING_INPUT_QUANTIZE 5
+#define NUM_MENU_SETTINGS 8
+#define SETTING_OUTPUT_1 0
+#define SETTING_OUTPUT_2 1
+#define SETTING_GLITCH_CHANNEL 2
+#define SETTING_OUTPUT_PULSE_LENGTH 3
+#define SETTING_OUTPUT_PPQN 4
+#define SETTING_INPUT_PPQN 5
+#define SETTING_PITCH_CURVE 6
+#define SETTING_INPUT_QUANTIZE 7
 
 // non-menu settings
-#define SETTING_BEAT 6
-#define SETTING_TEMPO 7
-#define SETTING_TUPLET 8
-#define SETTING_TIME_SIG 9
-#define SETTING_OUTPUT 10
+#define SETTING_BEAT 8
+#define SETTING_TEMPO 9
+#define SETTING_TUPLET 10
+#define SETTING_TIME_SIG 11
 
 #define GLITCH_CHANNEL_BOTH 0
 #define GLITCH_CHANNEL_1 1
@@ -123,7 +122,7 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM -223456789
+#define CHECK_NUM -123456789
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)

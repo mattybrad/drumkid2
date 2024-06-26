@@ -5,15 +5,16 @@ BUGS TO FIX
 - Output settings get reset when loading new kit
 
 FEATURES TO ADD
-- Figure out exactly when to save settings
+- Output moved to settings
+- "Clear" moves to shift+X or hold X etc
 - Live input undo?
 - Separate trigger pulse length setting
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
 - Dedicated back button?
-- "Clear" moves to shift+X or hold X etc
 - Pitch deadzone setting working
 - Live input quantize setting working
+- Scrolling text for settings menu
 POST-BETA FEATURES (non-essential)
 - Reinitializing flash seems to leave vestige of old samples
 - "Debouncing"(?) on drop pot, stays in current mode until definite change

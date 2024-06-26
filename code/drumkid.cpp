@@ -88,6 +88,8 @@ int syncInPpqnIndex = 0;
 int syncOutPpqnIndex = 0;
 int syncInPpqn = ppqnValues[syncInPpqnIndex];
 int syncOutPpqn = ppqnValues[syncOutPpqnIndex];
+uint8_t output1 = 255;
+uint8_t output2 = 255;
 
 // SD card stuff
 int sampleFolderNum = 0;
@@ -808,6 +810,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_SHIFT_CANCEL:
             activeButton = NO_ACTIVE_BUTTON;
+            settingsMenuLevel = 0;
             break;
         case BUTTON_PPQN_IN:
             activeButton = BUTTON_PPQN_IN;
@@ -828,14 +831,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_TIME_SIGNATURE:
             activeButton = BUTTON_TIME_SIGNATURE;
             displayTimeSignature();
-            break;
-        case BUTTON_OUTPUT_1:
-            activeButton = BUTTON_OUTPUT_1;
-            displayOutput(1);
-            break;
-        case BUTTON_OUTPUT_2:
-            activeButton = BUTTON_OUTPUT_2;
-            displayOutput(2);
             break;
         case BUTTON_TUPLET:
             activeButton = BUTTON_TUPLET;
@@ -880,40 +875,50 @@ void handleSubSettingIncDec(bool isInc) {
     // could probably do this with pointers to make it neater but it's hot today so that's not happening
     int thisInc = isInc ? 1 : -1;
     switch(activeSetting) {
-        case SETTING_GLITCH_CHANNEL:
-            glitchChannel += thisInc;
-            glitchChannel = std::max(0, std::min(3, glitchChannel));
-            glitch1 = !bitRead(glitchChannel, 1);
-            glitch2 = !bitRead(glitchChannel, 0);
-            break;
+    case SETTING_OUTPUT_1:
+    case SETTING_OUTPUT_2:
+        outputSample += isInc ? 1 : -1;
+        if (outputSample < 0)
+            outputSample = 0;
+        else if (outputSample > NUM_SAMPLES - 1)
+            outputSample = NUM_SAMPLES - 1;
+        displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
+        break;
 
-        case SETTING_OUTPUT_PULSE_LENGTH:
-            outputPulseLength += thisInc;
-            outputPulseLength = std::max(10, std::min(200, outputPulseLength));
-            break;
+    case SETTING_GLITCH_CHANNEL:
+        glitchChannel += thisInc;
+        glitchChannel = std::max(0, std::min(3, glitchChannel));
+        glitch1 = !bitRead(glitchChannel, 1);
+        glitch2 = !bitRead(glitchChannel, 0);
+        break;
 
-        case SETTING_OUTPUT_PPQN:
-            syncOutPpqnIndex += thisInc;
-            syncOutPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncOutPpqnIndex));
-            syncOutPpqn = ppqnValues[syncOutPpqnIndex];
-            break;
+    case SETTING_OUTPUT_PULSE_LENGTH:
+        outputPulseLength += thisInc;
+        outputPulseLength = std::max(10, std::min(200, outputPulseLength));
+        break;
 
-        case SETTING_INPUT_PPQN:
-            syncInPpqnIndex += thisInc;
-            syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
-            syncInPpqn = ppqnValues[syncInPpqnIndex];
-            break;
+    case SETTING_OUTPUT_PPQN:
+        syncOutPpqnIndex += thisInc;
+        syncOutPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncOutPpqnIndex));
+        syncOutPpqn = ppqnValues[syncOutPpqnIndex];
+        break;
 
-        case SETTING_PITCH_CURVE:
-            pitchCurve += thisInc;
-            pitchCurve = std::max(0, std::min(PITCH_CURVE_FORWARDS, pitchCurve));
-            break;
+    case SETTING_INPUT_PPQN:
+        syncInPpqnIndex += thisInc;
+        syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
+        syncInPpqn = ppqnValues[syncInPpqnIndex];
+        break;
 
-        case SETTING_INPUT_QUANTIZE:
-            inputQuantizeIndex += thisInc;
-            inputQuantizeIndex = std::max(0, std::min(NUM_QUANTIZE_VALUES - 1, inputQuantizeIndex));
-            inputQuantize = quantizeValues[inputQuantizeIndex];
-            break;
+    case SETTING_PITCH_CURVE:
+        pitchCurve += thisInc;
+        pitchCurve = std::max(0, std::min(PITCH_CURVE_FORWARDS, pitchCurve));
+        break;
+
+    case SETTING_INPUT_QUANTIZE:
+        inputQuantizeIndex += thisInc;
+        inputQuantizeIndex = std::max(0, std::min(NUM_QUANTIZE_VALUES - 1, inputQuantizeIndex));
+        inputQuantize = quantizeValues[inputQuantizeIndex];
+        break;
     }
 }
 
@@ -1028,14 +1033,6 @@ void handleIncDec(bool isInc, bool isHold)
         displayTuplet();
         break;
 
-    case BUTTON_OUTPUT_1:
-    case BUTTON_OUTPUT_2:
-        outputSample += isInc ? 1 : -1;
-        if(outputSample < 0) outputSample = 0;
-        else if(outputSample > NUM_SAMPLES-1) outputSample = NUM_SAMPLES-1;
-        displayOutput(activeButton == BUTTON_OUTPUT_1 ? 1 : 2);
-        break;
-
     case BUTTON_LOAD_SAMPLES:
         sampleFolderNum += isInc ? 1 : -1;
         if (sampleFolderNum < 0)
@@ -1054,18 +1051,7 @@ void handleYesNo(bool isYes) {
 
     bool useDefaultNoBehaviour = true;
     switch(activeButton)
-    {
-        case BUTTON_OUTPUT_1:
-        case BUTTON_OUTPUT_2:
-            useDefaultNoBehaviour = false;
-            if(activeButton == BUTTON_OUTPUT_1) {
-                samples[outputSample].output1 = isYes;
-            } else {
-                samples[outputSample].output2 = isYes;
-            }
-            displayOutput(activeButton == BUTTON_OUTPUT_1 ? 1 : 2);
-            break;
-        
+    {        
         case BUTTON_LOAD_SAMPLES:
             if(isYes) sdSafeLoadTemp = true;
             break;
@@ -1087,7 +1073,24 @@ void handleYesNo(bool isYes) {
             if(settingsMenuLevel == 0 && isYes) settingsMenuLevel = 1;
             else if(settingsMenuLevel == 1) {
                 // handle new chosen option
-                settingsMenuLevel = 0;
+
+                if (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2)
+                {
+                    useDefaultNoBehaviour = false;
+                    if (activeSetting == SETTING_OUTPUT_1)
+                    {
+                        samples[outputSample].output1 = isYes;
+                    }
+                    else
+                    {
+                        samples[outputSample].output2 = isYes;
+                    }
+                    displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
+                }
+                else
+                {
+                    settingsMenuLevel = 0;
+                }
             }
             displaySettings();
             break;
@@ -1169,6 +1172,14 @@ void displayOutput(int outputNum) {
 void displaySettings() {
     if(settingsMenuLevel == 0) {
         switch(activeSetting) {
+            case SETTING_OUTPUT_1:
+                updateLedDisplayAlpha("out1");
+                break;
+
+            case SETTING_OUTPUT_2:
+                updateLedDisplayAlpha("out2");
+                break;
+
             case SETTING_GLITCH_CHANNEL:
                 updateLedDisplayAlpha("glit");
                 break;
@@ -1195,6 +1206,14 @@ void displaySettings() {
         }
     } else if(settingsMenuLevel == 1) {
         switch(activeSetting) {
+            case SETTING_OUTPUT_1:
+                displayOutput(1);
+                break;
+
+            case SETTING_OUTPUT_2:
+                displayOutput(2);
+                break;
+
             case SETTING_GLITCH_CHANNEL:
                 if(glitchChannel == GLITCH_CHANNEL_BOTH)
                     updateLedDisplayAlpha("both");
@@ -1968,6 +1987,8 @@ void saveSettings() {
         int32_t refCheckNum = CHECK_NUM;
         std::memcpy(buffer, &refCheckNum, 4);
         std::memcpy(buffer + 4, &saveNum, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refCheckNum, 4); // temp
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refCheckNum, 4); // temp
         std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
@@ -1978,7 +1999,6 @@ void saveSettings() {
         std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 2);
         std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT, &refCheckNum, 4); // temp
 
         writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
     }
