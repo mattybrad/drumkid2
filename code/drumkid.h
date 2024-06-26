@@ -393,5 +393,7 @@ void showError(const char* msgx);
 void findCurrentFlashSettingsSector();
 void saveSettings();
 void loadSettings();
+bool checkSettingsChange();
+void scheduleSaveSettings();
 
 #endif

@@ -757,7 +757,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 scheduledStep = 0;
 
                 // temp! testing settings write
-                saveSettings();
+                scheduleSaveSettings();
             }
             break;
         case BUTTON_SETTINGS:
@@ -767,6 +767,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_TAP_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
             updateTapTempo();
+            scheduleSaveSettings();
             break;
         case BUTTON_LIVE_EDIT:
             activeButton = BUTTON_LIVE_EDIT;
@@ -1044,6 +1045,7 @@ void handleIncDec(bool isInc, bool isHold)
         sdShowFolderTemp = true;
         break;
     }
+    scheduleSaveSettings();
 }
 
 void handleYesNo(bool isYes) {
@@ -1099,6 +1101,7 @@ void handleYesNo(bool isYes) {
         activeButton = NO_ACTIVE_BUTTON;
         bitWrite(singleLedData, 3, false); // clear error LED
     }
+    scheduleSaveSettings();
 }
 
 void displayClockMode() {
@@ -1955,28 +1958,30 @@ void showError(const char* msgx) {
 }
 
 void saveSettings() {
-    uint saveNum = getIntFromBuffer(flashData, currentSettingsSector*FLASH_SECTOR_SIZE + 4) + 1;
-    uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
-    currentSettingsSector = saveSector;
-    printf("save settings to sector %d\n", currentSettingsSector);
+    if(checkSettingsChange()) {
+        uint saveNum = getIntFromBuffer(flashData, currentSettingsSector*FLASH_SECTOR_SIZE + 4) + 1;
+        uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
+        currentSettingsSector = saveSector;
+        printf("save settings to sector %d\n", currentSettingsSector);
 
-    uint8_t buffer[FLASH_PAGE_SIZE];
-    int32_t refCheckNum = CHECK_NUM;
-    std::memcpy(buffer, &refCheckNum, 4);
-    std::memcpy(buffer + 4, &saveNum, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4); // temp
-    std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
-    std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 2);
-    std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
-    std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT, &refCheckNum, 4); // temp
+        uint8_t buffer[FLASH_PAGE_SIZE];
+        int32_t refCheckNum = CHECK_NUM;
+        std::memcpy(buffer, &refCheckNum, 4);
+        std::memcpy(buffer + 4, &saveNum, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4); // temp
+        std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
+        std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 2);
+        std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT, &refCheckNum, 4); // temp
 
-    writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+        writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+    }
 }
 
 // should be called after current sector has been found
@@ -2000,4 +2005,41 @@ void loadSettings() {
     newNumSteps = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG);
     numSteps = newNumSteps;
     // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT);
+}
+
+bool checkSettingsChange() {
+    printf("checking settings changes...\n");
+    bool anyChanged = false;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
+
+    if(glitchChannel != getIntFromBuffer(flashData, startPoint + 4 * SETTING_GLITCH_CHANNEL)) anyChanged = true;
+    if(outputPulseLength != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH)) anyChanged = true;
+    if(syncOutPpqnIndex != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN)) anyChanged = true;
+    if(syncInPpqnIndex != getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN)) anyChanged = true;
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
+    if(beatNum != getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT)) anyChanged = true;
+    if(tempo != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO)) anyChanged = true;
+    if(tuplet != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TUPLET)) anyChanged = true;
+    if(newNumSteps != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG)) anyChanged = true;
+
+    return anyChanged;
+}
+
+alarm_id_t saveSettingsAlarm = 0;
+
+int64_t onSaveSettingsTimeout(alarm_id_t id, void *user_data)
+{
+    if(!beatPlaying) {
+        saveSettings();
+    }
+    saveSettingsAlarm = 0;
+    return 0;
+}
+
+void scheduleSaveSettings() {
+    if(saveSettingsAlarm > 0) {
+        cancel_alarm(saveSettingsAlarm);
+    }
+    saveSettingsAlarm = add_alarm_in_ms(3000, onSaveSettingsTimeout, NULL, true);
 }
