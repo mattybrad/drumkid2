@@ -758,12 +758,12 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     displayTimeSignature();
                 scheduledStep = 0;
 
-                // temp! testing settings write
                 scheduleSaveSettings();
             }
             break;
         case BUTTON_SETTINGS:
             activeButton = BUTTON_SETTINGS;
+            settingsMenuLevel = 0;
             displaySettings();
             break;
         case BUTTON_TAP_TEMPO:
