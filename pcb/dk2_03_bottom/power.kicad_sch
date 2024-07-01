@@ -1109,27 +1109,6 @@
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 1ab6a557-2b13-42b0-a4de-7d772d30eac8)
   )
-  (text_box "Warning! Default Kicad pin mapping for this component is wrong! Pins 2 and 3 were swapped, causing magic smoke release on previous board."
-    (at 69.215 71.12 0) (size 33.02 13.97)
-    (stroke (width 0) (type default))
-    (fill (type none))
-    (effects (font (size 1.27 1.27)) (justify left top))
-    (uuid 4f6bae55-09ad-4147-b1b9-c070591070f0)
-  )
-  (text_box "Yet another note! Might be good to power the pots/ADC ref(?) via this supply if I can actually get the pins right..."
-    (at 137.795 71.12 0) (size 27.94 13.97)
-    (stroke (width 0) (type default))
-    (fill (type none))
-    (effects (font (size 1.27 1.27)) (justify left top))
-    (uuid 4f8eddd0-ab93-4bea-b215-ef1dec5143f6)
-  )
-  (text_box "Another warning! JLCPCB lists this as SOT-23, but it's actually SOT-23R, which has a different pinout!!"
-    (at 103.505 71.12 0) (size 33.02 13.97)
-    (stroke (width 0) (type default))
-    (fill (type none))
-    (effects (font (size 1.27 1.27)) (justify left top))
-    (uuid 51fef99d-c7dc-4fa5-a544-f9d3dc5ffad4)
-  )
   (text_box "Datasheet called for 68uH/2A, but did some calculations and think I can get away with 47uH/1A, which is what I used in the first board."
     (at 179.07 105.41 0) (size 34.29 12.7)
     (stroke (width 0) (type default))

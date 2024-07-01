@@ -553,6 +553,10 @@
     [
       "d45d8c3a-37c1-4724-b0b8-292f8f48c8cc",
       "Multiplexer in 2"
+    ],
+    [
+      "1a91e583-926b-4126-a95f-efd256f8eb1b",
+      "Shift register in 3"
     ]
   ],
   "text_variables": {}
