@@ -732,7 +732,7 @@
           (reference "SW12") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "SW2") (unit 1)
+          (reference "SW18") (unit 1)
         )
       )
     )
@@ -763,7 +763,7 @@
           (reference "#PWR032") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "#PWR07") (unit 1)
+          (reference "#PWR061") (unit 1)
         )
       )
     )
@@ -826,7 +826,7 @@
           (reference "#PWR033") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "#PWR010") (unit 1)
+          (reference "#PWR062") (unit 1)
         )
       )
     )
@@ -860,7 +860,7 @@
           (reference "#PWR034") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "#PWR011") (unit 1)
+          (reference "#PWR063") (unit 1)
         )
       )
     )
@@ -869,7 +869,7 @@
   (symbol (lib_id "Connector:Conn_01x05_Pin") (at 149.86 73.66 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 9ad27d9e-5fb1-4645-b500-2bf14ea032c6)
-    (property "Reference" "J1" (at 140.97 73.025 0)
+    (property "Reference" "J16" (at 140.97 73.025 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "Conn_01x05_Pin" (at 140.97 75.565 0)
@@ -889,7 +889,7 @@
     (instances
       (project "dk2_03_top"
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "J1") (unit 1)
+          (reference "J16") (unit 1)
         )
       )
     )
@@ -920,7 +920,7 @@
           (reference "#PWR035") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "#PWR020") (unit 1)
+          (reference "#PWR064") (unit 1)
         )
       )
     )
@@ -952,7 +952,7 @@
           (reference "SW11") (unit 1)
         )
         (path "/87a59a99-d509-467e-85da-26d34072acb7/1a91e583-926b-4126-a95f-efd256f8eb1b"
-          (reference "SW1") (unit 1)
+          (reference "SW17") (unit 1)
         )
       )
     )
