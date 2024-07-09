@@ -7,7 +7,7 @@ BUGS TO FIX
 FEATURES TO ADD
 - Try setting GPIO23 high to force PWM power mode for lower ADC noise
 - Output moved to settings
-- "Clear" moves to shift+X or hold X etc
+- "Clear" moves to dedicated button
 - Live input undo?
 - Separate trigger pulse length setting
 - Program selection of default beats
