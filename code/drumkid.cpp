@@ -146,15 +146,17 @@ float getZoomMultiplier(int thisStep)
 
 // temp figuring out proper hit generation
 uint16_t scheduledStep = 0;
+uint16_t straightStep = 0;
 
 int64_t nextSyncOut = 0;
 int64_t nextHitTime = 0; // in samples
+int64_t nextStraightHitTime = 0;
 int64_t currentTime = 0; // in samples
 int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t mainTimerInterval = 100; // us
 
 void scheduleSyncOut() {
-    if(scheduledStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextHitTime;
+    if(straightStep % (QUARTER_NOTE_STEPS/syncOutPpqn) == 0) nextSyncOut = nextStraightHitTime;
 }
 void scheduleMetronome()
 {
@@ -269,6 +271,11 @@ void scheduleHits()
     }
 }
 
+void nextStraightHit() {
+    straightStep ++;
+    nextStraightHitTime += stepTime;
+}
+
 void nextHit()
 {
     scheduledStep++;
@@ -313,9 +320,21 @@ void scheduler()
     while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime)
     {
         scheduleHits();
-        scheduleSyncOut();
         scheduleMetronome();
         nextHit();
+    }
+
+    // keep straight timing in sync with main timing
+    if(scheduledStep == QUARTER_NOTE_STEPS) {
+        straightStep = scheduledStep;
+        nextStraightHitTime = nextHitTime;
+    }
+
+    // schedule straight timing (for sync, ignoring tuplet nonsense)
+    while(beatPlaying && nextStraightHitTime < currentTime + scheduleAheadTime)
+    {
+        scheduleSyncOut();
+        nextStraightHit();
     }
 }
 
@@ -742,6 +761,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 if(!externalClock) {
                     scheduledStep = 0;
                     nextHitTime = currentTime;
+                    nextStraightHitTime = nextHitTime;
                 }
                 scheduler();
             }
@@ -912,15 +932,6 @@ void handleIncDec(bool isInc, bool isHold)
 
     switch (activeButton)
     {
-    /*case BUTTON_CLOCK_MODE:
-        externalClock = !externalClock;
-        if(externalClock) {
-
-        } else {
-            stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
-        }
-        displayClockMode();
-        break;*/
     case BUTTON_MANUAL_TEMPO:
         if(!externalClock) {
             if(isHold) {
