@@ -409,3 +409,9 @@ Have implemented a wear levelling algorithm to allow all settings to be saved re
 
 28/6/24
 Have spent the morning thinking about whether I can improve the ADC readings. The datasheet for the Pico admits that the built-in ADC reference is noisy, and suggests a 3V (not 3.3V) shunt (e.g. LM4040). To make this work with the current Drumkid circuit, I would need to ensure the LM4040 could be used as the voltage source for 12 pots (not certain, ChatGPT recommends buffering the voltage with an op-amp), and I'd need to tweak the CV input resistor values - the LM4040 definitely can't power the MCP6002's, so I'd have to keep using 3.3V, which would then be clamping the output at 3.3V instead of 3V. I could change the resistor values, so that instead of reading -5V to 5V and clamping anything outside that range, I could (for instance) read -12V to 12V as 0V to 3V with no clamping, or maybe clamp values below 0V and allow a maximum output of 3V (for -12V input, it's inverting), but this would be a faff, would roughly halve the resolution (probably not a problem), and would require some careful coding/calibration. Overall I feel like the risk of getting a dud PCB because I'm changing so much stuff is probably not worth the benefit of cleaner ADC, because I'm really not feeling much of an issue with the pots or CV inputs during testing. For a future version, I could do something like this (I've simulated the op-amp changes in LTSpice). 
+
+22/7/24
+PCB 2.03 is here and working well. Some minor issues so far:
+- Tactile button holes are slightly too big
+- Knobs maybe feel a bit cheap? Maybe don't need them to be so small if not adding scale markings. Maybe stop being so wedded to the same pots for every project, use similar to Doepfer?
+- Display height/opening not necessarily perfect yet

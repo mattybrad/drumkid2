@@ -1,8 +1,8 @@
 BUGS TO FIX
-- HZQD no longer stable at 500BPM+
 - Live beat input is not great, can't really do tuplets, kinda unreliable
 - Rogue random hits with chance=0 and magnet>0 with time signatures>4?
 - Output settings get reset when loading new kit
+- Sync out is weird in tuplet mode
 
 FEATURES TO ADD
 - Try setting GPIO23 high to force PWM power mode for lower ADC noise

@@ -31,41 +31,40 @@
 const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // button numbers (shifted buttons are +16)
-#define BUTTON_CANCEL 0
-#define BUTTON_SHIFT_CANCEL (0 + 16)
-#define BUTTON_CONFIRM 1
-#define BUTTON_DEC 2
-#define BUTTON_INC 3
-#define BUTTON_CLEAR 4
-#define BUTTON_PPQN_IN 5
-#define BUTTON_PPQN_OUT (5 + 16)
-#define BUTTON_LOAD_SAMPLES (6 + 16)
-#define BUTTON_SHIFT 7
-#define BUTTON_TUPLET 8
-#define BUTTON_MANUAL_TEMPO 9
-#define BUTTON_TIME_SIGNATURE (BUTTON_MANUAL_TEMPO + 16)
-#define BUTTON_BEAT 10
-#define BUTTON_EDIT_BEAT (BUTTON_BEAT + 16)
-#define BUTTON_SAVE (11 + 16)
-#define BUTTON_SETTINGS 12
-#define BUTTON_LIVE_EDIT 13
-#define BUTTON_TAP_TEMPO 14
-#define BUTTON_CLOCK_MODE (14 + 16)
-#define BUTTON_START_STOP 15
+#define BUTTON_CANCEL 5
+#define BUTTON_CONFIRM 6
+#define BUTTON_DEC 7
+#define BUTTON_INC 8
+#define BUTTON_SHIFT_CANCEL 9
+#define BUTTON_CLEAR 10
+#define BUTTON_TIME_SIGNATURE 11
+#define BUTTON_LOAD_SAMPLES 12
+#define BUTTON_SETTINGS 13
+#define BUTTON_B 14
+#define BUTTON_TUPLET 15
+#define BUTTON_MANUAL_TEMPO 16
+#define BUTTON_BEAT 17
+#define BUTTON_SAVE 18
+#define BUTTON_A 19
+#define BUTTON_EDIT_BEAT 20
+#define BUTTON_LIVE_EDIT 21
+#define BUTTON_TAP_TEMPO 22
+#define BUTTON_START_STOP 23
 #define NO_ACTIVE_BUTTON -1
 #define ERROR_DISPLAY -2
 #define BOOTUP_VISUALS -3
 
 // menu settings
-#define NUM_MENU_SETTINGS 8
-#define SETTING_OUTPUT_1 0
-#define SETTING_OUTPUT_2 1
-#define SETTING_GLITCH_CHANNEL 2
-#define SETTING_OUTPUT_PULSE_LENGTH 3
-#define SETTING_OUTPUT_PPQN 4
-#define SETTING_INPUT_PPQN 5
-#define SETTING_PITCH_CURVE 6
-#define SETTING_INPUT_QUANTIZE 7
+#define NUM_MENU_SETTINGS 9
+#define SETTING_CLOCK_MODE 0
+#define SETTING_OUTPUT_1 1
+#define SETTING_OUTPUT_2 2
+#define SETTING_GLITCH_CHANNEL 3
+#define SETTING_OUTPUT_PULSE_LENGTH 4
+#define SETTING_OUTPUT_PPQN 5
+#define SETTING_INPUT_PPQN 6
+#define SETTING_PITCH_CURVE 7
+#define SETTING_INPUT_QUANTIZE 8
 
 // non-menu settings
 #define SETTING_BEAT 8
@@ -85,16 +84,16 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 // pot numbers
 #define POT_CHANCE 0
 #define POT_ZOOM 1
-#define POT_RANGE 2
-#define POT_MIDPOINT 3
-#define POT_SWING 4
-#define POT_CROP 5
+#define POT_CLUSTER 2
+#define POT_CROP 3
+#define POT_MIDPOINT 4
+#define POT_RANGE 5
 #define POT_MAGNET 6
-#define POT_CLUSTER 7
-#define POT_DROP 8
+#define POT_SWING 7
+#define POT_CRUSH 8
 #define POT_PITCH 9
-#define POT_CRUSH 10
-#define POT_DROP_RANDOM 11
+#define POT_DROP_RANDOM 10
+#define POT_DROP 11
 
 // CV input numbers
 #define CV_CHANCE 12
@@ -122,7 +121,7 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM -123456789
+#define CHECK_NUM -999999
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8*4)
@@ -335,8 +334,8 @@ uint shiftRegOutLoopNum = 0; // 0 to 15
 uint shiftRegOutPhase = 0;   // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
-bool buttonStableStates[18] = {false}; // array of bools not good use of space, change if running out of space
-uint32_t microsSinceChange[18] = {0};  // milliseconds since state change
+bool buttonStableStates[24] = {false}; // array of bools not good use of space, change if running out of space
+uint32_t microsSinceChange[24] = {0};  // milliseconds since state change
 uint shiftRegInLoopNum = 0;            // 0 to 15
 uint shiftRegInPhase = 0;              // 0 or 1
 

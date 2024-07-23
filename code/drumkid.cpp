@@ -727,15 +727,10 @@ void doLiveHit(int sampleNum) {
 
 void handleButtonChange(int buttonNum, bool buttonState)
 {
-    if (shift && buttonNum != BUTTON_SHIFT)
-        buttonNum += 16;
     if (buttonState)
     {
         switch (buttonNum)
         {
-        case BUTTON_SHIFT:
-            shift = true;
-            break;
         case BUTTON_START_STOP:
             numSteps = newNumSteps;
             if (activeButton == BUTTON_TIME_SIGNATURE)
@@ -774,10 +769,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_LIVE_EDIT:
             activeButton = BUTTON_LIVE_EDIT;
             break;
-        case BUTTON_CLOCK_MODE:
+        /*case BUTTON_CLOCK_MODE:
             activeButton = BUTTON_CLOCK_MODE;
             displayClockMode();
-            break;
+            break;*/
         case BUTTON_INC:
             if(activeButton == BUTTON_LIVE_EDIT) {
                 doLiveHit(0);
@@ -811,14 +806,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_SHIFT_CANCEL:
             activeButton = NO_ACTIVE_BUTTON;
             settingsMenuLevel = 0;
-            break;
-        case BUTTON_PPQN_IN:
-            activeButton = BUTTON_PPQN_IN;
-            updateLedDisplay(syncInPpqn);
-            break;
-        case BUTTON_PPQN_OUT:
-            activeButton = BUTTON_PPQN_OUT;
-            updateLedDisplay(syncOutPpqn);
             break;
         case BUTTON_LOAD_SAMPLES:
             activeButton = BUTTON_LOAD_SAMPLES;
@@ -860,21 +847,17 @@ void handleButtonChange(int buttonNum, bool buttonState)
             printf("(button not assigned)\n");
         }
     }
-    else if (!buttonState)
-    {
-        switch (buttonNum)
-        {
-        case BUTTON_SHIFT:
-            shift = false;
-            break;
-        }
-    }
 }
 
 void handleSubSettingIncDec(bool isInc) {
     // could probably do this with pointers to make it neater but it's hot today so that's not happening
     int thisInc = isInc ? 1 : -1;
     switch(activeSetting) {
+    case SETTING_CLOCK_MODE:
+        externalClock = !externalClock;
+        displayClockMode();
+        break;
+    
     case SETTING_OUTPUT_1:
     case SETTING_OUTPUT_2:
         outputSample += isInc ? 1 : -1;
@@ -929,19 +912,7 @@ void handleIncDec(bool isInc, bool isHold)
 
     switch (activeButton)
     {
-    case BUTTON_PPQN_IN:
-        syncInPpqnIndex += isInc ? 1 : -1;
-        syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES-1, syncInPpqnIndex));
-        syncInPpqn = ppqnValues[syncInPpqnIndex];
-        updateLedDisplay(syncInPpqn);
-        break;
-    case BUTTON_PPQN_OUT:
-        syncOutPpqnIndex += isInc ? 1 : -1;
-        syncOutPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncOutPpqnIndex));
-        syncOutPpqn = ppqnValues[syncOutPpqnIndex];
-        updateLedDisplay(syncOutPpqn);
-        break;
-    case BUTTON_CLOCK_MODE:
+    /*case BUTTON_CLOCK_MODE:
         externalClock = !externalClock;
         if(externalClock) {
 
@@ -949,7 +920,7 @@ void handleIncDec(bool isInc, bool isHold)
             stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
         }
         displayClockMode();
-        break;
+        break;*/
     case BUTTON_MANUAL_TEMPO:
         if(!externalClock) {
             if(isHold) {
@@ -1172,6 +1143,10 @@ void displayOutput(int outputNum) {
 void displaySettings() {
     if(settingsMenuLevel == 0) {
         switch(activeSetting) {
+            case SETTING_CLOCK_MODE:
+                updateLedDisplayAlpha("cloc");
+                break;
+
             case SETTING_OUTPUT_1:
                 updateLedDisplayAlpha("out1");
                 break;
@@ -1206,6 +1181,10 @@ void displaySettings() {
         }
     } else if(settingsMenuLevel == 1) {
         switch(activeSetting) {
+            case SETTING_CLOCK_MODE:
+                displayClockMode();
+                break;
+
             case SETTING_OUTPUT_1:
                 displayOutput(1);
                 break;
@@ -1273,7 +1252,9 @@ void updateShiftRegButtons()
             {
                 buttonStableStates[shiftRegInLoopNum] = buttonState;
                 microsSinceChange[shiftRegInLoopNum] = 0;
-                printf("button %d: %d\n", shiftRegInLoopNum, buttonState ? 1 : 0);
+                if(shiftRegInLoopNum >= 5) {
+                    printf("button %d: %d\n", shiftRegInLoopNum, buttonState ? 1 : 0);
+                }
                 handleButtonChange(shiftRegInLoopNum, buttonState);
             }
         }
@@ -1291,7 +1272,7 @@ void updateShiftRegButtons()
     if (shiftRegInPhase == 4)
     {
         shiftRegInLoopNum++;
-        if (shiftRegInLoopNum < 16)
+        if (shiftRegInLoopNum < 24)
         {
             shiftRegInPhase = 2;
         }
@@ -1581,8 +1562,8 @@ void initSamplesFromFlash()
         }
 
         // temp
-        samples[n].output1 = true;
-        samples[n].output2 = true;
+        //samples[n].output1 = true;
+        //samples[n].output2 = true;
     }
 
     if(storageOverflow) {
@@ -1729,6 +1710,11 @@ int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
     // potentially a silly way of doing this, written before I knew about std::memcpy? but it works
     int32_t thisInt = buffer[position] | buffer[position + 1] << 8 | buffer[position + 2] << 16 | buffer[position + 3] << 24;
     return thisInt;
+}
+
+bool getBoolFromBuffer(const uint8_t *buffer, uint position)
+{
+    return getIntFromBuffer(buffer, position) != 0;
 }
 
 // possibly unnecessary now, not really using floats
@@ -1985,8 +1971,10 @@ void saveSettings() {
 
         uint8_t buffer[FLASH_PAGE_SIZE];
         int32_t refCheckNum = CHECK_NUM;
+        int32_t refExternalClock = externalClock ? 1 : 0;
         std::memcpy(buffer, &refCheckNum, 4);
         std::memcpy(buffer + 4, &saveNum, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refCheckNum, 4); // temp
         std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refCheckNum, 4); // temp
         std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
@@ -2008,6 +1996,7 @@ void saveSettings() {
 void loadSettings() {
     printf("load settings from sector %d\n", currentSettingsSector);
     int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
+    externalClock = getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE);
     glitchChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_GLITCH_CHANNEL);
     outputPulseLength = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH);
     syncOutPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN);
@@ -2032,6 +2021,7 @@ bool checkSettingsChange() {
     bool anyChanged = false;
     int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
 
+    if(externalClock != getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE)) anyChanged = true;
     if(glitchChannel != getIntFromBuffer(flashData, startPoint + 4 * SETTING_GLITCH_CHANNEL)) anyChanged = true;
     if(outputPulseLength != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH)) anyChanged = true;
     if(syncOutPpqnIndex != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN)) anyChanged = true;
