@@ -1983,11 +1983,17 @@ void saveSettings() {
         uint8_t buffer[FLASH_PAGE_SIZE];
         int32_t refCheckNum = CHECK_NUM;
         int32_t refExternalClock = externalClock ? 1 : 0;
+        int32_t refOutput1 = 0;
+        int32_t refOutput2 = 0;
+        for(int i=0; i<NUM_SAMPLES; i++) {
+            bitWrite(refOutput1, i, samples[i].output1);
+            bitWrite(refOutput2, i, samples[i].output2);
+        }
         std::memcpy(buffer, &refCheckNum, 4);
         std::memcpy(buffer + 4, &saveNum, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refCheckNum, 4); // temp
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refCheckNum, 4); // temp
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
         std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
@@ -2025,6 +2031,12 @@ void loadSettings() {
     newNumSteps = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG);
     numSteps = newNumSteps;
     // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT);
+    uint32_t output1Loaded = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_1);
+    uint32_t output2Loaded = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_2);
+    for(int i=0; i<NUM_SAMPLES; i++) {
+        samples[i].output1 = bitRead(output1Loaded, i);
+        samples[i].output2 = bitRead(output2Loaded, i);
+    }
 }
 
 bool checkSettingsChange() {
@@ -2043,6 +2055,16 @@ bool checkSettingsChange() {
     if(tempo != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO)) anyChanged = true;
     if(tuplet != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TUPLET)) anyChanged = true;
     if(newNumSteps != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG)) anyChanged = true;
+
+    int32_t refOutput1 = 0;
+    int32_t refOutput2 = 0;
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        bitWrite(refOutput1, i, samples[i].output1);
+        bitWrite(refOutput2, i, samples[i].output2);
+    }
+    if(refOutput1 != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_1)) anyChanged = true;
+    if(refOutput2 != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_2)) anyChanged = true;
 
     return anyChanged;
 }

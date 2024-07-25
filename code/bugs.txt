@@ -1,7 +1,6 @@
 BUGS TO FIX
 - Live beat input is not great, can't really do tuplets, kinda unreliable
-- Rogue random hits with chance=0 and magnet>0 with time signatures>4?
-- Output settings get reset when loading new kit
+- Rogue random hits with chance=0 and magnet>0 (and magnet<4095) with time signatures>4, drawing for wrong bit of memory...
 
 FEATURES TO ADD
 - Add 24PPQN (somehow) because it's common
