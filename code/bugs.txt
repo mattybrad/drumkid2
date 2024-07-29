@@ -1,18 +1,15 @@
 BUGS TO FIX
 - Live beat input is not great, can't really do tuplets, kinda unreliable
 - Rogue random hits with chance=0 and magnet>0 (and magnet<4095) with time signatures>4, drawing for wrong bit of memory...
+- Metronome shouldn't be crushed?
 
 FEATURES TO ADD
 - Add 24PPQN (somehow) because it's common
-- Try setting GPIO23 high to force PWM power mode for lower ADC noise
-- Output moved to settings
-- "Clear" moves to dedicated button
 - Live input undo?
 - Separate trigger pulse length setting
 - Program selection of default beats
 - Finalise default kit and three(?) other kits for beta testers
 - Dedicated back button?
-- Pitch deadzone setting working
 - Live input quantize setting working
 - Scrolling text for settings menu
 POST-BETA FEATURES (non-essential)

@@ -415,8 +415,25 @@ PCB 2.03 is here and working well. Some minor issues so far:
 - Tactile button holes are slightly too big
 - Knobs maybe feel a bit cheap? Maybe don't need them to be so small if not adding scale markings. Maybe stop being so wedded to the same pots for every project, use similar to Doepfer?
 - Display height/opening not necessarily perfect yet
+- Add + markings to the LEDs
+- Add soldering order? TOP: display header, buttons, jacks, SD, LEDs, pots, rear headers. BOTTOM: diode, pico headers, euro power, dac jumper, little cap, inductor, big cap
 
 23/7/24
 Just fixed an issue where the sync output didn't fire at the right times in tuplet mode, and it got me thinking about how I've approached the main timing system in a slightly stupid way. When the tuplet mode changes, I change the value of a step, and the whole drum machine is suddenly operating in "quintuplet mode" or whatever. It works, but it would have made way more sense to just keep a steady clock going at 32PPQN or whatever and then derive everything from that. How about 3360PPQN? That's divisible by all the PPQN values that I use in tuplet modes (32, 24, 15, 28). I reckon it's too late right now to change it (I'll go insane), but a good idea for the future.
 
 If I was redesigning everything from scratch, I'd also have finer-grained timing, allow for fractional tempos etc.
+
+25/7/24
+Tried setting GPIO 23 to high. Seemed to improve noise issues so will keep that in.
+
+26/7/24
+Been soldering up a second V2.03. Tried naiively drag-and-dropping the UF2 file via USB to see if it was as simple as that. Got an error light which went away (mysteriously?) when I plugged in the debugger. Or maybe it went away the first time I rebooted the unit AFTER having attempted an SD card load. Either way, need to think about the first boot process.
+
+Some thoughts about manual soldering vs JLCPCB. Drumkid V1 had SMD components done by JLCPCB, through-hole by me, partly because there was no front panel to hide slightly wonky machine soldering (after I tried switching the buttons to SMD) but I don't want to spend my life soldering with this version. Have been checking out the wave soldering option. Can't quite work out how it works, whether I can have components wave-soldered on two sides, etc. Regardless, I think I'd have to solder a few of the less common (vertical jacks) or more fiddly (LED with holder) components, but would be nice to, say, halve the amount of soldering I'd need to do. Buttons and headers would be a good place to start, maybe also pots.
+
+Just had a play with two V2.03 units. Really not a fan of the external clock mode - not very steady at all.
+
+29/7/24
+Tried connecting two DK2.03 modules together via clock in/out. Definitely not very nice. Think the problem is probably the output pulse rather than input polling, because it's polling at 10kHz and sounds fine when ramping tempo up/down via a square-wave oscillator. Looks like I've done the output in a stupid way in the code. The audio buffer loop thing is not guaranteed to happen at a particular time (quick testing shows intervals seem to range from ~0.2ms to ~4ms!) so there should be no precise timing stuff in there. This also probably explains why live edit mode is borked.
+
+Hard to know how to fix this without a lot of rewriting. I feel like I've done something pretty majorly wrong with the timing in the code, but somehow it still works almost perfectly apart from this.

@@ -392,6 +392,7 @@ int main()
     loadSettings();
     initGpio();
 
+
     initSamplesFromFlash();
     loadBeatsFromFlash();
 
@@ -477,6 +478,7 @@ int main()
         give_audio_buffer(ap, buffer);
 
         currentTime += timeIncrement;
+        //printf("%llu \n", time_us_64());
 
         if (sdSafeLoadTemp)
         {
@@ -566,6 +568,11 @@ void initGpio()
         gpio_init(TRIGGER_OUT_PINS[i]);
         gpio_set_dir(TRIGGER_OUT_PINS[i], GPIO_OUT);
     };
+
+    // set GPIO23 high, apparently improves ADC readings
+    gpio_init(23);
+    gpio_set_dir(23, GPIO_OUT);
+    gpio_put(23, 1);
 }
 
 int64_t prevTimeCheck = 0;
@@ -598,6 +605,14 @@ bool mainTimerLogic(repeating_timer_t *rt)
     updateShiftRegButtons();
     updateAnalog();
     updateSyncIn();
+
+    // temp, putting sync out here for better resolution
+    // if (currentTime + (i >> 1) >= nextSyncOut)
+    // {
+    //     pulseGpio(SYNC_OUT, outputPulseLength); // todo: adjust pulse length based on PPQN, or advanced setting
+    //     pulseLed(0, LED_PULSE_LENGTH);
+    //     nextSyncOut = INT64_MAX;
+    // }
 
     // knobs / CV
     chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
@@ -864,7 +879,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             updateLedDisplay(saveBeatLocation);
             break;
         default:
-            printf("(button not assigned)\n");
+            printf("(button %d not assigned)\n", buttonNum);
         }
     }
 }
@@ -1265,8 +1280,8 @@ void updateShiftRegButtons()
                 microsSinceChange[shiftRegInLoopNum] = 0;
                 if(shiftRegInLoopNum >= 5) {
                     printf("button %d: %d\n", shiftRegInLoopNum, buttonState ? 1 : 0);
+                    handleButtonChange(shiftRegInLoopNum, buttonState);
                 }
-                handleButtonChange(shiftRegInLoopNum, buttonState);
             }
         }
         else
