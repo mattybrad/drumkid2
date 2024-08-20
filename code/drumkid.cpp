@@ -48,9 +48,10 @@ int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t scheduledStep = 0;
 uint16_t nextBigStep = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
-int ppqn = 8;
+int ppqn = 1;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
+bool tempExtSync = false;
 
 void nextHit()
 {
@@ -69,7 +70,7 @@ void scheduleHits()
 {
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (true || beats[beatNum].getHit(i, scheduledStep, 0))
+        if ((i == 0 && scheduledStep == 0) || (i == 1 && scheduledStep == 64) || (i == 2 && scheduledStep % 4 == 0))
         {
             // if current beat contains a hit on this step, calculate the velocity and queue the hit
             samples[i].queueHit(nextHitTime, scheduledStep, 4095);
@@ -92,32 +93,48 @@ bool tempScheduler(repeating_timer_t *rt)
     return true;
 }
 
-void gpio_callback(uint gpio, uint32_t events)
-{
-    // This will execute when the interrupt occurs (e.g., button press)
-    //printf("Clock input went high %llu\n", time_us_64());
-
+void handleSyncPulse() {
     uint64_t deltaT = time_us_64() - lastClockIn;
     if (lastClockIn > 0)
     {
-        // attempt clock divide
-        pulseGpio(SYNC_OUT, 10);
-
         int64_t timeError = currentTime - nextHitTime;
-        //printf("err %lld\n", timeError);
+
+        if ((nextBigStep % QUARTER_NOTE_STEPS) == 0)
+        {
+            pulseGpio(SYNC_OUT, 10);
+            printf("err %lld\n", timeError);
+        }
         scheduledStep = nextBigStep;
-        if(timeError > 0) {
+        if (timeError > 0)
+        {
             nextHitTime = currentTime;
             scheduleHits();
         }
-        stepTime = (deltaT * SAMPLE_RATE * ppqn) / (QUARTER_NOTE_STEPS * 1000000) + 1; // remove the +1 at some point!!
-        //uint64_t derivedTempo = (60000000) / (deltaT * ppqn);
-        //printf("tempo %llu\n", derivedTempo);
+        stepTime = (deltaT * SAMPLE_RATE * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
+        if (timeError > 0)
+            stepTime++; // the +1 is a lazy way of rounding up, and I don't fully understand why it fixes timing stability but... it does
+        // uint64_t derivedTempo = (60000000) / (deltaT * ppqn);
+        // printf("tempo %llu\n", derivedTempo);
         nextBigStep = scheduledStep + (QUARTER_NOTE_STEPS / ppqn);
         nextBigStep = nextBigStep % numSteps;
-        
     }
     lastClockIn = time_us_64();
+}
+
+bool tempSyncTimerCallback(repeating_timer_t *rt)
+{
+    if (!tempExtSync)
+    {
+        handleSyncPulse();
+    }
+    return true;
+}
+
+void gpio_callback(uint gpio, uint32_t events)
+{
+    if(tempExtSync) {
+        handleSyncPulse();
+    }
 }
 
 int main()
@@ -139,6 +156,8 @@ int main()
     int64_t tempPeriod = 500;
     repeating_timer_t tempSchedulerTimer;
     add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
+    repeating_timer_t tempSyncTimer;
+    add_repeating_timer_us(500000, tempSyncTimerCallback, NULL, &tempSyncTimer);
 
     beatPlaying = true;
 
