@@ -437,3 +437,8 @@ Just had a play with two V2.03 units. Really not a fan of the external clock mod
 Tried connecting two DK2.03 modules together via clock in/out. Definitely not very nice. Think the problem is probably the output pulse rather than input polling, because it's polling at 10kHz and sounds fine when ramping tempo up/down via a square-wave oscillator. Looks like I've done the output in a stupid way in the code. The audio buffer loop thing is not guaranteed to happen at a particular time (quick testing shows intervals seem to range from ~0.2ms to ~4ms!) so there should be no precise timing stuff in there. This also probably explains why live edit mode is borked.
 
 Hard to know how to fix this without a lot of rewriting. I feel like I've done something pretty majorly wrong with the timing in the code, but somehow it still works almost perfectly apart from this.
+
+19/8/24
+After a lot of thinking and a lot of messing about, I decided it was time to partially rewrite the Drumkid 2 code, because there were too many issues with timing. External clock mode was really janky, and the code for tuplet stuff was all pretty horrible.
+My new way of handling sync input is to just schedule the hits as soon as a pulse is received, and not use the repeating timer thing at all in this mode. Will have to do some sort of clock-dividing stuff for lower PPQN input values.
+I also think I'm going to rewrite the "beat" object so that instead of a binary grid of finite resolution, it's more like a list of events. This should allow better tuplet behaviour. Not a final decision though.

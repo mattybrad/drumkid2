@@ -46,11 +46,16 @@ int64_t nextHitTime = 0; // in samples
 int64_t currentTime = 0; // in samples
 int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t scheduledStep = 0;
+uint16_t nextBigStep = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
+int ppqn = 8;
+uint64_t lastClockIn = 0;
+uint64_t maxHitTime = 0;
 
 void nextHit()
 {
     scheduledStep++;
+    //printf("step %d\n", scheduledStep);
 
     nextHitTime += stepTime;
 
@@ -64,7 +69,7 @@ void scheduleHits()
 {
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if (beats[beatNum].getHit(i, scheduledStep, 0))
+        if (true || beats[beatNum].getHit(i, scheduledStep, 0))
         {
             // if current beat contains a hit on this step, calculate the velocity and queue the hit
             samples[i].queueHit(nextHitTime, scheduledStep, 4095);
@@ -74,7 +79,7 @@ void scheduleHits()
 
 void scheduler()
 {
-    while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime)
+    while (beatPlaying && nextHitTime < currentTime + scheduleAheadTime && (scheduledStep % numSteps) != nextBigStep)
     {
         scheduleHits();
         nextHit();
@@ -85,6 +90,34 @@ bool tempScheduler(repeating_timer_t *rt)
 {
     scheduler();
     return true;
+}
+
+void gpio_callback(uint gpio, uint32_t events)
+{
+    // This will execute when the interrupt occurs (e.g., button press)
+    //printf("Clock input went high %llu\n", time_us_64());
+
+    uint64_t deltaT = time_us_64() - lastClockIn;
+    if (lastClockIn > 0)
+    {
+        // attempt clock divide
+        pulseGpio(SYNC_OUT, 10);
+
+        int64_t timeError = currentTime - nextHitTime;
+        //printf("err %lld\n", timeError);
+        scheduledStep = nextBigStep;
+        if(timeError > 0) {
+            nextHitTime = currentTime;
+            scheduleHits();
+        }
+        stepTime = (deltaT * SAMPLE_RATE * ppqn) / (QUARTER_NOTE_STEPS * 1000000) + 1; // remove the +1 at some point!!
+        //uint64_t derivedTempo = (60000000) / (deltaT * ppqn);
+        //printf("tempo %llu\n", derivedTempo);
+        nextBigStep = scheduledStep + (QUARTER_NOTE_STEPS / ppqn);
+        nextBigStep = nextBigStep % numSteps;
+        
+    }
+    lastClockIn = time_us_64();
 }
 
 int main()
@@ -98,6 +131,8 @@ int main()
     initGpio();
     initSamplesFromFlash();
     loadBeatsFromFlash();
+
+    gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -215,7 +250,7 @@ void initSamplesFromFlash()
         }
         printf("sample %d, start %d, length %d\n", n, samples[n].startPosition, samples[n].length);
         samples[n].position = samples[n].length;
-        samples[n].positionAccurate = samples[n].length << Sample::LERP_BITS;
+        //samples[n].positionAccurate = samples[n].length << Sample::LERP_BITS;
 
         if (!storageOverflow)
         {
@@ -337,4 +372,17 @@ int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
     // potentially a silly way of doing this, written before I knew about std::memcpy? but it works
     int32_t thisInt = buffer[position] | buffer[position + 1] << 8 | buffer[position + 2] << 16 | buffer[position + 3] << 24;
     return thisInt;
+}
+
+int64_t onGpioPulseTimeout(alarm_id_t id, void *user_data)
+{
+    uint gpioNum = (uint)user_data;
+    gpio_put(gpioNum, 0);
+    return 0;
+}
+
+void pulseGpio(uint gpioNum, uint16_t pulseLengthMillis)
+{
+    gpio_put(gpioNum, 1);
+    add_alarm_in_ms(pulseLengthMillis, onGpioPulseTimeout, (void *)gpioNum, true);
 }
