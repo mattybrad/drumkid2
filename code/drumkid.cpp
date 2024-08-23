@@ -52,6 +52,8 @@ int ppqn = 1;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
 bool tempExtSync = false;
+uint64_t nextPredictedPulse;
+int pulseTimeTotal;
 
 void nextHit()
 {
@@ -66,11 +68,19 @@ void nextHit()
     }
 }
 
+int temp1 = QUARTER_NOTE_STEPS * 2;
+int temp2 = QUARTER_NOTE_STEPS / 16;
 void scheduleHits()
 {
+    //printf("schedule hits %d\n", scheduledStep);
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if ((i == 0 && scheduledStep == 0) || (i == 1 && scheduledStep == 64) || (i == 2 && scheduledStep % 4 == 0))
+        // if ((i == 0 && scheduledStep == 0) || (i == 1 && scheduledStep == temp1) || (i == 2 && scheduledStep % temp2 == 0))
+        // {
+        //     // if current beat contains a hit on this step, calculate the velocity and queue the hit
+        //     samples[i].queueHit(nextHitTime, scheduledStep, 4095);
+        // }
+        if (true || beats[beatNum].getHit(i, scheduledStep, 0))
         {
             // if current beat contains a hit on this step, calculate the velocity and queue the hit
             samples[i].queueHit(nextHitTime, scheduledStep, 4095);
@@ -93,8 +103,34 @@ bool tempScheduler(repeating_timer_t *rt)
     return true;
 }
 
+alarm_id_t stepAlarm = 0;
+int64_t stepAlarmCallback(alarm_id_t id, void *user_data)
+{
+    //printf("alarm callback\n");
+    //scheduler();
+    nextHit();
+    scheduleHits();
+    if(((scheduledStep+1) % numSteps) != nextBigStep) {
+        setStepAlarm();
+    }
+    return 0;
+}
+
+void setStepAlarm() {
+    //printf("set alarm\n");
+    if(stepAlarm > 0) cancel_alarm(stepAlarm);
+    uint64_t pulseTimeRemaining = nextPredictedPulse - time_us_64();
+    uint64_t stepTimeUs = (pulseTimeRemaining * ppqn) / (QUARTER_NOTE_STEPS - (scheduledStep % QUARTER_NOTE_STEPS));
+    stepTimeUs -= 10;
+    stepTime = (44100 * stepTimeUs) / 1000000; // samples
+    stepAlarm = add_alarm_in_us(stepTimeUs, stepAlarmCallback, NULL, true);
+}
+
 void handleSyncPulse() {
+    //printf("sync pulse\n");
     uint64_t deltaT = time_us_64() - lastClockIn;
+    pulseTimeTotal = deltaT;
+    nextPredictedPulse = time_us_64() + deltaT;
     if (lastClockIn > 0)
     {
         int64_t timeError = currentTime - nextHitTime;
@@ -102,21 +138,19 @@ void handleSyncPulse() {
         if ((nextBigStep % QUARTER_NOTE_STEPS) == 0)
         {
             pulseGpio(SYNC_OUT, 10);
-            printf("err %lld\n", timeError);
+            //printf("err %lld\n", timeError);
         }
         scheduledStep = nextBigStep;
-        if (timeError > 0)
-        {
-            nextHitTime = currentTime;
-            scheduleHits();
-        }
-        stepTime = (deltaT * SAMPLE_RATE * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
-        if (timeError > 0)
-            stepTime++; // the +1 is a lazy way of rounding up, and I don't fully understand why it fixes timing stability but... it does
+        nextHitTime = currentTime;
+        scheduleHits();
+        //stepTime = (deltaT * SAMPLE_RATE * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
+        //if (timeError > 0)
+            //stepTime++; // the +1 is a lazy way of rounding up, and I don't fully understand why it fixes timing stability but... it does
         // uint64_t derivedTempo = (60000000) / (deltaT * ppqn);
         // printf("tempo %llu\n", derivedTempo);
         nextBigStep = scheduledStep + (QUARTER_NOTE_STEPS / ppqn);
         nextBigStep = nextBigStep % numSteps;
+        setStepAlarm();
     }
     lastClockIn = time_us_64();
 }
@@ -154,8 +188,8 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     int64_t tempPeriod = 500;
-    repeating_timer_t tempSchedulerTimer;
-    add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
+    //repeating_timer_t tempSchedulerTimer;
+    //add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
     repeating_timer_t tempSyncTimer;
     add_repeating_timer_us(500000, tempSyncTimerCallback, NULL, &tempSyncTimer);
 
