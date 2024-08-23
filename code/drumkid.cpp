@@ -48,7 +48,7 @@ int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t step = 0;
 uint16_t nextBigStep = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
-int ppqn = 1;
+int ppqn = 8;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
 bool tempExtSync = true;
@@ -71,7 +71,7 @@ void nextHit()
 }
 
 int temp1 = QUARTER_NOTE_STEPS * 2;
-int temp2 = QUARTER_NOTE_STEPS / 8;
+int temp2 = QUARTER_NOTE_STEPS / 4;
 void scheduleHits()
 {
     //printf("schedule hits %d\n", step);
@@ -96,10 +96,10 @@ int64_t stepAlarmCallback(alarm_id_t id, void *user_data)
     step ++;
     if(step >= numSteps) {
         step = 0;
-    }    
-    nextHitTime = hitTimes[(step+QUARTER_NOTE_STEPS-1)%QUARTER_NOTE_STEPS]; // hacky...
+    }
+    nextHitTime = hitTimes[(step + QUARTER_NOTE_STEPS - 1) % (QUARTER_NOTE_STEPS / ppqn)]; // hacky...
     scheduleHits();
-    if((step%QUARTER_NOTE_STEPS)!=0) {
+    if((step%(QUARTER_NOTE_STEPS/ppqn))!=0) {
         setStepAlarm();
     }
     return 0;
@@ -107,14 +107,15 @@ int64_t stepAlarmCallback(alarm_id_t id, void *user_data)
 
 void setStepAlarm() {
     if(stepAlarm > 0) cancel_alarm(stepAlarm);
-    int64_t stepTimeUs = alarmTimes[step % QUARTER_NOTE_STEPS] - time_us_64();
+    int64_t stepTimeUs = alarmTimes[step % (QUARTER_NOTE_STEPS/ppqn)] - time_us_64();
     stepAlarm = add_alarm_in_us(stepTimeUs-5000, stepAlarmCallback, NULL, true); // 5000 makes sure scheduling happens in time, can be tweaked for stability
 }
 
 bool firstHit = true;
 void handleSyncPulse() {
     //printf("sync pulse\n");
-    pulseGpio(SYNC_OUT, 10);
+    if(stepAlarm > 0) cancel_alarm(stepAlarm); // probably a good idea..?
+    pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
     int64_t deltaT = time_us_64() - lastClockIn;
     if (lastClockIn > 0)
     {
@@ -125,14 +126,14 @@ void handleSyncPulse() {
             scheduleHits();
         }
         if(nextHitTime - currentTime < 0) {
-            deltaT += 300; // this part should be tweaked
+            deltaT += 300 / ppqn; // this part should be tweaked, should be dependent on ppqn
         }
         if(nextHitTime - currentTime < -200) {
             nextHitTime = currentTime;
         }
-        for(int i=0; i<32; i++) {
-            alarmTimes[i] = time_us_64() + ((i+1) * deltaT) / 32;
-            hitTimes[i] = nextHitTime + (44100 * (i+1) * (deltaT)) / (32000000);
+        for(int i=0; i<32/ppqn; i++) {
+            alarmTimes[i] = time_us_64() + ((i+1) * deltaT * ppqn) / QUARTER_NOTE_STEPS;
+            hitTimes[i] = nextHitTime + (44100 * (i+1) * deltaT * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
             //printf("%llu %llu\n", alarmTimes[i], hitTimes[i]);
         }
         //printf("diff %lld\n", nextHitTime - currentTime);
