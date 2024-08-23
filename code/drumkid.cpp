@@ -51,7 +51,7 @@ int numSteps = 4 * QUARTER_NOTE_STEPS;
 int ppqn = 1;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
-bool tempExtSync = false;
+bool tempExtSync = true;
 uint64_t nextPredictedPulse;
 int pulseTimeTotal;
 uint64_t alarmTimes[32] = {0};
@@ -77,16 +77,16 @@ void scheduleHits()
     //printf("schedule hits %d\n", step);
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        // if ((i == 0 && step == 0) || (i == 1 && step == temp1) || (i == 2 && step % temp2 == 0))
-        // {
-        //     // if current beat contains a hit on this step, calculate the velocity and queue the hit
-        //     samples[i].queueHit(nextHitTime, step, 4095);
-        // }
-        if (true || beats[beatNum].getHit(i, step, 0))
+        if ((i == 0 && step == 0) || (i == 1 && step == temp1) || (i == 2 && step % temp2 == 0))
         {
             // if current beat contains a hit on this step, calculate the velocity and queue the hit
             samples[i].queueHit(nextHitTime, step, 4095);
         }
+        // if (true || beats[beatNum].getHit(i, step, 0))
+        // {
+        //     // if current beat contains a hit on this step, calculate the velocity and queue the hit
+        //     samples[i].queueHit(nextHitTime, step, 4095);
+        // }
     }
 }
 
@@ -113,7 +113,8 @@ void setStepAlarm() {
 
 bool firstHit = true;
 void handleSyncPulse() {
-    printf("sync pulse\n");
+    //printf("sync pulse\n");
+    pulseGpio(SYNC_OUT, 10);
     int64_t deltaT = time_us_64() - lastClockIn;
     if (lastClockIn > 0)
     {
@@ -134,7 +135,7 @@ void handleSyncPulse() {
             hitTimes[i] = nextHitTime + (44100 * (i+1) * (deltaT)) / (32000000);
             //printf("%llu %llu\n", alarmTimes[i], hitTimes[i]);
         }
-        printf("diff %lld\n", nextHitTime - currentTime);
+        //printf("diff %lld\n", nextHitTime - currentTime);
         setStepAlarm();
     }
     lastClockIn = time_us_64();
