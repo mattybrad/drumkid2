@@ -48,7 +48,7 @@ int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t step = 0;
 uint16_t nextBigStep = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
-int ppqn = 8;
+int ppqn = 1;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
 bool tempExtSync = true;
@@ -56,6 +56,12 @@ uint64_t nextPredictedPulse;
 int pulseTimeTotal;
 uint64_t alarmTimes[32] = {0};
 uint64_t hitTimes[32] = {0};
+uint64_t prevQuarterNote = 0;   // samples
+uint64_t nextQuarterNote = 0;   // samples
+uint64_t scheduledUntil = 0;    // samples
+uint64_t scheduleWindow = 1000; // samples
+uint quarterNote = 0;
+int64_t deltaT;                 // microseconds
 
 int temp1 = QUARTER_NOTE_STEPS * 2;
 int temp2 = QUARTER_NOTE_STEPS / 4;
@@ -77,6 +83,20 @@ void scheduleHits()
         }
     }
 }
+int scheduledUntilStep = 0;
+void scheduleHitsNew() {
+    int maxStep = (step + 500) % (4*3360); // very much temp, should depend on tempo etc
+    while(maxStep < scheduledUntilStep) maxStep += 4 * 3360;
+    printf("%d %d %d\n", step, scheduledUntilStep, maxStep);
+    for(int i=scheduledUntilStep; i<maxStep; i++) {
+        if(i%3360==0) {
+            uint64_t queueTime = prevQuarterNote + ((i%3360) * (nextQuarterNote - prevQuarterNote)) / 3360;
+            printf("hit! %d\n", i);
+            samples[i%(4*3360)==0?0:2].queueHit(queueTime, i%(4*3360), 4095);
+        }
+    }
+    scheduledUntilStep = maxStep % (4*3360);
+}
 
 alarm_id_t stepAlarm = 0;
 int64_t stepAlarmCallback(alarm_id_t id, void *user_data)
@@ -86,7 +106,8 @@ int64_t stepAlarmCallback(alarm_id_t id, void *user_data)
         step = 0;
     }
     nextHitTime = hitTimes[(step + QUARTER_NOTE_STEPS - 1) % (QUARTER_NOTE_STEPS / ppqn)]; // hacky...
-    scheduleHits();
+    //scheduleHits();
+    scheduleHitsNew();
     if((step%(QUARTER_NOTE_STEPS/ppqn))!=0) {
         setStepAlarm();
     }
@@ -101,33 +122,38 @@ void setStepAlarm() {
 
 bool firstHit = true;
 void handleSyncPulse() {
-    //printf("sync pulse\n");
-    if(stepAlarm > 0) cancel_alarm(stepAlarm); // probably a good idea..?
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
-    int64_t deltaT = time_us_64() - lastClockIn;
+    deltaT = time_us_64() - lastClockIn; // real time since last pulse
     if (lastClockIn > 0)
     {
         if(firstHit) {
-            nextHitTime = currentTime;
-            printf("start time (samples): %llu\n", currentTime);
+            prevQuarterNote = currentTime;
+            nextQuarterNote = currentTime + (44100 * deltaT) / 1000000;
             firstHit = false;
-            scheduleHits();
-        }
-        if(nextHitTime - currentTime < 0) {
-            deltaT += 300 / ppqn; // this part should be tweaked, should be dependent on ppqn
-        }
-        if(nextHitTime - currentTime < -200) {
-            nextHitTime = currentTime;
+            scheduleHitsNew();
         }
         for(int i=0; i<32/ppqn; i++) {
-            alarmTimes[i] = time_us_64() + ((i+1) * deltaT * ppqn) / QUARTER_NOTE_STEPS;
-            hitTimes[i] = nextHitTime + (44100 * (i+1) * deltaT * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
+            //alarmTimes[i] = time_us_64() + ((i+1) * deltaT * ppqn) / QUARTER_NOTE_STEPS;
+            //hitTimes[i] = nextHitTime + (44100 * (i+1) * deltaT * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
             //printf("%llu %llu\n", alarmTimes[i], hitTimes[i]);
         }
         //printf("diff %lld\n", nextHitTime - currentTime);
-        setStepAlarm();
+        //setStepAlarm();
     }
     lastClockIn = time_us_64();
+}
+
+bool tempSchedulerCallback(repeating_timer_t *rt)
+{
+    if(currentTime >= nextQuarterNote) {
+        prevQuarterNote = nextQuarterNote;
+        nextQuarterNote += (44100 * deltaT) / 1000000;
+        quarterNote = (quarterNote + 1) % 4;
+        if(quarterNote == 0) printf("NEW BAR\n");
+    }
+    step = 3360 * quarterNote + ((currentTime - prevQuarterNote) * 3360) / (nextQuarterNote - prevQuarterNote);
+    scheduleHitsNew();
+    return true;
 }
 
 bool tempSyncTimerCallback(repeating_timer_t *rt)
@@ -166,17 +192,17 @@ int main()
     beats[0].addHit(2, 2*3360/2, 255);
     beats[0].addHit(2, 3*3360/2, 255);
     beats[0].addHit(2, 6 * 3360 / 3, 255);
-    beats[0].addHit(2, 7 * 3360 / 3, 255);
     beats[0].addHit(2, 8 * 3360 / 3, 255);
+    beats[0].addHit(2, 10 * 3360 / 3, 255);
 
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
     struct audio_buffer_pool *ap = init_audio();
 
-    int64_t tempPeriod = 500;
-    //repeating_timer_t tempSchedulerTimer;
-    //add_repeating_timer_us(tempPeriod, tempScheduler, NULL, &tempSchedulerTimer);
-    repeating_timer_t tempSyncTimer;
+    int64_t tempPeriod = 50000;
+    repeating_timer_t tempSchedulerTimer;
+    add_repeating_timer_us(tempPeriod, tempSchedulerCallback, NULL, &tempSchedulerTimer);
+    repeating_timer_t tempSyncTimer; // for internal clock...?
     add_repeating_timer_us(500000, tempSyncTimerCallback, NULL, &tempSyncTimer);
 
     beatPlaying = true;
