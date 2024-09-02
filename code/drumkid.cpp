@@ -57,19 +57,6 @@ int pulseTimeTotal;
 uint64_t alarmTimes[32] = {0};
 uint64_t hitTimes[32] = {0};
 
-void nextHit()
-{
-    step++;
-    //printf("step %d\n", step);
-
-    nextHitTime += stepTime;
-
-    if (step >= numSteps)
-    {
-        step = 0;
-    }
-}
-
 int temp1 = QUARTER_NOTE_STEPS * 2;
 int temp2 = QUARTER_NOTE_STEPS / 4;
 void scheduleHits()
@@ -77,16 +64,17 @@ void scheduleHits()
     //printf("schedule hits %d\n", step);
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        if ((i == 0 && step == 0) || (i == 1 && step == temp1) || (i == 2 && step % temp2 == 0))
-        {
-            // if current beat contains a hit on this step, calculate the velocity and queue the hit
-            samples[i].queueHit(nextHitTime, step, 4095);
-        }
-        // if (true || beats[beatNum].getHit(i, step, 0))
+        // if ((i == 0 && step == 0) || (i == 1 && step == temp1) || (i == 2 && step % temp2 == 0))
         // {
         //     // if current beat contains a hit on this step, calculate the velocity and queue the hit
         //     samples[i].queueHit(nextHitTime, step, 4095);
         // }
+        int tempMicroStep = step * 105;
+        if (beats[beatNum].getHit(i, tempMicroStep))
+        {
+            // if current beat contains a hit on this step, calculate the velocity and queue the hit
+            samples[i].queueHit(nextHitTime, tempMicroStep/105, 4095);
+        }
     }
 }
 
@@ -168,7 +156,18 @@ int main()
     findCurrentFlashSettingsSector();
     initGpio();
     initSamplesFromFlash();
-    loadBeatsFromFlash();
+    //loadBeatsFromFlash();
+
+    // temp beat setting
+    beats[0].addHit(0, 0, 255);
+    beats[0].addHit(1, 2*3360, 255);
+    beats[0].addHit(2, 0*3360/2, 255);
+    beats[0].addHit(2, 1*3360/2, 255);
+    beats[0].addHit(2, 2*3360/2, 255);
+    beats[0].addHit(2, 3*3360/2, 255);
+    beats[0].addHit(2, 6 * 3360 / 3, 255);
+    beats[0].addHit(2, 7 * 3360 / 3, 255);
+    beats[0].addHit(2, 8 * 3360 / 3, 255);
 
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
@@ -316,7 +315,7 @@ void loadBeatsFromFlash()
     {
         for (int j = 0; j < NUM_SAMPLES; j++)
         {
-            std::memcpy(&beats[i].beatData[j], &flashUserBeats[8 * (i * NUM_SAMPLES + j)], 8);
+            //std::memcpy(&beats[i].beatData[j], &flashUserBeats[8 * (i * NUM_SAMPLES + j)], 8);
         }
     }
     backupBeat(beatNum);
@@ -326,7 +325,7 @@ void backupBeat(int backupBeatNum)
 {
     for (int i = 0; i < NUM_SAMPLES; i++)
     {
-        beatBackup.beatData[i] = beats[backupBeatNum].beatData[i];
+        //beatBackup.beatData[i] = beats[backupBeatNum].beatData[i];
     }
 }
 

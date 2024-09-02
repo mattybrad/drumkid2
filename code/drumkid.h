@@ -134,7 +134,7 @@ uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds
 int samplesPerStep;                                         // slower tempos give higher values
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
-int beatNum = 6;
+int beatNum = 0;
 int saveBeatLocation;
 Beat beats[NUM_BEATS];
 Beat beatBackup; // copy of current beat before editing, to allow easy revert if not saving new version
