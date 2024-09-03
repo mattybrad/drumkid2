@@ -65,80 +65,53 @@ int64_t deltaT;                 // microseconds
 
 int temp1 = QUARTER_NOTE_STEPS * 2;
 int temp2 = QUARTER_NOTE_STEPS / 4;
-void scheduleHits()
-{
-    //printf("schedule hits %d\n", step);
-    for (int i = 0; i < NUM_SAMPLES; i++)
-    {
-        // if ((i == 0 && step == 0) || (i == 1 && step == temp1) || (i == 2 && step % temp2 == 0))
-        // {
-        //     // if current beat contains a hit on this step, calculate the velocity and queue the hit
-        //     samples[i].queueHit(nextHitTime, step, 4095);
-        // }
-        int tempMicroStep = step * 105;
-        if (beats[beatNum].getHit(i, tempMicroStep))
-        {
-            // if current beat contains a hit on this step, calculate the velocity and queue the hit
-            samples[i].queueHit(nextHitTime, tempMicroStep/105, 4095);
-        }
-    }
-}
 int scheduledUntilStep = 0;
-void scheduleHitsNew() {
-    int maxStep = (step + 500) % (4*3360); // very much temp, should depend on tempo etc
-    while(maxStep < scheduledUntilStep) maxStep += 4 * 3360;
-    printf("%d %d %d\n", step, scheduledUntilStep, maxStep);
-    for(int i=scheduledUntilStep; i<maxStep; i++) {
-        if(i%3360==0) {
-            uint64_t queueTime = prevQuarterNote + ((i%3360) * (nextQuarterNote - prevQuarterNote)) / 3360;
-            printf("hit! %d\n", i);
-            samples[i%(4*3360)==0?0:2].queueHit(queueTime, i%(4*3360), 4095);
+void scheduleHits() {
+    // at 10ms scheduler interval, gap is approx 50 steps
+    // schedule ahead 250 steps just to be safe while testing
+    int from = scheduledUntilStep;
+    int to = step + 20;
+    if(from < step) {
+        to = to % 3360;
+    }
+    //printf("f%d-t%d ", from, to);
+    for(int i=from; i<to; i++) {
+        if(i%420==0) {
+            uint64_t hitTime = prevQuarterNote + (i * (nextQuarterNote - prevQuarterNote)) / 3360;
+            samples[2].queueHit(hitTime, i, 4095);
+            if(i%3360==0) samples[0].queueHit(hitTime, i, 4095);
+            if(i%3360==1680) samples[1].queueHit(hitTime, i, 4095);
+            //printf("\nHIT %d\n", i);
         }
     }
-    scheduledUntilStep = maxStep % (4*3360);
-}
-
-alarm_id_t stepAlarm = 0;
-int64_t stepAlarmCallback(alarm_id_t id, void *user_data)
-{
-    step ++;
-    if(step >= numSteps) {
-        step = 0;
-    }
-    nextHitTime = hitTimes[(step + QUARTER_NOTE_STEPS - 1) % (QUARTER_NOTE_STEPS / ppqn)]; // hacky...
-    //scheduleHits();
-    scheduleHitsNew();
-    if((step%(QUARTER_NOTE_STEPS/ppqn))!=0) {
-        setStepAlarm();
-    }
-    return 0;
-}
-
-void setStepAlarm() {
-    if(stepAlarm > 0) cancel_alarm(stepAlarm);
-    int64_t stepTimeUs = alarmTimes[step % (QUARTER_NOTE_STEPS/ppqn)] - time_us_64();
-    stepAlarm = add_alarm_in_us(stepTimeUs-5000, stepAlarmCallback, NULL, true); // 5000 makes sure scheduling happens in time, can be tweaked for stability
+    scheduledUntilStep = to % 3360;
 }
 
 bool firstHit = true;
 void handleSyncPulse() {
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
+    deltaT -= 100;
     if (lastClockIn > 0)
     {
         if(firstHit) {
             prevQuarterNote = currentTime;
             nextQuarterNote = currentTime + (44100 * deltaT) / 1000000;
             firstHit = false;
-            scheduleHitsNew();
+            scheduleHits();
         }
-        for(int i=0; i<32/ppqn; i++) {
-            //alarmTimes[i] = time_us_64() + ((i+1) * deltaT * ppqn) / QUARTER_NOTE_STEPS;
-            //hitTimes[i] = nextHitTime + (44100 * (i+1) * deltaT * ppqn) / (QUARTER_NOTE_STEPS * 1000000);
-            //printf("%llu %llu\n", alarmTimes[i], hitTimes[i]);
+        if (nextQuarterNote - currentTime < 0)
+        {
+            deltaT += 256; // this part should be tweaked, should be dependent on ppqn
+            printf("\ntweak timing\n");
         }
+        /*if (nextQuarterNote - currentTime < -500)
+        {
+            prevQuarterNote = currentTime;
+            nextQuarterNote = currentTime + (44100 * deltaT) / 1000000;
+            printf("\nreset timing\n");
+        }*/
         //printf("diff %lld\n", nextHitTime - currentTime);
-        //setStepAlarm();
     }
     lastClockIn = time_us_64();
 }
@@ -149,10 +122,11 @@ bool tempSchedulerCallback(repeating_timer_t *rt)
         prevQuarterNote = nextQuarterNote;
         nextQuarterNote += (44100 * deltaT) / 1000000;
         quarterNote = (quarterNote + 1) % 4;
-        if(quarterNote == 0) printf("NEW BAR\n");
+        //printf("\nQN%d\n", quarterNote);
     }
-    step = 3360 * quarterNote + ((currentTime - prevQuarterNote) * 3360) / (nextQuarterNote - prevQuarterNote);
-    scheduleHitsNew();
+    step = ((currentTime - prevQuarterNote) * 3360) / (nextQuarterNote - prevQuarterNote);
+    //printf("%d ", step);
+    scheduleHits();
     return true;
 }
 
@@ -199,7 +173,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    int64_t tempPeriod = 50000;
+    int64_t tempPeriod = 500;
     repeating_timer_t tempSchedulerTimer;
     add_repeating_timer_us(tempPeriod, tempSchedulerCallback, NULL, &tempSchedulerTimer);
     repeating_timer_t tempSyncTimer; // for internal clock...?
