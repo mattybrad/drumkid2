@@ -67,31 +67,13 @@ int temp1 = QUARTER_NOTE_STEPS * 2;
 int temp2 = QUARTER_NOTE_STEPS / 4;
 int scheduledUntilStep = 0;
 void scheduleHits() {
-    // at 10ms scheduler interval, gap is approx 50 steps
-    // schedule ahead 250 steps just to be safe while testing
-    int from = scheduledUntilStep;
-    int to = step + 20;
-    if(from < step) {
-        to = to % 3360;
-    }
-    //printf("f%d-t%d ", from, to);
-    for(int i=from; i<to; i++) {
-        if(i%420==0) {
-            uint64_t hitTime = prevQuarterNote + (i * (nextQuarterNote - prevQuarterNote)) / 3360;
-            samples[2].queueHit(hitTime, i, 4095);
-            if(i%3360==0) samples[0].queueHit(hitTime, i, 4095);
-            if(i%3360==1680) samples[1].queueHit(hitTime, i, 4095);
-            //printf("\nHIT %d\n", i);
-        }
-    }
-    scheduledUntilStep = to % 3360;
+    
 }
 
 bool firstHit = true;
 void handleSyncPulse() {
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
-    deltaT -= 100;
     if (lastClockIn > 0)
     {
         if(firstHit) {
@@ -116,25 +98,11 @@ void handleSyncPulse() {
     lastClockIn = time_us_64();
 }
 
-bool tempSchedulerCallback(repeating_timer_t *rt)
-{
-    if(currentTime >= nextQuarterNote) {
-        prevQuarterNote = nextQuarterNote;
-        nextQuarterNote += (44100 * deltaT) / 1000000;
-        quarterNote = (quarterNote + 1) % 4;
-        //printf("\nQN%d\n", quarterNote);
-    }
-    step = ((currentTime - prevQuarterNote) * 3360) / (nextQuarterNote - prevQuarterNote);
-    //printf("%d ", step);
-    scheduleHits();
-    return true;
-}
-
 bool tempSyncTimerCallback(repeating_timer_t *rt)
 {
     if (!tempExtSync)
     {
-        handleSyncPulse();
+        //handleSyncPulse();
     }
     return true;
 }
@@ -161,13 +129,13 @@ int main()
     // temp beat setting
     beats[0].addHit(0, 0, 255);
     beats[0].addHit(1, 2*3360, 255);
-    beats[0].addHit(2, 0*3360/2, 255);
-    beats[0].addHit(2, 1*3360/2, 255);
-    beats[0].addHit(2, 2*3360/2, 255);
-    beats[0].addHit(2, 3*3360/2, 255);
-    beats[0].addHit(2, 6 * 3360 / 3, 255);
-    beats[0].addHit(2, 8 * 3360 / 3, 255);
-    beats[0].addHit(2, 10 * 3360 / 3, 255);
+    for(int i=0; i<24; i++) {
+        beats[0].addHit(2, (i*4*3360)/24, 64);
+    }
+    for (int i = 0; i < 10; i++)
+    {
+        beats[0].addHit(3, (i * 4 * 3360) / 10, 64);
+    }
 
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
@@ -175,13 +143,14 @@ int main()
 
     int64_t tempPeriod = 500;
     repeating_timer_t tempSchedulerTimer;
-    add_repeating_timer_us(tempPeriod, tempSchedulerCallback, NULL, &tempSchedulerTimer);
+    //add_repeating_timer_us(tempPeriod, tempSchedulerCallback, NULL, &tempSchedulerTimer);
     repeating_timer_t tempSyncTimer; // for internal clock...?
     add_repeating_timer_us(500000, tempSyncTimerCallback, NULL, &tempSyncTimer);
 
     beatPlaying = true;
 
     // audio buffer loop, runs forever
+    int lastStep = -1;
     while (true)
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
@@ -190,24 +159,41 @@ int main()
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
+            currentTime ++;
+
             // sample updates go here
             int32_t out1 = 0;
             int32_t out2 = 0;
 
+            if(currentTime >= nextQuarterNote) {
+                prevQuarterNote = nextQuarterNote;
+                nextQuarterNote += 22050;
+                quarterNote = (quarterNote + 1) % 4;
+            }
+
+            int microstep = (3360 * (currentTime - prevQuarterNote)) / (nextQuarterNote - prevQuarterNote);
+            int checkBeat = false;
+
+            if(microstep != lastStep) {
+                checkBeat = true;
+            }
+            lastStep = microstep;
+
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
-                bool didTrigger = samples[j].update(currentTime + (i >> 1)); // could be more efficient
-                if (true||samples[j].output1)
-                    out1 += samples[j].value;
-                if (samples[j].output2)
-                    out2 += samples[j].value;
+                if(checkBeat) {
+                    if(beats[0].getHit(j, microstep + 3360 * quarterNote)) {
+                        samples[j].queueHit(currentTime, 0, 4095);
+                    }
+                }
+                samples[j].update(currentTime);
+                out1 += samples[j].value;
             }
             bufferSamples[i] = out1 >> 2;
-            bufferSamples[i + 1] = rand() % 8192;
+            bufferSamples[i + 1] = 0;
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
-        currentTime += SAMPLES_PER_BUFFER;
     }
     return 0;
 }
