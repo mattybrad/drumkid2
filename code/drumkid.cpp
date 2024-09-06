@@ -48,17 +48,17 @@ int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
 uint16_t step = 0;
 uint16_t nextBigStep = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
-int ppqn = 1;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
 bool tempExtSync = true;
 int pulseTimeTotal;
 uint64_t alarmTimes[32] = {0};
 uint64_t hitTimes[32] = {0};
-uint64_t prevQuarterNote = 0;   // samples
-uint64_t nextQuarterNote = 0;   // samples
-uint64_t scheduledUntil = 0;    // samples
-uint64_t nextPredictedPulse;    // samples?
+
+int ppqn = 4;
+uint64_t prevPulseTime = 0; // samples
+uint64_t nextPulseTime = 0; // samples
+uint64_t nextPredictedPulseTime = 0; // samples
 uint quarterNote = 0;
 int64_t deltaT;                 // microseconds
 int64_t lastDacUpdateSamples;   // samples
@@ -80,15 +80,15 @@ void handleSyncPulse() {
     {
         int64_t currentTimeSamples = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
         if(firstHit) {
-            nextQuarterNote = currentTimeSamples + SAMPLES_PER_BUFFER;
-            nextPredictedPulse = nextQuarterNote + (44100 * deltaT) / 1000000;
-            prevQuarterNote = nextQuarterNote - (44100*deltaT)/1000000; // for completeness, but maybe not used?
+            nextPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
+            nextPredictedPulseTime = nextPulseTime + (44100 * deltaT) / (1000000);
+            prevPulseTime = nextPulseTime - (44100 * deltaT) / (1000000); // for completeness, but maybe not used?
             firstHit = false;
             beatStarted = true;
         } else {
-            nextQuarterNote = currentTimeSamples + SAMPLES_PER_BUFFER;
-            nextPredictedPulse = nextQuarterNote + (44100 * deltaT) / 1000000;
-            prevQuarterNote = nextQuarterNote - (44100 * deltaT) / 1000000;
+            nextPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
+            nextPredictedPulseTime = nextPulseTime + (44100 * deltaT) / (1000000);
+            prevPulseTime = nextPulseTime - (44100 * deltaT) / (1000000);
         }
 
     }
@@ -159,16 +159,15 @@ int main()
             int32_t out1 = 0;
             int32_t out2 = 0;
 
-            if(beatStarted && currentTime >= nextQuarterNote) {
-                prevQuarterNote = nextQuarterNote;
-                nextQuarterNote += (44100*deltaT)/1000000;
-                quarterNote = (quarterNote + 1) % 4;
+            if(beatStarted && currentTime >= nextPulseTime) {
+                prevPulseTime = nextPulseTime;
+                nextPulseTime += (44100*deltaT)/(1000000);
             }
 
-            int64_t microstep = (3360 * (currentTime - prevQuarterNote)) / (nextQuarterNote - prevQuarterNote);
+            int64_t microstep = (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
             bool checkBeat = false;
 
-            if(beatStarted && currentTime < nextPredictedPulse && microstep != lastStep) {
+            if(beatStarted && currentTime < nextPredictedPulseTime && microstep != lastStep) {
                 checkBeat = true;
             }
             lastStep = microstep;
@@ -176,7 +175,10 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 if(checkBeat) {
-                    if(beats[0].getHit(j, microstep + 3360 * quarterNote)) {
+                    // if(beats[0].getHit(j, microstep + step)) {
+                    //     samples[j].queueHit(currentTime, 0, 4095);
+                    // }
+                    if((microstep + step) % 105 == 0) {
                         samples[j].queueHit(currentTime, 0, 4095);
                     }
                 }
@@ -185,6 +187,12 @@ int main()
             }
             bufferSamples[i] = out1 >> 2;
             bufferSamples[i + 1] = 0;
+
+            if(checkBeat) {
+                if(microstep == 0) {
+                    step = (step + (3360/ppqn)) % (4*3360);
+                }
+            }
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
