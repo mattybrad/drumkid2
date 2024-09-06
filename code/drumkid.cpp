@@ -55,7 +55,7 @@ int pulseTimeTotal;
 uint64_t alarmTimes[32] = {0};
 uint64_t hitTimes[32] = {0};
 
-int ppqn = 4;
+int ppqn = 24;
 uint64_t prevPulseTime = 0; // samples
 uint64_t nextPulseTime = 0; // samples
 uint64_t nextPredictedPulseTime = 0; // samples
@@ -175,12 +175,12 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 if(checkBeat) {
-                    // if(beats[0].getHit(j, microstep + step)) {
-                    //     samples[j].queueHit(currentTime, 0, 4095);
-                    // }
-                    if((microstep + step) % 105 == 0) {
+                    if(beats[0].getHit(j, microstep + step)) {
                         samples[j].queueHit(currentTime, 0, 4095);
                     }
+                    // if((microstep + step) % 105 == 0) {
+                    //     samples[j].queueHit(currentTime, 0, 4095);
+                    // }
                 }
                 samples[j].update(currentTime);
                 out1 += samples[j].value;
