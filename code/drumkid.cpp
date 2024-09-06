@@ -52,16 +52,18 @@ int ppqn = 1;
 uint64_t lastClockIn = 0;
 uint64_t maxHitTime = 0;
 bool tempExtSync = true;
-uint64_t nextPredictedPulse;
 int pulseTimeTotal;
 uint64_t alarmTimes[32] = {0};
 uint64_t hitTimes[32] = {0};
 uint64_t prevQuarterNote = 0;   // samples
 uint64_t nextQuarterNote = 0;   // samples
 uint64_t scheduledUntil = 0;    // samples
-uint64_t scheduleWindow = 1000; // samples
+uint64_t nextPredictedPulse;    // samples?
 uint quarterNote = 0;
 int64_t deltaT;                 // microseconds
+int64_t lastDacUpdateSamples;   // samples
+int64_t lastDacUpdateMicros;    // microseconds
+bool beatStarted = false;
 
 int temp1 = QUARTER_NOTE_STEPS * 2;
 int temp2 = QUARTER_NOTE_STEPS / 4;
@@ -76,24 +78,19 @@ void handleSyncPulse() {
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
     if (lastClockIn > 0)
     {
+        int64_t currentTimeSamples = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
         if(firstHit) {
-            prevQuarterNote = currentTime;
-            nextQuarterNote = currentTime + (44100 * deltaT) / 1000000;
+            nextQuarterNote = currentTimeSamples + SAMPLES_PER_BUFFER;
+            nextPredictedPulse = nextQuarterNote + (44100 * deltaT) / 1000000;
+            prevQuarterNote = nextQuarterNote - (44100*deltaT)/1000000; // for completeness, but maybe not used?
             firstHit = false;
-            scheduleHits();
+            beatStarted = true;
+        } else {
+            nextQuarterNote = currentTimeSamples + SAMPLES_PER_BUFFER;
+            nextPredictedPulse = nextQuarterNote + (44100 * deltaT) / 1000000;
+            prevQuarterNote = nextQuarterNote - (44100 * deltaT) / 1000000;
         }
-        if (nextQuarterNote - currentTime < 0)
-        {
-            deltaT += 256; // this part should be tweaked, should be dependent on ppqn
-            printf("\ntweak timing\n");
-        }
-        /*if (nextQuarterNote - currentTime < -500)
-        {
-            prevQuarterNote = currentTime;
-            nextQuarterNote = currentTime + (44100 * deltaT) / 1000000;
-            printf("\nreset timing\n");
-        }*/
-        //printf("diff %lld\n", nextHitTime - currentTime);
+
     }
     lastClockIn = time_us_64();
 }
@@ -129,12 +126,9 @@ int main()
     // temp beat setting
     beats[0].addHit(0, 0, 255);
     beats[0].addHit(1, 2*3360, 255);
-    for(int i=0; i<24; i++) {
-        beats[0].addHit(2, (i*4*3360)/24, 64);
-    }
-    for (int i = 0; i < 10; i++)
-    {
-        beats[0].addHit(3, (i * 4 * 3360) / 10, 64);
+    int numHatsTemp = 16;
+    for(int i=0; i<numHatsTemp; i++) {
+        beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64);
     }
 
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -165,16 +159,16 @@ int main()
             int32_t out1 = 0;
             int32_t out2 = 0;
 
-            if(currentTime >= nextQuarterNote) {
+            if(beatStarted && currentTime >= nextQuarterNote) {
                 prevQuarterNote = nextQuarterNote;
-                nextQuarterNote += 22050;
+                nextQuarterNote += (44100*deltaT)/1000000;
                 quarterNote = (quarterNote + 1) % 4;
             }
 
-            int microstep = (3360 * (currentTime - prevQuarterNote)) / (nextQuarterNote - prevQuarterNote);
-            int checkBeat = false;
+            int64_t microstep = (3360 * (currentTime - prevQuarterNote)) / (nextQuarterNote - prevQuarterNote);
+            bool checkBeat = false;
 
-            if(microstep != lastStep) {
+            if(beatStarted && currentTime < nextPredictedPulse && microstep != lastStep) {
                 checkBeat = true;
             }
             lastStep = microstep;
@@ -194,6 +188,8 @@ int main()
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
+        lastDacUpdateSamples = currentTime;
+        lastDacUpdateMicros = time_us_64();
     }
     return 0;
 }
