@@ -42,20 +42,13 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "drumkid.h"
 
 // globals, organise later
-int64_t nextHitTime = 0; // in samples
-int64_t currentTime = 0; // in samples
-int scheduleAheadTime = SAMPLES_PER_BUFFER * 4; // in samples, was 0.02 seconds
+int64_t currentTime = 0; // samples
 uint16_t step = 0;
-uint16_t nextBigStep = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
-uint64_t lastClockIn = 0;
-uint64_t maxHitTime = 0;
-bool tempExtSync = true;
-int pulseTimeTotal;
-uint64_t alarmTimes[32] = {0};
-uint64_t hitTimes[32] = {0};
+uint64_t lastClockIn = 0; // microseconds
+bool tempExtSync = false;
 
-int ppqn = 24;
+int ppqn = 32;
 uint64_t prevPulseTime = 0; // samples
 uint64_t nextPulseTime = 0; // samples
 uint64_t nextPredictedPulseTime = 0; // samples
@@ -64,15 +57,8 @@ int64_t deltaT;                 // microseconds
 int64_t lastDacUpdateSamples;   // samples
 int64_t lastDacUpdateMicros;    // microseconds
 bool beatStarted = false;
-
-int temp1 = QUARTER_NOTE_STEPS * 2;
-int temp2 = QUARTER_NOTE_STEPS / 4;
-int scheduledUntilStep = 0;
-void scheduleHits() {
-    
-}
-
 bool firstHit = true;
+
 void handleSyncPulse() {
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
@@ -93,15 +79,6 @@ void handleSyncPulse() {
 
     }
     lastClockIn = time_us_64();
-}
-
-bool tempSyncTimerCallback(repeating_timer_t *rt)
-{
-    if (!tempExtSync)
-    {
-        //handleSyncPulse();
-    }
-    return true;
 }
 
 void gpio_callback(uint gpio, uint32_t events)
@@ -126,7 +103,7 @@ int main()
     // temp beat setting
     beats[0].addHit(0, 0, 255);
     beats[0].addHit(1, 2*3360, 255);
-    int numHatsTemp = 16;
+    int numHatsTemp = 64;
     for(int i=0; i<numHatsTemp; i++) {
         beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64);
     }
@@ -135,13 +112,14 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    int64_t tempPeriod = 500;
-    repeating_timer_t tempSchedulerTimer;
-    //add_repeating_timer_us(tempPeriod, tempSchedulerCallback, NULL, &tempSchedulerTimer);
-    repeating_timer_t tempSyncTimer; // for internal clock...?
-    add_repeating_timer_us(500000, tempSyncTimerCallback, NULL, &tempSyncTimer);
-
     beatPlaying = true;
+
+    if (!tempExtSync)
+    {
+        ppqn = 1;
+        deltaT = 250000;
+        beatStarted = true;
+    }
 
     // audio buffer loop, runs forever
     int lastStep = -1;
@@ -162,6 +140,9 @@ int main()
             if(beatStarted && currentTime >= nextPulseTime) {
                 prevPulseTime = nextPulseTime;
                 nextPulseTime += (44100*deltaT)/(1000000);
+                if(!tempExtSync) {
+                    nextPredictedPulseTime = nextPulseTime;
+                }
             }
 
             int64_t microstep = (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
@@ -175,12 +156,12 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 if(checkBeat) {
-                    if(beats[0].getHit(j, microstep + step)) {
-                        samples[j].queueHit(currentTime, 0, 4095);
-                    }
-                    // if((microstep + step) % 105 == 0) {
+                    // if(beats[0].getHit(j, microstep + step)) {
                     //     samples[j].queueHit(currentTime, 0, 4095);
                     // }
+                    if((microstep + step) % 105 == 0) {
+                        samples[j].queueHit(currentTime, 0, 4095);
+                    }
                 }
                 samples[j].update(currentTime);
                 out1 += samples[j].value;

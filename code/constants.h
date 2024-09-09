@@ -9,6 +9,6 @@
 #define NUM_TUPLET_MODES 4
 #define HIT_QUEUE_SIZE 8
 #define FADE_OUT 64 // must be smaller than schedule ahead time(?) to work properly
-#define MAX_BEAT_HITS 64
+#define MAX_BEAT_HITS 128
 
 #endif
