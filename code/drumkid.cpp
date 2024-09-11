@@ -123,12 +123,22 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
             }
             printf("\n");
         }
-        // printf("\n%4d 0x%08X\t\t", loop, data);
-        // printf("%08b %08b %08b %08b\n",
-        //         (data >> 24) & 0xFF,
-        //         (data >> 16) & 0xFF,
-        //         (data >> 8) & 0xFF,
-        //         data & 0xFF);
+        if(data == 0x00010000) {
+            beatStarted = !beatStarted;
+            if(beatStarted) {
+                step = 0;
+                prevPulseTime = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
+                nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
+                nextPredictedPulseTime = nextPulseTime;
+            }
+        }
+
+        printf("\n%4d 0x%08X\t\t", loop, data);
+        printf("%08b %08b %08b %08b\n",
+                (data >> 24) & 0xFF,
+                (data >> 16) & 0xFF,
+                (data >> 8) & 0xFF,
+                data & 0xFF);
     }
 
     return true;
@@ -191,6 +201,8 @@ int main()
     {
         ppqn = 1;
         deltaT = 500000;
+        nextPulseTime = (44100 * deltaT) / (1000000);
+        nextPredictedPulseTime = nextPulseTime;
         beatStarted = true;
     }
 
@@ -239,7 +251,7 @@ int main()
                         }
                     } else {
                         int randNum = rand() % 4095;
-                        if (((microstep + step) % 105) == 0 && tempChance > randNum)
+                        if (((microstep + step) % 1680) == 0 && tempChance > randNum)
                         {
                             samples[j].queueHit(currentTime, 0, 4095);
                         }
