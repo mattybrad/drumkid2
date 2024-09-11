@@ -42,6 +42,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "Beat.h"
 #include "drumkid.h"
 #include "sn74595.pio.h"
+#include "sn74165.pio.h"
 
 // globals, organise later
 int64_t currentTime = 0; // samples
@@ -127,13 +128,35 @@ int main()
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
-
-
-    struct audio_buffer_pool *ap = init_audio();
-
     // testing PIO stuff
     sn74595::shiftreg_init();
+    sn74165::shiftreg_init();
+    uint32_t data;
+    uint32_t data2;
+    bool inpChanged;
+
+    int loop = 0;
+    while (true)
+    {
+        data = sn74165::shiftreg_get(&inpChanged);
+        if (inpChanged)
+        {
+            loop++;
+            printf("\n%4d 0x%08X\t\t", loop, data);
+            printf("%08b %08b %08b %08b\n",
+                   (data >> 24) & 0xFF,
+                   (data >> 16) & 0xFF,
+                   (data >> 8) & 0xFF,
+                   data & 0xFF);
+        }
+        else
+            printf(".");
+
+        sleep_ms(200);
+    }
     // end testing PIO
+
+    struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
 

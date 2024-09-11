@@ -10,6 +10,7 @@ add_executable(drumkid
         )
 
 pico_generate_pio_header(drumkid ${CMAKE_CURRENT_LIST_DIR}/sn74595.pio)
+pico_generate_pio_header(drumkid ${CMAKE_CURRENT_LIST_DIR}/sn74165.pio)
 project(drumkid)
 
 pico_sdk_init()
