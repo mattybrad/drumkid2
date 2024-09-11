@@ -451,3 +451,6 @@ RIGHT. I've been through a lot of changes in the last week or so. The 32-alarms 
 
 6/9/24
 Yep, this is all working great. Way easier to calculate sync in pulse, PPQN stuff, all of that. HZQD seems stable once you pick a sensible PPQN. 24PPQN is suddenly no biggy. And I should be able to revert back to a fully DAC-timing-based system for internal clock, no faffing with pulses. Plus I can presumably now monitor performance issues really easily? I can record the time it takes to do all the stuff before I update the DAC, and if it's anywhere near 6ms then I've got issues. MONDAY: tidy everything up, remove old code, check variable names make sense, add comments, then add internal clock mode etc. After that, bring back shift register stuff to check that the timers don't mess with the DAC (maybe try and run more stuff directly after the DAC has updated, keep everything aligned on a 6ms cycle).
+
+11/9/24
+Well, everything is coming up Milhouse. I've 

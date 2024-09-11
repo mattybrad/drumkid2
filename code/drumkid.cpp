@@ -64,6 +64,7 @@ bool firstHit = true;
 
 repeating_timer_t outputShiftRegistersTimer;
 repeating_timer_t inputShiftRegistersTimer;
+repeating_timer_t multiplexersTimer;
 
 void handleSyncPulse() {
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
@@ -116,14 +117,34 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
     if (tempInputChanged)
     {
         loop++;
-        if(data!=0) pulseGpio(SYNC_OUT, 10);
-        printf("\n%4d 0x%08X\t\t", loop, data);
-        printf("%08b %08b %08b %08b\n",
-                (data >> 24) & 0xFF,
-                (data >> 16) & 0xFF,
-                (data >> 8) & 0xFF,
-                data & 0xFF);
+        if(data!=0) {
+            for(int i=0; i<16; i++) {
+                printf("%d\t", analogReadings[i]);
+            }
+            printf("\n");
+        }
+        // printf("\n%4d 0x%08X\t\t", loop, data);
+        // printf("%08b %08b %08b %08b\n",
+        //         (data >> 24) & 0xFF,
+        //         (data >> 16) & 0xFF,
+        //         (data >> 8) & 0xFF,
+        //         data & 0xFF);
     }
+
+    return true;
+}
+
+int tempMuxAddr = 0;
+bool updateMultiplexers(repeating_timer_t *rt)
+{
+    adc_select_input(0);
+    analogReadings[tempMuxAddr] = 4095 - adc_read();
+    adc_select_input(1);
+    analogReadings[tempMuxAddr + 8] = 4095 - adc_read();
+    tempMuxAddr = (tempMuxAddr + 1) % 8;
+    gpio_put(MUX_ADDR_A, bitRead(tempMuxAddr, 0));
+    gpio_put(MUX_ADDR_B, bitRead(tempMuxAddr, 1));
+    gpio_put(MUX_ADDR_C, bitRead(tempMuxAddr, 2));
 
     return true;
 }
@@ -151,15 +172,16 @@ int main()
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
-    // testing PIO stuff
+    // init PIO programs
     sn74595::shiftreg_init();
     sn74165::shiftreg_init();
-    // end testing PIO
+
+    // can tweak timing for any of these
+    add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
+    add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
+    add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe
 
     struct audio_buffer_pool *ap = init_audio();
-
-    add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
-    add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer);
 
     beatPlaying = true;
 
