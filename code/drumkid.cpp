@@ -162,11 +162,13 @@ int main()
     //loadBeatsFromFlash();
 
     // temp beat setting
-    beats[0].addHit(0, 0, 255);
-    beats[0].addHit(1, 2*3360, 255);
+    beats[0].addHit(0, 0, 255, 255, 0);
+    beats[0].addHit(1, 2*3360, 255, 255, 0);
+    beats[0].addHit(1, 3*3360, 255, 127, 1);
+    beats[0].addHit(1, 7*3360/2, 255, 127, 1);
     int numHatsTemp = 16;
     for(int i=0; i<numHatsTemp; i++) {
-        beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64);
+        beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
     }
 
     // interrupt for clock in pulse
@@ -179,7 +181,7 @@ int main()
     // can tweak timing for any of these
     add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
     add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
-    add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe
+    add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe, potentially faster
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -202,8 +204,6 @@ int main()
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
-            currentTime ++;
-
             // sample updates go here
             int32_t out1 = 0;
             int32_t out2 = 0;
@@ -214,6 +214,7 @@ int main()
                 if(!tempExtSync) {
                     nextPredictedPulseTime = nextPulseTime;
                 }
+                step = (step + (3360 / ppqn)) % (4 * 3360);
             }
 
             int64_t microstep = (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
@@ -224,11 +225,24 @@ int main()
             }
             lastStep = microstep;
 
+            int tempChance = analogReadings[POT_CHANCE];
+
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 if(checkBeat) {
-                    if(beats[0].getHit(j, microstep + step)) {
-                        samples[j].queueHit(currentTime, 0, 4095);
+                    int foundHit = beats[0].getHit(j, microstep + step);
+                    if(foundHit >= 0) {
+                        int prob = beats[0].hits[foundHit].probability;
+                        int randNum = rand() % 255;
+                        if(prob>randNum) {
+                            samples[j].queueHit(currentTime, 0, 4095);
+                        }
+                    } else {
+                        int randNum = rand() % 4095;
+                        if (((microstep + step) % 105) == 0 && tempChance > randNum)
+                        {
+                            samples[j].queueHit(currentTime, 0, 4095);
+                        }
                     }
                     // if((microstep + step) % 105 == 0) {
                     //     samples[j].queueHit(currentTime, 0, 4095);
@@ -242,9 +256,11 @@ int main()
 
             if(checkBeat) {
                 if(microstep == 0) {
-                    step = (step + (3360/ppqn)) % (4*3360);
+                    //step = (step + (3360/ppqn)) % (4*3360);
                 }
             }
+
+            currentTime++;
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);

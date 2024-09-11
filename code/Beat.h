@@ -8,27 +8,30 @@ class Beat {
             uint8_t sample;
             uint16_t step;
             uint8_t velocity;
+            uint8_t probability;
+            uint8_t group;
         };
         Hit hits[MAX_BEAT_HITS];
         uint8_t numHits = 0;
-        void addHit(uint8_t sample, uint16_t step, uint8_t velocity)
+        void addHit(uint8_t sample, uint16_t step, uint8_t velocity, uint8_t probability, uint8_t group)
         {
             if(numHits < MAX_BEAT_HITS) {
                 hits[numHits].sample = sample;
                 hits[numHits].step = step;
                 hits[numHits].velocity = velocity;
+                hits[numHits].probability = probability;
+                hits[numHits].group = group;
             }
             numHits ++;
         }
-        bool getHit(uint8_t sample, uint16_t step)
+        int getHit(uint8_t sample, uint16_t step)
         {
-            bool isHit = false;
             for(int i=0; i<numHits; i++) {
                 if(hits[i].sample == sample && hits[i].step == step) {
-                    isHit = true;
+                    return i;
                 }
             }
-            return isHit;
+            return -1;
         }
         Beat() {
             
