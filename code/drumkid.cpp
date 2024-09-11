@@ -30,6 +30,7 @@ Aleatoric drum machine
 #include "hardware/adc.h"
 #include "hardware/flash.h"
 #include "hardware/irq.h"
+#include "hardware/pio.h"
 #include "pico/stdlib.h"
 // #include "pico/multicore.h"
 #include "pico/audio_i2s.h"
@@ -40,6 +41,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "Sample.h"
 #include "Beat.h"
 #include "drumkid.h"
+#include "blink.pio.h"
 
 // globals, organise later
 int64_t currentTime = 0; // samples
@@ -58,6 +60,8 @@ int64_t lastDacUpdateSamples;   // samples
 int64_t lastDacUpdateMicros;    // microseconds
 bool beatStarted = false;
 bool firstHit = true;
+
+void blink_pin_forever(PIO pio, uint sm, uint offset, uint pin, uint freq);
 
 void handleSyncPulse() {
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
@@ -108,16 +112,24 @@ int main()
         beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64);
     }
 
+    // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 
     struct audio_buffer_pool *ap = init_audio();
+
+    // testing PIO stuff
+    PIO pio = pio0;
+    uint offset = pio_add_program(pio, &blink_program);
+    uint sm = pio_claim_unused_sm(pio, true);
+    blink_pin_forever(pio, sm, offset, SYNC_OUT, 16);
+    // end testing PIO
 
     beatPlaying = true;
 
     if (!tempExtSync)
     {
         ppqn = 1;
-        deltaT = 250000;
+        deltaT = 500000;
         beatStarted = true;
     }
 
@@ -156,12 +168,12 @@ int main()
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 if(checkBeat) {
-                    // if(beats[0].getHit(j, microstep + step)) {
-                    //     samples[j].queueHit(currentTime, 0, 4095);
-                    // }
-                    if((microstep + step) % 105 == 0) {
+                    if(beats[0].getHit(j, microstep + step)) {
                         samples[j].queueHit(currentTime, 0, 4095);
                     }
+                    // if((microstep + step) % 105 == 0) {
+                    //     samples[j].queueHit(currentTime, 0, 4095);
+                    // }
                 }
                 samples[j].update(currentTime);
                 out1 += samples[j].value;
@@ -181,6 +193,18 @@ int main()
         lastDacUpdateMicros = time_us_64();
     }
     return 0;
+}
+
+void blink_pin_forever(PIO pio, uint sm, uint offset, uint pin, uint freq)
+{
+    blink_program_init(pio, sm, offset, pin);
+    pio_sm_set_enabled(pio, sm, true);
+
+    printf("Blinking pin %d at %d Hz\n", pin, freq);
+
+    // PIO counter program takes 3 more cycles in total than we pass as
+    // input (wait for n + 1; mov; jmp)
+    pio->txf[sm] = (clock_get_hz(clk_sys) / (2 * freq)) - 3;
 }
 
 #define FLASH_SETTINGS_START 0

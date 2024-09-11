@@ -2,12 +2,14 @@ cmake_minimum_required(VERSION 3.13)
 
 include(pico_sdk_import.cmake)
 include(pico_extras_import_optional.cmake)
+include($ENV{PICO_SDK_PATH}/tools/CMakeLists.txt)
 
 add_executable(drumkid
         drumkid.cpp
         hw_config.c
         )
 
+pico_generate_pio_header(drumkid ${CMAKE_CURRENT_LIST_DIR}/blink.pio)
 project(drumkid)
 
 pico_sdk_init()
@@ -20,6 +22,7 @@ target_link_libraries(drumkid PRIVATE
         pico_audio_i2s
         hardware_adc
         hardware_flash
+        hardware_pio
         FatFs_SPI
         )
 
