@@ -63,6 +63,7 @@ bool beatStarted = false;
 bool firstHit = true;
 
 repeating_timer_t outputShiftRegistersTimer;
+repeating_timer_t inputShiftRegistersTimer;
 
 void handleSyncPulse() {
     pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
@@ -105,6 +106,28 @@ bool updateOutputShiftRegisters(repeating_timer_t *rt)
     return true;
 }
 
+bool tempInputChanged = false;
+bool updateInputShiftRegisters(repeating_timer_t *rt)
+{
+    uint32_t data;
+
+    int loop = 0;
+    data = sn74165::shiftreg_get(&tempInputChanged);
+    if (tempInputChanged)
+    {
+        loop++;
+        if(data!=0) pulseGpio(SYNC_OUT, 10);
+        printf("\n%4d 0x%08X\t\t", loop, data);
+        printf("%08b %08b %08b %08b\n",
+                (data >> 24) & 0xFF,
+                (data >> 16) & 0xFF,
+                (data >> 8) & 0xFF,
+                data & 0xFF);
+    }
+
+    return true;
+}
+
 int main()
 {
     stdio_init_all();
@@ -131,34 +154,12 @@ int main()
     // testing PIO stuff
     sn74595::shiftreg_init();
     sn74165::shiftreg_init();
-    uint32_t data;
-    uint32_t data2;
-    bool inpChanged;
-
-    int loop = 0;
-    while (true)
-    {
-        data = sn74165::shiftreg_get(&inpChanged);
-        if (inpChanged)
-        {
-            loop++;
-            printf("\n%4d 0x%08X\t\t", loop, data);
-            printf("%08b %08b %08b %08b\n",
-                   (data >> 24) & 0xFF,
-                   (data >> 16) & 0xFF,
-                   (data >> 8) & 0xFF,
-                   data & 0xFF);
-        }
-        else
-            printf(".");
-
-        sleep_ms(200);
-    }
     // end testing PIO
 
     struct audio_buffer_pool *ap = init_audio();
 
     add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
+    add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer);
 
     beatPlaying = true;
 
