@@ -40,6 +40,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // Drumkid classes
 #include "Sample.h"
 #include "Beat.h"
+#include "sevensegcharacters.h"
 #include "drumkid.h"
 #include "sn74595.pio.h"
 #include "sn74165.pio.h"
@@ -49,7 +50,11 @@ int64_t currentTime = 0; // samples
 uint16_t step = 0;
 int numSteps = 4 * QUARTER_NOTE_STEPS;
 uint64_t lastClockIn = 0; // microseconds
-bool tempExtSync = false;
+bool externalClock = false;
+
+int activeButton = BOOTUP_VISUALS;
+int activeSetting = 0;
+int settingsMenuLevel = 0;
 
 int ppqn = 32;
 uint64_t prevPulseTime = 0; // samples
@@ -90,58 +95,579 @@ void handleSyncPulse() {
 
 void gpio_callback(uint gpio, uint32_t events)
 {
-    if(tempExtSync) {
+    if(externalClock) {
         handleSyncPulse();
     }
 }
 
+uint16_t shiftRegOutBase = 0b0000111100000000;
 int tempDigit = 0;
+
+void setLed(uint8_t ledNum, bool value) {
+    bitWrite(shiftRegOutBase, 15-ledNum, value);
+}
+
 bool updateOutputShiftRegisters(repeating_timer_t *rt)
 {
-    uint b = 0b1111111100000000;
-    bitWrite(b, 8+tempDigit, false);
-    bitWrite(b, tempDigit, true);
+    uint16_t b = shiftRegOutBase;
+    bitWrite(b, 8+tempDigit, false); // set digit's common anode low to activate
+    b += sevenSegData[tempDigit];
     sn74595::shiftreg_send(b);
     tempDigit = (tempDigit + 1) % 4;
 
     return true;
 }
 
-bool tempInputChanged = false;
+uint32_t shiftRegInValues = 0;
 bool updateInputShiftRegisters(repeating_timer_t *rt)
 {
     uint32_t data;
-
-    int loop = 0;
+    bool tempInputChanged = false;
     data = sn74165::shiftreg_get(&tempInputChanged);
     if (tempInputChanged)
     {
-        loop++;
-        if(data!=0) {
-            for(int i=0; i<16; i++) {
-                printf("%d\t", analogReadings[i]);
-            }
-            printf("\n");
-        }
-        if(data == 0x00010000) {
-            beatStarted = !beatStarted;
-            if(beatStarted) {
-                step = 0;
-                prevPulseTime = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
-                nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
-                nextPredictedPulseTime = nextPulseTime;
+        for(int i=0; i<32; i++) {
+            bool newVal = bitRead(data, i);
+            if(bitRead(shiftRegInValues, i) != newVal) {
+                uint8_t buttonNum = (2-(i>>3))*8 + (i%8) + 1; // to match SW num in schematic (SW1 is top left on unit)
+                handleButtonChange(buttonNum, newVal);
             }
         }
+        
+        //loop++;
 
-        printf("\n%4d 0x%08X\t\t", loop, data);
-        printf("%08b %08b %08b %08b\n",
-                (data >> 24) & 0xFF,
-                (data >> 16) & 0xFF,
-                (data >> 8) & 0xFF,
-                data & 0xFF);
+        // if(data!=0) {
+        //     for(int i=0; i<16; i++) {
+        //         printf("%d\t", analogReadings[i]);
+        //     }
+        //     printf("\n");
+        // }
+        // if(data == 0x00010000) {
+        //     beatStarted = !beatStarted;
+        //     if(beatStarted) {
+        //         step = 0;
+        //         prevPulseTime = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
+        //         nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
+        //         nextPredictedPulseTime = nextPulseTime;
+        //     }
+        // }
+
+        // printf("\n%4d 0x%08X\t\t", loop, data);
+        // printf("%08b %08b %08b %08b\n",
+        //         (data >> 24) & 0xFF,
+        //         (data >> 16) & 0xFF,
+        //         (data >> 8) & 0xFF,
+        //         data & 0xFF);
     }
 
     return true;
+}
+
+void handleButtonChange(int buttonNum, bool buttonState)
+{
+    if (buttonState)
+    {
+        switch (buttonNum)
+        {
+        case BUTTON_START_STOP:
+            
+            break;
+        case BUTTON_MENU:
+            activeButton = BUTTON_MENU;
+            // settingsMenuLevel = 0;
+            // displaySettings();
+            break;
+        case BUTTON_TAP_TEMPO:
+            activeButton = BUTTON_MANUAL_TEMPO;
+            // updateTapTempo();
+            // scheduleSaveSettings();
+            break;
+        case BUTTON_LIVE_EDIT:
+            activeButton = BUTTON_LIVE_EDIT;
+            break;
+        case BUTTON_INC:
+            if (activeButton == BUTTON_LIVE_EDIT)
+            {
+                //doLiveHit(0);
+            }
+            else
+            {
+                //nextHoldUpdateInc = currentTime + SAMPLE_RATE;
+                handleIncDec(true, false);
+            }
+            break;
+        case BUTTON_DEC:
+            if (activeButton == BUTTON_LIVE_EDIT)
+            {
+                //doLiveHit(1);
+            }
+            else
+            {
+                //nextHoldUpdateDec = currentTime + SAMPLE_RATE;
+                handleIncDec(false, false);
+            }
+            break;
+        case BUTTON_CONFIRM:
+            if (activeButton == BUTTON_LIVE_EDIT)
+            {
+                //doLiveHit(2);
+            }
+            else
+            {
+                handleYesNo(true);
+            }
+            break;
+        case BUTTON_CANCEL:
+            if (activeButton == BUTTON_LIVE_EDIT)
+            {
+                //doLiveHit(3);
+            }
+            else
+            {
+                handleYesNo(false);
+            }
+            break;
+        case BUTTON_BACK:
+            activeButton = NO_ACTIVE_BUTTON;
+            //settingsMenuLevel = 0;
+            break;
+        case BUTTON_KIT:
+            activeButton = BUTTON_KIT;
+            //sdShowFolderTemp = true;
+            break;
+        case BUTTON_MANUAL_TEMPO:
+            activeButton = BUTTON_MANUAL_TEMPO;
+            displayTempo();
+            break;
+        case BUTTON_TIME_SIGNATURE:
+            activeButton = BUTTON_TIME_SIGNATURE;
+            displayTimeSignature();
+            break;
+        case BUTTON_TUPLET:
+            activeButton = BUTTON_TUPLET;
+            displayTuplet();
+            break;
+        case BUTTON_BEAT:
+            activeButton = BUTTON_BEAT;
+            displayBeat();
+            break;
+        case BUTTON_CLEAR:
+            if (activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT)
+            {
+                // for (int i = 0; i < NUM_SAMPLES; i++)
+                // {
+                //     beats[beatNum].beatData[i] = 0;
+                // }
+            }
+            break;
+        case BUTTON_STEP_EDIT:
+            activeButton = BUTTON_STEP_EDIT;
+            displayEditBeat();
+            break;
+        case BUTTON_SAVE:
+            saveBeatLocation = beatNum;
+            activeButton = BUTTON_SAVE;
+            updateLedDisplayNumber(saveBeatLocation);
+            break;
+        default:
+            printf("(button %d not assigned)\n", buttonNum);
+        }
+    }
+}
+
+void handleIncDec(bool isInc, bool isHold)
+{
+    // have to declare stuff up here because of switch statement
+    int prevBeatNum;
+
+    switch (activeButton)
+    {
+    case BUTTON_MANUAL_TEMPO:
+        if (!externalClock)
+        {
+            if (isHold)
+            {
+                tempo += isInc ? 10 : -10;
+                tempo = 10 * ((tempo + 5) / 10);
+            }
+            else
+            {
+                tempo += isInc ? 1 : -1;
+            }
+            if (tempo > 9999)
+                tempo = 9999;
+            else if (tempo < 10)
+                tempo = 10;
+            stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
+            displayTempo();
+        }
+        break;
+
+    case BUTTON_TIME_SIGNATURE:
+        // newNumSteps += isInc ? QUARTER_NOTE_STEPS : -QUARTER_NOTE_STEPS;
+        // if (newNumSteps > 7 * QUARTER_NOTE_STEPS)
+        //     newNumSteps = 7 * QUARTER_NOTE_STEPS;
+        // else if (newNumSteps < QUARTER_NOTE_STEPS)
+        //     newNumSteps = QUARTER_NOTE_STEPS;
+        // if (!beatPlaying)
+        //     numSteps = newNumSteps;
+        displayTimeSignature();
+        break;
+
+    case BUTTON_BEAT:
+        prevBeatNum = beatNum;
+        beatNum += isInc ? 1 : -1;
+        if (beatNum >= NUM_BEATS)
+            beatNum = NUM_BEATS - 1;
+        if (beatNum < 0)
+            beatNum = 0;
+        if (beatNum != prevBeatNum)
+        {
+            //revertBeat(prevBeatNum);
+            //backupBeat(beatNum);6
+        }
+        displayBeat();
+        break;
+
+    case BUTTON_STEP_EDIT:
+        editSample += isInc ? 1 : -1;
+        if (editSample < 0)
+            editSample = 0;
+        if (editSample >= NUM_SAMPLES)
+            editSample = NUM_SAMPLES - 1;
+        displayEditBeat();
+        break;
+
+    case BUTTON_MENU:
+        if (settingsMenuLevel == 0)
+        {
+            activeSetting += isInc ? 1 : -1;
+            if (activeSetting < 0)
+                activeSetting = 0;
+            if (activeSetting >= NUM_MENU_SETTINGS)
+                activeSetting = NUM_MENU_SETTINGS - 1;
+        }
+        else if (settingsMenuLevel == 1)
+        {
+            //handleSubSettingIncDec(isInc);
+        }
+        displaySettings();
+        break;
+
+    case BUTTON_SAVE:
+        saveBeatLocation += isInc ? 1 : -1;
+        if (saveBeatLocation < 0)
+            saveBeatLocation = 0;
+        if (saveBeatLocation >= NUM_BEATS)
+            saveBeatLocation = NUM_BEATS - 1;
+        updateLedDisplayNumber(saveBeatLocation);
+        break;
+
+    case BUTTON_TUPLET:
+        // tuplet += isInc ? 1 : -1;
+        // if (tuplet < 0)
+        //     tuplet = 0;
+        // else if (tuplet >= NUM_TUPLET_MODES)
+        //     tuplet = NUM_TUPLET_MODES - 1;
+        // nextQuarterNoteDivision = quarterNoteDivisionRef[tuplet];
+        displayTuplet();
+        break;
+
+    case BUTTON_KIT:
+        // sampleFolderNum += isInc ? 1 : -1;
+        // if (sampleFolderNum < 0)
+        //     sampleFolderNum = 0;
+        // else if (sampleFolderNum > numSampleFolders - 1)
+        //     sampleFolderNum = numSampleFolders - 1;
+        // sdShowFolderTemp = true;
+        break;
+    }
+    //scheduleSaveSettings();
+}
+
+void handleYesNo(bool isYes)
+{
+    // have to declare stuff up here because of switch statement
+    int tupletEditStep;
+
+    bool useDefaultNoBehaviour = true;
+    switch (activeButton)
+    {
+    case BUTTON_KIT:
+        if (isYes)
+            //sdSafeLoadTemp = true;
+        break;
+
+    case BUTTON_STEP_EDIT:
+        // useDefaultNoBehaviour = false;
+        // tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
+        // bitWrite(beats[beatNum].beatData[editSample], tupletEditStep, isYes);
+        // editStep++;
+        // if (editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE >= quarterNoteDivision >> 2)
+        // {
+        //     editStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE + 1) * QUARTER_NOTE_STEPS_SEQUENCEABLE;
+        // }
+        // if (editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
+        //     editStep = 0;
+        displayEditBeat();
+        break;
+
+    case BUTTON_MENU:
+        if (settingsMenuLevel == 0 && isYes)
+            settingsMenuLevel = 1;
+        else if (settingsMenuLevel == 1)
+        {
+            // handle new chosen option
+
+            if (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2)
+            {
+                useDefaultNoBehaviour = false;
+                if (activeSetting == SETTING_OUTPUT_1)
+                {
+                    //samples[outputSample].output1 = isYes;
+                }
+                else
+                {
+                    //samples[outputSample].output2 = isYes;
+                }
+                displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
+            }
+            else
+            {
+                settingsMenuLevel = 0;
+            }
+        }
+        displaySettings();
+        break;
+
+    case BUTTON_SAVE:
+        // if (isYes)
+        //     writeBeatsToFlash();
+        activeButton = NO_ACTIVE_BUTTON;
+        break;
+    }
+    if (!isYes && useDefaultNoBehaviour)
+    {
+        activeButton = NO_ACTIVE_BUTTON;
+        bitWrite(singleLedData, 3, false); // clear error LED
+    }
+    //scheduleSaveSettings();
+}
+
+void displayClockMode()
+{
+    updateLedDisplayAlpha(externalClock ? "ext" : "int");
+}
+
+void displayTempo()
+{
+    if (externalClock)
+    {
+        int calculatedTempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS);
+        updateLedDisplayNumber(calculatedTempo);
+    }
+    else
+    {
+        updateLedDisplayNumber((int)tempo);
+    }
+}
+
+void displayTimeSignature()
+{
+    char timeSigText[4];
+    // timeSigText[0] = newNumSteps / QUARTER_NOTE_STEPS + 48;
+    // timeSigText[1] = '-';
+    // timeSigText[2] = '4';
+    // timeSigText[3] = (newNumSteps != numSteps) ? '_' : ' ';
+    updateLedDisplayAlpha(timeSigText);
+}
+
+void displayTuplet()
+{
+    // char tupletNames[NUM_TUPLET_MODES][5] = {
+    //     "stra",
+    //     "trip",
+    //     "quin",
+    //     "sept"};
+    // updateLedDisplayAlpha(tupletNames[tuplet]);
+}
+
+void displayBeat()
+{
+    updateLedDisplayNumber(beatNum);
+}
+
+void displayEditBeat()
+{
+    int humanReadableEditStep = editStep + 1;
+    char chars[4];
+    chars[0] = editSample + 49;
+    chars[1] = ' ';
+    chars[2] = (humanReadableEditStep < 10) ? ' ' : humanReadableEditStep / 10 + 48;
+    chars[3] = (humanReadableEditStep % 10) + 48;
+    updateLedDisplayAlpha(chars);
+}
+
+void displayOutput(int outputNum)
+{
+    // for (int i = 0; i < 4 && i < NUM_SAMPLES; i++)
+    // {
+    //     if (outputNum == 1)
+    //     {
+    //         sevenSegData[i] = samples[i].output1 ? 0b10000000 : 0b00000000;
+    //     }
+    //     else if (outputNum == 2)
+    //     {
+    //         sevenSegData[i] = samples[i].output2 ? 0b10000000 : 0b00000000;
+    //     }
+    // }
+    // bitWrite(sevenSegData[outputSample], 4, true);
+}
+
+void displaySettings()
+{
+    if (settingsMenuLevel == 0)
+    {
+        switch (activeSetting)
+        {
+        case SETTING_CLOCK_MODE:
+            updateLedDisplayAlpha("cloc");
+            break;
+
+        case SETTING_OUTPUT_1:
+            updateLedDisplayAlpha("out1");
+            break;
+
+        case SETTING_OUTPUT_2:
+            updateLedDisplayAlpha("out2");
+            break;
+
+        case SETTING_GLITCH_CHANNEL:
+            updateLedDisplayAlpha("glit");
+            break;
+
+        case SETTING_OUTPUT_PULSE_LENGTH:
+            updateLedDisplayAlpha("plso");
+            break;
+
+        case SETTING_OUTPUT_PPQN:
+            updateLedDisplayAlpha("pqno");
+            break;
+
+        case SETTING_INPUT_PPQN:
+            updateLedDisplayAlpha("pqni");
+            break;
+
+        case SETTING_PITCH_CURVE:
+            updateLedDisplayAlpha("ptch");
+            break;
+
+        case SETTING_INPUT_QUANTIZE:
+            updateLedDisplayAlpha("qntz");
+            break;
+        }
+    }
+    else if (settingsMenuLevel == 1)
+    {
+        switch (activeSetting)
+        {
+        case SETTING_CLOCK_MODE:
+            displayClockMode();
+            break;
+
+        case SETTING_OUTPUT_1:
+            displayOutput(1);
+            break;
+
+        case SETTING_OUTPUT_2:
+            displayOutput(2);
+            break;
+
+        case SETTING_GLITCH_CHANNEL:
+            // if (glitchChannel == GLITCH_CHANNEL_BOTH)
+            //     updateLedDisplayAlpha("both");
+            // else if (glitchChannel == GLITCH_CHANNEL_1)
+            //     updateLedDisplayAlpha("1");
+            // else if (glitchChannel == GLITCH_CHANNEL_2)
+            //     updateLedDisplayAlpha("2");
+            // else if (glitchChannel == GLITCH_CHANNEL_NONE)
+            //     updateLedDisplayAlpha("none");
+            break;
+
+        case SETTING_OUTPUT_PULSE_LENGTH:
+            updateLedDisplayNumber(outputPulseLength);
+            break;
+
+        case SETTING_OUTPUT_PPQN:
+            //updateLedDisplayNumber(syncOutPpqn);
+            break;
+
+        case SETTING_INPUT_PPQN:
+            //updateLedDisplayNumber(syncInPpqn);
+            break;
+
+        case SETTING_PITCH_CURVE:
+            if (pitchCurve == PITCH_CURVE_DEFAULT)
+                updateLedDisplayAlpha("dflt");
+            else if (pitchCurve == PITCH_CURVE_LINEAR)
+                updateLedDisplayAlpha("linr");
+            else if (pitchCurve == PITCH_CURVE_FORWARDS)
+                updateLedDisplayAlpha("fwds");
+            break;
+
+        case SETTING_INPUT_QUANTIZE:
+            updateLedDisplayNumber(inputQuantize);
+            break;
+        }
+    }
+}
+
+// Borrowed from StackOverflow
+char getNthDigit(int x, int n)
+{
+    while (n--)
+    {
+        x /= 10;
+    }
+    return x % 10;
+}
+
+void updateLedDisplayNumber(int num)
+{
+    int compare = 1;
+    for (int i = 0; i < 4; i++)
+    {
+        if (i == 0 || num >= compare)
+        {
+            sevenSegData[3 - i] = sevenSegAsciiCharacters[getNthDigit(num, i) + 48];
+        }
+        else
+        {
+            sevenSegData[3 - i] = sevenSegAsciiCharacters[' '];
+        }
+        compare *= 10;
+    }
+}
+
+void updateLedDisplayAlpha(const char *word)
+{
+    bool foundWordEnd = false;
+    for (int i = 0; i < 4; i++)
+    {
+        bool skipChar = false;
+        if (word[i] == '\0')
+        {
+            foundWordEnd = true;
+        }
+        if (foundWordEnd)
+        {
+            sevenSegData[i] = 0b00000000;
+        }
+        else
+        {
+            sevenSegData[i] = sevenSegAsciiCharacters[word[i]];
+        }
+    }
 }
 
 int tempMuxAddr = 0;
@@ -174,8 +700,10 @@ int main()
     // temp beat setting
     beats[0].addHit(0, 0, 255, 255, 0);
     beats[0].addHit(1, 2*3360, 255, 255, 0);
-    beats[0].addHit(1, 3*3360, 255, 127, 1);
-    beats[0].addHit(1, 7*3360/2, 255, 127, 1);
+    beats[0].addHit(1, 12*3360/4, 255, 127, 1);
+    beats[0].addHit(1, 13*3360/4, 255, 127, 1);
+    beats[0].addHit(1, 14*3360/4, 255, 127, 1);
+    beats[0].addHit(1, 15*3360/4, 255, 127, 1);
     int numHatsTemp = 16;
     for(int i=0; i<numHatsTemp; i++) {
         beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
@@ -197,7 +725,7 @@ int main()
 
     beatPlaying = true;
 
-    if (!tempExtSync)
+    if (!externalClock)
     {
         ppqn = 1;
         deltaT = 500000;
@@ -223,19 +751,19 @@ int main()
             if(beatStarted && currentTime >= nextPulseTime) {
                 prevPulseTime = nextPulseTime;
                 nextPulseTime += (44100*deltaT)/(1000000);
-                if(!tempExtSync) {
+                if(!externalClock) {
                     nextPredictedPulseTime = nextPulseTime;
                 }
                 step = (step + (3360 / ppqn)) % (4 * 3360);
             }
 
             int64_t microstep = (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
-            bool checkBeat = false;
+            bool checkBeat = false; // only check beat when microstep has been incremented
 
             if(beatStarted && currentTime < nextPredictedPulseTime && microstep != lastStep) {
                 checkBeat = true;
             }
-            lastStep = microstep;
+            lastStep = microstep; // this maybe needs to be reset to -1 or something when beat stops?
 
             int tempChance = analogReadings[POT_CHANCE];
 

@@ -26,30 +26,28 @@
 #define DATA_165 14
 #define SYNC_IN 16
 #define SYNC_OUT 17
-#define BUTTON_PIN_START_STOP 0
-#define BUTTON_PIN_TAP_TEMPO 1
 const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
-// button numbers (shifted buttons are +16)
-#define BUTTON_CANCEL 5
-#define BUTTON_CONFIRM 6
-#define BUTTON_DEC 7
-#define BUTTON_INC 8
-#define BUTTON_SHIFT_CANCEL 9
-#define BUTTON_CLEAR 10
-#define BUTTON_TIME_SIGNATURE 11
-#define BUTTON_LOAD_SAMPLES 12
-#define BUTTON_SETTINGS 13
-#define BUTTON_B 14
-#define BUTTON_TUPLET 15
-#define BUTTON_MANUAL_TEMPO 16
-#define BUTTON_BEAT 17
-#define BUTTON_SAVE 18
-#define BUTTON_A 19
-#define BUTTON_EDIT_BEAT 20
-#define BUTTON_LIVE_EDIT 21
-#define BUTTON_TAP_TEMPO 22
-#define BUTTON_START_STOP 23
+// button numbers
+#define BUTTON_START_STOP 1
+#define BUTTON_TAP_TEMPO 2
+#define BUTTON_LIVE_EDIT 3
+#define BUTTON_STEP_EDIT 4
+#define BUTTON_A 5
+#define BUTTON_SAVE 6
+#define BUTTON_BEAT 7
+#define BUTTON_MANUAL_TEMPO 8
+#define BUTTON_TUPLET 9
+#define BUTTON_B 10
+#define BUTTON_MENU 11
+#define BUTTON_KIT 12
+#define BUTTON_TIME_SIGNATURE 13
+#define BUTTON_CLEAR 14
+#define BUTTON_BACK 15
+#define BUTTON_INC 16
+#define BUTTON_DEC 17
+#define BUTTON_CONFIRM 18
+#define BUTTON_CANCEL 19
 #define NO_ACTIVE_BUTTON -1
 #define ERROR_DISPLAY -2
 #define BOOTUP_VISUALS -3
@@ -154,175 +152,6 @@ int numSampleFolders = 0;
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
 uint8_t singleLedData = 0b0000; // 4 x 3mm LEDs
 uint16_t storedLedData[4] = {0, 0, 0, 0};
-uint8_t sevenSegCharacters[10] = {
-    0b11111100,
-    0b01100000,
-    0b11011010,
-    0b11110010,
-    0b01100110,
-    0b10110110,
-    0b10111110,
-    0b11100000,
-    0b11111110,
-    0b11110110};
-uint8_t sevenSegAlphaCharacters[26] = {
-    0b11101110,
-    0b00111110,
-    0b10011100,
-    0b01111010,
-    0b10011110,
-    0b10001110,
-    0b11110110,
-    0b01101110,
-    0b01100000,
-    0b01111000,
-    0b01101110,
-    0b00011100,
-    0b11101100,
-    0b00101010,
-    0b00111010,
-    0b11001110,
-    0b11100110,
-    0b00001010,
-    0b10110110,
-    0b00011110,
-    0b01111100,
-    0b00111000,
-    0b01111100,
-    0b01101110,
-    0b01110110,
-    0b11011010};
-uint8_t sevenSegAsciiCharacters[256] = {
-    0b00000000, // 0 NULL
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000, // 32 SPACE
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000010, // -
-    0b00000000,
-    0b00000000,
-    0b11111100, // digit 0
-    0b01100000,
-    0b11011010,
-    0b11110010,
-    0b01100110,
-    0b10110110,
-    0b10111110,
-    0b11100000,
-    0b11111110,
-    0b11110110, // digit 9
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000, // 64
-    0b11101110, // A (a)
-    0b00111110,
-    0b10011100,
-    0b01111010,
-    0b10011110,
-    0b10001110,
-    0b11110110,
-    0b01101110,
-    0b01100000,
-    0b01111000,
-    0b01101110,
-    0b00011100,
-    0b11101100,
-    0b00101010,
-    0b00111010,
-    0b11001110,
-    0b11100110,
-    0b00001010,
-    0b10110110,
-    0b00011110,
-    0b01111100,
-    0b00111000,
-    0b01111100,
-    0b01101110,
-    0b01110110,
-    0b11011010, // Z (z)
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00010000, // _
-    0b00000000, // 96
-    0b11101110, // a
-    0b00111110,
-    0b10011100,
-    0b01111010,
-    0b10011110,
-    0b10001110,
-    0b11110110,
-    0b01101110,
-    0b01100000,
-    0b01111000,
-    0b01101110,
-    0b00011100,
-    0b11101100,
-    0b00101010,
-    0b00111010,
-    0b11001110,
-    0b11100110,
-    0b00001010,
-    0b10110110,
-    0b00011110,
-    0b01111100,
-    0b00111000,
-    0b01111100,
-    0b01101110,
-    0b01110110,
-    0b11011010, // z
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-};
-
 // timers and alarms
 repeating_timer_t mainTimer;
 repeating_timer_t performanceCheckTimer;
@@ -352,7 +181,7 @@ bool performanceCheck(repeating_timer_t *rt);
 bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
-void updateLedDisplay(int num);
+void updateLedDisplayNumber(int num);
 void updateLedDisplayAlpha(const char *word);
 void handleIncDec(bool isInc, bool isHold);
 void handleYesNo(bool isYes);
