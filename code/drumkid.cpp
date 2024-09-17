@@ -48,7 +48,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // globals, organise later
 int64_t currentTime = 0; // samples
 uint16_t step = 0;
-int numSteps = 3 * 3360;
+int numSteps = 4 * 3360;
 int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at start of next bar
 uint64_t lastClockIn = 0; // microseconds
 bool externalClock = false;
@@ -767,7 +767,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    beatPlaying = false;
+    beatPlaying = true;
 
     if (!externalClock)
     {
@@ -780,6 +780,7 @@ int main()
 
     // audio buffer loop, runs forever
     int lastStep = -1;
+    int groupStatus[8] = {GROUP_PENDING};
     while (true)
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
@@ -812,6 +813,12 @@ int main()
                         displayTimeSignature();
                     }
                 }
+                if(step + microstep == 0) {
+                    // reset groups
+                    for(int j=0; j<8; j++) {
+                        groupStatus[j] = GROUP_PENDING;
+                    }
+                }
             }
             lastStep = microstep; // this maybe needs to be reset to -1 or something when beat stops?
 
@@ -823,8 +830,16 @@ int main()
                     int foundHit = beats[0].getHit(j, microstep + step);
                     if(foundHit >= 0) {
                         int prob = beats[0].hits[foundHit].probability;
+                        int group = beats[0].hits[foundHit].group;
                         int randNum = rand() % 255;
-                        if(prob>randNum) {
+                        if(group>0) {
+                            if(groupStatus[group] == GROUP_PENDING) {
+                                groupStatus[group] = (prob>randNum) ? GROUP_YES : GROUP_NO;
+                            }
+                            if(groupStatus[group] == GROUP_YES) {
+                                samples[j].queueHit(currentTime, 0, 4095);
+                            }
+                        } else if(prob>randNum) {
                             samples[j].queueHit(currentTime, 0, 4095);
                         }
                     } else {

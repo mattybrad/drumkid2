@@ -105,6 +105,11 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define TUPLET_QUINTUPLET 2
 #define TUPLET_SEPTUPLET 3
 
+// group statuses
+#define GROUP_PENDING 0
+#define GROUP_YES 1
+#define GROUP_NO 2
+
 // analog smoothing etc
 #define ANALOG_DEAD_ZONE_LOWER 100
 #define ANALOG_DEAD_ZONE_UPPER (4095 - ANALOG_DEAD_ZONE_LOWER)
