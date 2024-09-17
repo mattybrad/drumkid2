@@ -3,7 +3,7 @@
 
 #define NUM_SAMPLES 4
 #define MAX_SAMPLE_STORAGE 100000 // limited by RAM, unlikely to get more than 100,000 samples
-#define QUARTER_NOTE_STEPS 32
+#define QUARTER_NOTE_STEPS 3360
 #define QUARTER_NOTE_STEPS_SEQUENCEABLE 8
 #define MAX_TIME_SIGNATURE 8
 #define NUM_TUPLET_MODES 4

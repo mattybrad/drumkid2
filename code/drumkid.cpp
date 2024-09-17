@@ -48,7 +48,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // globals, organise later
 int64_t currentTime = 0; // samples
 uint16_t step = 0;
-int numSteps = 4 * QUARTER_NOTE_STEPS;
+int numSteps = 3 * 3360;
+int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at start of next bar
 uint64_t lastClockIn = 0; // microseconds
 bool externalClock = false;
 
@@ -170,7 +171,31 @@ void handleButtonChange(int buttonNum, bool buttonState)
         switch (buttonNum)
         {
         case BUTTON_START_STOP:
-            
+            printf("start stop");
+            numSteps = newNumSteps;
+            if (activeButton == BUTTON_TIME_SIGNATURE)
+                displayTimeSignature();
+            beatPlaying = !beatPlaying;
+            if (beatPlaying)
+            {
+                // handle beat start
+                if (!externalClock)
+                {
+                    step = 0;
+                    prevPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER; // ?
+                    nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
+                    nextPredictedPulseTime = nextPulseTime;
+                }
+            }
+            else
+            {
+                // handle beat stop
+                if (activeButton == BUTTON_TIME_SIGNATURE)
+                    displayTimeSignature();
+                step = 0;
+
+                //scheduleSaveSettings();
+            }
             break;
         case BUTTON_MENU:
             activeButton = BUTTON_MENU;
@@ -179,7 +204,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_TAP_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
-            // updateTapTempo();
+            updateTapTempo();
             // scheduleSaveSettings();
             break;
         case BUTTON_LIVE_EDIT:
@@ -298,19 +323,19 @@ void handleIncDec(bool isInc, bool isHold)
                 tempo = 9999;
             else if (tempo < 10)
                 tempo = 10;
-            stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS);
+            deltaT = 60000000 / tempo;
             displayTempo();
         }
         break;
 
     case BUTTON_TIME_SIGNATURE:
-        // newNumSteps += isInc ? QUARTER_NOTE_STEPS : -QUARTER_NOTE_STEPS;
-        // if (newNumSteps > 7 * QUARTER_NOTE_STEPS)
-        //     newNumSteps = 7 * QUARTER_NOTE_STEPS;
-        // else if (newNumSteps < QUARTER_NOTE_STEPS)
-        //     newNumSteps = QUARTER_NOTE_STEPS;
-        // if (!beatPlaying)
-        //     numSteps = newNumSteps;
+        newNumSteps += isInc ? QUARTER_NOTE_STEPS : -QUARTER_NOTE_STEPS;
+        if (newNumSteps > 7 * QUARTER_NOTE_STEPS)
+            newNumSteps = 7 * QUARTER_NOTE_STEPS;
+        else if (newNumSteps < QUARTER_NOTE_STEPS)
+            newNumSteps = QUARTER_NOTE_STEPS;
+        if (!beatPlaying)
+            numSteps = newNumSteps;
         displayTimeSignature();
         break;
 
@@ -454,6 +479,25 @@ void handleYesNo(bool isYes)
     //scheduleSaveSettings();
 }
 
+uint64_t lastTapTempoTime;
+void updateTapTempo()
+{
+    if (!externalClock)
+    {
+        //uint64_t deltaT = time_us_64() - lastTapTempoTime;
+        uint64_t newDeltaT = time_us_64() - lastTapTempoTime;
+        lastTapTempoTime = time_us_64();
+        if (newDeltaT < 5000000)
+        {
+            deltaT = newDeltaT;
+            //stepTime = (44100 * deltaT) / 32000000;
+            //tempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS); // temp...
+            tempo = 60000000 / deltaT;
+            displayTempo();
+        }
+    }
+}
+
 void displayClockMode()
 {
     updateLedDisplayAlpha(externalClock ? "ext" : "int");
@@ -463,8 +507,8 @@ void displayTempo()
 {
     if (externalClock)
     {
-        int calculatedTempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS);
-        updateLedDisplayNumber(calculatedTempo);
+        //int calculatedTempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS);
+        //updateLedDisplayNumber(calculatedTempo);
     }
     else
     {
@@ -475,10 +519,10 @@ void displayTempo()
 void displayTimeSignature()
 {
     char timeSigText[4];
-    // timeSigText[0] = newNumSteps / QUARTER_NOTE_STEPS + 48;
-    // timeSigText[1] = '-';
-    // timeSigText[2] = '4';
-    // timeSigText[3] = (newNumSteps != numSteps) ? '_' : ' ';
+    timeSigText[0] = newNumSteps / QUARTER_NOTE_STEPS + 48; // 48 is digit zero in ascii
+    timeSigText[1] = '-';
+    timeSigText[2] = '4';
+    timeSigText[3] = (newNumSteps != numSteps) ? '_' : ' ';
     updateLedDisplayAlpha(timeSigText);
 }
 
@@ -723,7 +767,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    beatPlaying = true;
+    beatPlaying = false;
 
     if (!externalClock)
     {
@@ -748,20 +792,26 @@ int main()
             int32_t out1 = 0;
             int32_t out2 = 0;
 
-            if(beatStarted && currentTime >= nextPulseTime) {
+            if(beatStarted && beatPlaying && currentTime >= nextPulseTime) {
                 prevPulseTime = nextPulseTime;
                 nextPulseTime += (44100*deltaT)/(1000000);
                 if(!externalClock) {
                     nextPredictedPulseTime = nextPulseTime;
                 }
-                step = (step + (3360 / ppqn)) % (4 * 3360);
+                step = (step + (3360 / ppqn)) % numSteps;
             }
 
             int64_t microstep = (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
             bool checkBeat = false; // only check beat when microstep has been incremented
 
-            if(beatStarted && currentTime < nextPredictedPulseTime && microstep != lastStep) {
+            if(beatStarted && beatPlaying && currentTime < nextPredictedPulseTime && microstep != lastStep) {
                 checkBeat = true;
+                if(step + microstep == 0 && numSteps != newNumSteps) {
+                    numSteps = newNumSteps;
+                    if(activeButton == BUTTON_TIME_SIGNATURE) {
+                        displayTimeSignature();
+                    }
+                }
             }
             lastStep = microstep; // this maybe needs to be reset to -1 or something when beat stops?
 
@@ -793,12 +843,6 @@ int main()
             }
             bufferSamples[i] = out1 >> 2;
             bufferSamples[i + 1] = 0;
-
-            if(checkBeat) {
-                if(microstep == 0) {
-                    //step = (step + (3360/ppqn)) % (4*3360);
-                }
-            }
 
             currentTime++;
         }

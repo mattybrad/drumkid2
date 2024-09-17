@@ -1,5 +1,5 @@
-Bugs for the refactored code Aug 2024:
+TODO:
 
-- Beat takes a while to play again if sync in is unplugged and then reconnected after a while (need some sort of cutoff)
-- Time error goes very negative after sync in unplugged for a while
-- First beat or so always a bit messy in either int or ext mode, sort it out
+- Tap tempo should average several taps
+- Tap tempo / external tempo display should use floats and display a decimal point
+- Debounce button pushes
