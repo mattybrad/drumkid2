@@ -68,6 +68,10 @@ int64_t lastDacUpdateMicros;    // microseconds
 bool beatStarted = false;
 bool firstHit = true;
 
+bool sdSafeLoadTemp = false;
+bool sdShowFolderTemp = false;
+int sampleFolderNum = 0;
+
 repeating_timer_t outputShiftRegistersTimer;
 repeating_timer_t inputShiftRegistersTimer;
 repeating_timer_t multiplexersTimer;
@@ -258,7 +262,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_KIT:
             activeButton = BUTTON_KIT;
-            //sdShowFolderTemp = true;
+            sdShowFolderTemp = true;
             break;
         case BUTTON_MANUAL_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
@@ -399,12 +403,12 @@ void handleIncDec(bool isInc, bool isHold)
         break;
 
     case BUTTON_KIT:
-        // sampleFolderNum += isInc ? 1 : -1;
-        // if (sampleFolderNum < 0)
-        //     sampleFolderNum = 0;
-        // else if (sampleFolderNum > numSampleFolders - 1)
-        //     sampleFolderNum = numSampleFolders - 1;
-        // sdShowFolderTemp = true;
+        sampleFolderNum += isInc ? 1 : -1;
+        if (sampleFolderNum < 0)
+            sampleFolderNum = 0;
+        else if (sampleFolderNum > numSampleFolders - 1)
+            sampleFolderNum = numSampleFolders - 1;
+        sdShowFolderTemp = true;
         break;
     }
     //scheduleSaveSettings();
@@ -420,7 +424,7 @@ void handleYesNo(bool isYes)
     {
     case BUTTON_KIT:
         if (isYes)
-            //sdSafeLoadTemp = true;
+            sdSafeLoadTemp = true;
         break;
 
     case BUTTON_STEP_EDIT:
@@ -736,22 +740,24 @@ int main()
 
     printf("Drumkid V2\n");
 
+    // temp beat setting
+    // beats[0].addHit(0, 0, 255, 255, 0);
+    // beats[0].addHit(1, 2*3360, 255, 255, 0);
+    // beats[0].addHit(1, 12*3360/4, 255, 127, 1);
+    // beats[0].addHit(1, 13*3360/4, 255, 127, 1);
+    // beats[0].addHit(1, 14*3360/4, 255, 127, 1);
+    // beats[0].addHit(1, 15*3360/4, 255, 127, 1);
+    // int numHatsTemp = 16;
+    // for(int i=0; i<numHatsTemp; i++) {
+    //     beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
+    // }
+
     findCurrentFlashSettingsSector();
     initGpio();
     initSamplesFromFlash();
-    //loadBeatsFromFlash();
+    loadBeatsFromFlash();
 
-    // temp beat setting
-    beats[0].addHit(0, 0, 255, 255, 0);
-    beats[0].addHit(1, 2*3360, 255, 255, 0);
-    beats[0].addHit(1, 12*3360/4, 255, 127, 1);
-    beats[0].addHit(1, 13*3360/4, 255, 127, 1);
-    beats[0].addHit(1, 14*3360/4, 255, 127, 1);
-    beats[0].addHit(1, 15*3360/4, 255, 127, 1);
-    int numHatsTemp = 16;
-    for(int i=0; i<numHatsTemp; i++) {
-        beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
-    }
+    beats[0].addHit(3, 0, 255, 255, 0);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -865,8 +871,323 @@ int main()
         give_audio_buffer(ap, buffer);
         lastDacUpdateSamples = currentTime;
         lastDacUpdateMicros = time_us_64();
+
+        if (sdSafeLoadTemp)
+        {
+            sdSafeLoadTemp = false;
+            loadSamplesFromSD();
+        }
+
+        if (sdShowFolderTemp)
+        {
+            sdShowFolderTemp = false;
+            scanSampleFolders();
+            if (activeButton != ERROR_DISPLAY)
+            {
+                if (sampleFolderNum >= numSampleFolders)
+                    sampleFolderNum = 0; // just in case card is removed, changed, and reinserted - todo: proper folder names comparison to revert to first folder if any changes
+                char ledFolderName[5];
+                strncpy(ledFolderName, folderNames[sampleFolderNum], 5);
+                updateLedDisplayAlpha(ledFolderName);
+            }
+        }
     }
     return 0;
+}
+
+void showError(const char *msgx)
+{
+    updateLedDisplayAlpha("err");
+    activeButton = ERROR_DISPLAY;
+    bitWrite(singleLedData, 3, true);
+}
+
+void loadSamplesFromSD()
+{
+    uint totalSize = 0;
+    bool dryRun = false;
+    int pageNum = 0;
+    const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav"};
+    uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
+    uint32_t sampleLengths[NUM_SAMPLES] = {0};
+
+    for (int n = 0; n < NUM_SAMPLES; n++)
+    {
+        sd_init_driver();
+        sd_card_t *pSD = sd_get_by_num(0);
+        if (!pSD->sd_test_com(pSD))
+        {
+            showError("card");
+            return;
+        }
+        FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+        if (FR_OK != fr)
+        {
+            printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+            showError("err");
+            return;
+        }
+        FIL fil;
+        char filename[255];
+        strcpy(filename, "samples/");
+        strcpy(filename + strlen(filename), folderNames[sampleFolderNum]);
+        strcpy(filename + strlen(filename), sampleNames[n]);
+        fr = f_open(&fil, filename, FA_READ);
+        if (FR_OK != fr)
+        {
+            printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+            showError("err");
+            return;
+        }
+
+        // below is my first proper stab at a WAV file parser. it's messy but it works as long as you supply a mono, 16-bit, 44.1kHz file. need to make it handle more edge cases in future
+
+        // read WAV file header before reading data
+        uint br; // bytes read
+        bool foundDataChunk = false;
+        char descriptorBuffer[4];
+        uint8_t sizeBuffer[4];
+        uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
+
+        // first 3 4-byte sections should be "RIFF", file size, "WAVE"
+        for (int i = 0; i < 3; i++)
+        {
+            fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
+            if (i == 0 || i == 2)
+                printf("check... %s\n", descriptorBuffer);
+        }
+
+        while (!foundDataChunk)
+        {
+            fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
+            printf("descriptor=%s, ", descriptorBuffer);
+            fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
+            uint32_t chunkSize = (uint32_t)getIntFromBuffer(sizeBuffer, 0);
+            printf("size=%d bytes\n", chunkSize);
+            uint brTotal = 0;
+            for (;;)
+            {
+                uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
+                fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
+                if (br == 0)
+                    break;
+
+                if (strncmp(descriptorBuffer, "data", 4) == 0)
+                {
+                    if (!foundDataChunk)
+                    {
+                        sampleStartPoints[n] = pageNum * FLASH_PAGE_SIZE;
+                        sampleLengths[n] = chunkSize;
+                        totalSize += chunkSize;
+                        printf("sample %d, start on page %d, length %d\n", n, sampleStartPoints[n], sampleLengths[n]);
+                    }
+                    foundDataChunk = true;
+
+                    if (!dryRun)
+                    {
+                        writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                    }
+
+                    pageNum++;
+                }
+
+                brTotal += br;
+                if (brTotal == chunkSize)
+                {
+                    break;
+                }
+            }
+        }
+
+        printf("\n");
+        fr = f_close(&fil);
+        if (FR_OK != fr)
+        {
+            printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+        }
+        f_unmount(pSD->pcName);
+    }
+    printf("TOTAL SAMPLE SIZE: %d bytes\n", totalSize);
+
+    if (!dryRun)
+    {
+        // write sample metadata to flash
+        uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
+
+        // copy data so we don't lose other data (check num, tempo, etc)
+        for (int i = 0; i < FLASH_PAGE_SIZE; i++)
+        {
+            metadataBuffer[i] = flashData[i];
+        }
+
+        for (int n = 0; n < NUM_SAMPLES; n++)
+        {
+            std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
+            std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
+        }
+        writePageToFlash(metadataBuffer, FLASH_AUDIO_METADATA_ADDRESS);
+
+        initSamplesFromFlash();
+    }
+}
+
+void resetSampleFolderList()
+{
+    char nullString[MAX_FOLDER_NAME_LENGTH] = "";
+    for (int i = 0; i < MAX_SAMPLE_FOLDERS; i++)
+    {
+        strncpy(folderNames[i], nullString, MAX_FOLDER_NAME_LENGTH);
+    }
+}
+
+// not the most beautiful function, but this adds a sample folder at the right point in the alphabetical list
+void addSampleFolder(char *newFolderPointer)
+{
+    int insertPoint = 0;
+    bool done = false;
+
+    for (int i = 0; i < MAX_SAMPLE_FOLDERS && !done; i++)
+    {
+        int res = strncmp(newFolderPointer, folderNames[i], MAX_FOLDER_NAME_LENGTH);
+        if (res < 0 || folderNames[i][0] == 0)
+        {
+            insertPoint = i;
+            done = true;
+        }
+    }
+
+    done = false;
+    for (int i = MAX_SAMPLE_FOLDERS - 1; i > insertPoint && i > 0; i--)
+    {
+        strncpy(folderNames[i], folderNames[i - 1], MAX_FOLDER_NAME_LENGTH);
+    }
+    strncpy(folderNames[insertPoint], newFolderPointer, MAX_FOLDER_NAME_LENGTH);
+}
+
+// go through every sample folder and create an alphabetically ordered array of the folder names
+void scanSampleFolders()
+{
+    printf("scan sample folders...\n");
+    sd_init_driver();
+    sd_card_t *pSD = sd_get_by_num(0);
+    if (!pSD->sd_test_com(pSD))
+    {
+        showError("card");
+        return;
+    }
+    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+    if (FR_OK != fr)
+    {
+        printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
+        showError("card");
+        return;
+    }
+    static FILINFO fno;
+    int foundNum = -1;
+    DIR dir;
+    fr = f_opendir(&dir, path);
+    if (FR_OK != fr)
+    {
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        showError("err");
+        return;
+    }
+    resetSampleFolderList();
+    for (;;)
+    {
+        fr = f_readdir(&dir, &fno); /* Read a directory item */
+        if (fr != FR_OK || fno.fname[0] == 0)
+            break; /* Break on error or end of dir */
+        if (fno.fattrib & AM_DIR)
+        { /* It is a directory */
+            foundNum++;
+            addSampleFolder(fno.fname);
+        }
+    }
+    numSampleFolders = foundNum + 1;
+
+    f_closedir(&dir);
+}
+
+void saveSettings()
+{
+    // if (checkSettingsChange())
+    // {
+    //     uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
+    //     uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
+    //     currentSettingsSector = saveSector;
+    //     printf("save settings to sector %d\n", currentSettingsSector);
+
+    //     uint8_t buffer[FLASH_PAGE_SIZE];
+    //     int32_t refCheckNum = CHECK_NUM;
+    //     int32_t refExternalClock = externalClock ? 1 : 0;
+    //     int32_t refOutput1 = 0;
+    //     int32_t refOutput2 = 0;
+    //     for (int i = 0; i < NUM_SAMPLES; i++)
+    //     {
+    //         bitWrite(refOutput1, i, samples[i].output1);
+    //         bitWrite(refOutput2, i, samples[i].output2);
+    //     }
+    //     std::memcpy(buffer, &refCheckNum, 4);
+    //     std::memcpy(buffer + 4, &saveNum, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4);    // temp
+    //     std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
+    //     std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 2);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
+    //     std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+
+    //     writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+    // }
+}
+
+// Writes a page of data (256 bytes) to a flash address. If the page number is at the start of a sector, that sector is erased first. Function designed to be called several times for consecutive pages, starting at the start of a sector, otherwise data won't be written properly.
+void writePageToFlash(const uint8_t *buffer, uint address)
+{
+    uint32_t interrupts; // The Pico requires you to save and disable interrupts when writing/erasing flash memory
+
+    uint pageNum = address / FLASH_PAGE_SIZE;
+    if (pageNum % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) == 0)
+    {
+        interrupts = save_and_disable_interrupts();
+        flash_range_erase(address, FLASH_SECTOR_SIZE);
+        restore_interrupts(interrupts);
+    }
+
+    interrupts = save_and_disable_interrupts();
+    flash_range_program(address, buffer, FLASH_PAGE_SIZE);
+    restore_interrupts(interrupts);
+
+    // todo: check data has been written? check buffer is right size? basically more checks
+}
+
+void saveAllBeats() {
+    uint8_t buffer[FLASH_PAGE_SIZE] = {0};
+    int bufferIndex = 0;
+    int pageNum = 0;
+    int structSize = sizeof(Beat::Hit);
+    assert(structSize <= 8); // otherwise data won't fit
+    for(int i=0; i<NUM_BEATS; i++) {
+        for(int j=0; j<MAX_BEAT_HITS; j++) {
+            std::memcpy(buffer + bufferIndex, &(beats[i].hits[j]), structSize);
+            bufferIndex += 8;
+            if(bufferIndex == FLASH_PAGE_SIZE) {
+                writePageToFlash(buffer, FLASH_USER_BEATS_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                bufferIndex = 0;
+                pageNum ++;
+                for(int k=0; k<FLASH_PAGE_SIZE; k++) {
+                    buffer[k] = 0; // reset buffer
+                }
+            }
+        }
+    }
 }
 
 #define FLASH_SETTINGS_START 0
@@ -880,6 +1201,7 @@ void findCurrentFlashSettingsSector()
     for (int i = FLASH_SETTINGS_START; i <= FLASH_SETTINGS_END; i++)
     {
         int testInt = getIntFromBuffer(flashData + i * FLASH_SECTOR_SIZE, DATA_CHECK);
+        //testInt = 9999; // temp, force initialisation
         if (testInt == CHECK_NUM)
         {
             foundValidSector = true;
@@ -894,7 +1216,7 @@ void findCurrentFlashSettingsSector()
     if (!foundValidSector)
     {
         // no valid sectors, which means the flash needs to be initialised:
-        /*uint8_t buffer[FLASH_PAGE_SIZE];
+        uint8_t buffer[FLASH_PAGE_SIZE];
         int32_t refCheckNum = CHECK_NUM;
         std::memcpy(buffer, &refCheckNum, 4); // copy check number
         int32_t refZero = 0;
@@ -918,7 +1240,8 @@ void findCurrentFlashSettingsSector()
             writePageToFlash(buffer, FLASH_AUDIO_ADDRESS + i);
         }
 
-        saveSettings();*/
+        saveSettings();
+        saveAllBeats();
     }
     else
     {
@@ -968,14 +1291,20 @@ void initSamplesFromFlash()
 void loadBeatsFromFlash()
 {
     int startPos = 0;
+    int structSize = sizeof(Beat::Hit);
+    assert(structSize <= 8);
+    uint8_t tempBuffer[8] = {0};
     for (int i = 0; i < NUM_BEATS; i++)
     {
-        for (int j = 0; j < NUM_SAMPLES; j++)
-        {
-            //std::memcpy(&beats[i].beatData[j], &flashUserBeats[8 * (i * NUM_SAMPLES + j)], 8);
+        for(int j=0; j<MAX_BEAT_HITS; j++) {
+            std::memcpy(&beats[i].hits[j], &flashUserBeats[(i*MAX_BEAT_HITS + j) * 8], structSize);
+            if(beats[i].hits[j].sample != 255) {
+                beats[i].numHits = j + 1;
+            }
+            // std::memcpy(tempBuffer, &flashUserBeats[(i * MAX_BEAT_HITS + j) * 8], 8);
         }
     }
-    backupBeat(beatNum);
+    //backupBeat(beatNum);
 }
 
 void backupBeat(int backupBeatNum)

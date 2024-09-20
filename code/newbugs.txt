@@ -3,3 +3,4 @@ TODO:
 - Tap tempo should average several taps
 - Tap tempo / external tempo display should use floats and display a decimal point
 - Debounce button pushes
+- Tidy up groups feature

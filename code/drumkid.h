@@ -124,7 +124,7 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM -999999
+#define CHECK_NUM 127
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)

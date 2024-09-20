@@ -34,6 +34,8 @@ class Beat {
             return -1;
         }
         Beat() {
-            
+            for(int i=0; i<MAX_BEAT_HITS; i++) {
+                hits[i].sample = 255;
+            }
         }
 };
