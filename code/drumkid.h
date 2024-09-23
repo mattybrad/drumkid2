@@ -205,7 +205,7 @@ void getNthSampleFolder(int n);
 void scanSampleFolders();
 void loadSamplesFromSD();
 void updateLeds();
-void pulseGpio(uint gpioNum, uint16_t pulseLengthMicros);
+void pulseGpio(uint gpioNum, uint16_t delayMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
 void initSamplesFromFlash();
 void loadBeatsFromFlash();

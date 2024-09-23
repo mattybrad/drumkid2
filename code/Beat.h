@@ -35,7 +35,7 @@ class Beat {
         }
         Beat() {
             for(int i=0; i<MAX_BEAT_HITS; i++) {
-                hits[i].sample = 255;
+                hits[i].sample = 255; // this helps identify which hits are not in use when loading beats from flash, where numHits is not explicitly set/known
             }
         }
 };

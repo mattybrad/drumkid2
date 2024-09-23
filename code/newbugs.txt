@@ -4,3 +4,5 @@ TODO:
 - Tap tempo / external tempo display should use floats and display a decimal point
 - Debounce button pushes
 - Tidy up groups feature
+- Allow different sample rates when loading WAV files
+- Allow stereo WAV files (but bounce to mono)

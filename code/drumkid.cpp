@@ -47,7 +47,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 // globals, organise later
 int64_t currentTime = 0; // samples
-uint16_t step = 0;
+uint16_t pulseStep = 0;
 int numSteps = 4 * 3360;
 int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at start of next bar
 uint64_t lastClockIn = 0; // microseconds
@@ -58,6 +58,7 @@ int activeSetting = 0;
 int settingsMenuLevel = 0;
 
 int ppqn = 32;
+int outputPpqn = 16;
 uint64_t prevPulseTime = 0; // samples
 uint64_t nextPulseTime = 0; // samples
 uint64_t nextPredictedPulseTime = 0; // samples
@@ -67,6 +68,7 @@ int64_t lastDacUpdateSamples;   // samples
 int64_t lastDacUpdateMicros;    // microseconds
 bool beatStarted = false;
 bool firstHit = true;
+int tuplet = TUPLET_STRAIGHT;
 
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
@@ -77,7 +79,7 @@ repeating_timer_t inputShiftRegistersTimer;
 repeating_timer_t multiplexersTimer;
 
 void handleSyncPulse() {
-    pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
+    //pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
     if (lastClockIn > 0)
     {
@@ -185,7 +187,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 // handle beat start
                 if (!externalClock)
                 {
-                    step = 0;
+                    pulseStep = 0;
                     prevPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER; // ?
                     nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
                     nextPredictedPulseTime = nextPulseTime;
@@ -196,7 +198,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 // handle beat stop
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
-                step = 0;
+                pulseStep = 0;
 
                 //scheduleSaveSettings();
             }
@@ -393,12 +395,11 @@ void handleIncDec(bool isInc, bool isHold)
         break;
 
     case BUTTON_TUPLET:
-        // tuplet += isInc ? 1 : -1;
-        // if (tuplet < 0)
-        //     tuplet = 0;
-        // else if (tuplet >= NUM_TUPLET_MODES)
-        //     tuplet = NUM_TUPLET_MODES - 1;
-        // nextQuarterNoteDivision = quarterNoteDivisionRef[tuplet];
+        tuplet += isInc ? 1 : -1;
+        if (tuplet < 0)
+            tuplet = 0;
+        else if (tuplet >= NUM_TUPLET_MODES)
+            tuplet = NUM_TUPLET_MODES - 1;
         displayTuplet();
         break;
 
@@ -532,12 +533,12 @@ void displayTimeSignature()
 
 void displayTuplet()
 {
-    // char tupletNames[NUM_TUPLET_MODES][5] = {
-    //     "stra",
-    //     "trip",
-    //     "quin",
-    //     "sept"};
-    // updateLedDisplayAlpha(tupletNames[tuplet]);
+    char tupletNames[NUM_TUPLET_MODES][5] = {
+        "stra",
+        "trip",
+        "quin",
+        "sept"};
+    updateLedDisplayAlpha(tupletNames[tuplet]);
 }
 
 void displayBeat()
@@ -733,6 +734,27 @@ bool updateMultiplexers(repeating_timer_t *rt)
     return true;
 }
 
+int zoomValues[NUM_TUPLET_MODES][9] = {
+    {-1, 13440, 6720, 3360, 1680, 840, 420, 210, 105},
+    {-1, 13440, 13440, 3360, 1120, 560, 280, 140, 70},
+    {-1, 13440, 13440, 3360, 672, 336, 168, 84, 42},
+    {-1, 13440, 13440, 3360, 480, 240, 120, 60, 30},
+};
+
+int getRandomHitVelocity(int step) {
+    // first draft...
+
+    int tempZoom = analogReadings[POT_ZOOM] / 456;
+    if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
+    {
+        int tempChance = analogReadings[POT_CHANCE];
+        if(tempChance > rand()%4095) {
+            return 4095;
+        }
+    }
+    return 0;
+}
+
 int main()
 {
     stdio_init_all();
@@ -799,65 +821,72 @@ int main()
             int32_t out1 = 0;
             int32_t out2 = 0;
 
+            // update step at PPQN level
             if(beatStarted && beatPlaying && currentTime >= nextPulseTime) {
                 prevPulseTime = nextPulseTime;
                 nextPulseTime += (44100*deltaT)/(1000000);
                 if(!externalClock) {
                     nextPredictedPulseTime = nextPulseTime;
                 }
-                step = (step + (3360 / ppqn)) % numSteps;
+                pulseStep = (pulseStep + (3360 / ppqn)) % numSteps;
             }
 
-            int64_t microstep = (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
-            bool checkBeat = false; // only check beat when microstep has been incremented
+            // update step
+            int64_t step = pulseStep + (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
+            bool newStep = false; // only check beat when step has been incremented
 
-            if(beatStarted && beatPlaying && currentTime < nextPredictedPulseTime && microstep != lastStep) {
-                checkBeat = true;
-                if(step + microstep == 0 && numSteps != newNumSteps) {
+            // do stuff if step has been incremented
+            if(beatStarted && beatPlaying && currentTime < nextPredictedPulseTime && step != lastStep) {
+                newStep = true;
+                if(step == 0 && numSteps != newNumSteps) {
                     numSteps = newNumSteps;
                     if(activeButton == BUTTON_TIME_SIGNATURE) {
                         displayTimeSignature();
                     }
                 }
-                if(step + microstep == 0) {
+                if(step == 0) {
                     // reset groups
                     for(int j=0; j<8; j++) {
                         groupStatus[j] = GROUP_PENDING;
                     }
                 }
+                if((step % (3360/outputPpqn)) == 0) {
+                    pulseGpio(SYNC_OUT, 3000);
+                }
             }
-            lastStep = microstep; // this maybe needs to be reset to -1 or something when beat stops?
+            lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
 
             int tempChance = analogReadings[POT_CHANCE];
 
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
-                if(checkBeat) {
-                    int foundHit = beats[0].getHit(j, microstep + step);
+                if(newStep) {
+                    int thisVel = 0;
+                    int foundHit = beats[beatNum].getHit(j, step);
                     if(foundHit >= 0) {
-                        int prob = beats[0].hits[foundHit].probability;
-                        int group = beats[0].hits[foundHit].group;
+                        int prob = beats[beatNum].hits[foundHit].probability;
+                        int group = beats[beatNum].hits[foundHit].group;
                         int randNum = rand() % 255;
+                        // hits from group 0 are treated independently (group 0 is not a group)
                         if(group>0) {
+                            // if the group's status has not yet been determined, calculate it
                             if(groupStatus[group] == GROUP_PENDING) {
                                 groupStatus[group] = (prob>randNum) ? GROUP_YES : GROUP_NO;
                             }
                             if(groupStatus[group] == GROUP_YES) {
-                                samples[j].queueHit(currentTime, 0, 4095);
+                                thisVel = beats[beatNum].hits[foundHit].velocity;
+                                //samples[j].queueHit(currentTime, 0, 4095);
                             }
                         } else if(prob>randNum) {
-                            samples[j].queueHit(currentTime, 0, 4095);
-                        }
-                    } else {
-                        int randNum = rand() % 4095;
-                        if (((microstep + step) % 1680) == 0 && tempChance > randNum)
-                        {
-                            samples[j].queueHit(currentTime, 0, 4095);
+                            //samples[j].queueHit(currentTime, 0, 4095);
+                            thisVel = beats[beatNum].hits[foundHit].velocity;
                         }
                     }
-                    // if((microstep + step) % 105 == 0) {
-                    //     samples[j].queueHit(currentTime, 0, 4095);
-                    // }
+                    // calculate whether random hit should occur, even if a beat hit has already been found (random hit could be higher velocity)
+                    thisVel = std::max(thisVel, getRandomHitVelocity(step));
+                    if(thisVel > 0) {
+                        samples[j].queueHit(currentTime, 0, thisVel);
+                    }
                 }
                 samples[j].update(currentTime);
                 out1 += samples[j].value;
@@ -1399,15 +1428,22 @@ int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
     return thisInt;
 }
 
-int64_t onGpioPulseTimeout(alarm_id_t id, void *user_data)
+int64_t gpioPulseLowCallback(alarm_id_t id, void *user_data)
 {
     uint gpioNum = (uint)user_data;
     gpio_put(gpioNum, 0);
     return 0;
 }
 
-void pulseGpio(uint gpioNum, uint16_t pulseLengthMillis)
+int64_t gpioPulseHighCallback(alarm_id_t id, void *user_data)
 {
+    uint gpioNum = (uint)user_data;
     gpio_put(gpioNum, 1);
-    add_alarm_in_ms(pulseLengthMillis, onGpioPulseTimeout, (void *)gpioNum, true);
+    add_alarm_in_ms(15, gpioPulseLowCallback, (void *)gpioNum, true);
+    return 0;
+}
+
+void pulseGpio(uint gpioNum, uint16_t delayMicros)
+{
+    add_alarm_in_us(delayMicros, gpioPulseHighCallback, (void *)gpioNum, true);
 }
