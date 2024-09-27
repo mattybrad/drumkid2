@@ -58,7 +58,7 @@ int activeSetting = 0;
 int settingsMenuLevel = 0;
 
 int ppqn = 32;
-int outputPpqn = 16;
+int outputPpqn = 1;
 uint64_t prevPulseTime = 0; // samples
 uint64_t nextPulseTime = 0; // samples
 uint64_t nextPredictedPulseTime = 0; // samples
@@ -112,6 +112,26 @@ int tempDigit = 0;
 
 void setLed(uint8_t ledNum, bool value) {
     bitWrite(shiftRegOutBase, 15-ledNum, value);
+}
+
+int64_t ledPulseLowCallback(alarm_id_t id, void *user_data)
+{
+    uint ledNum = (uint)user_data;
+    setLed(ledNum, false);
+    return 0;
+}
+
+int64_t ledPulseHighCallback(alarm_id_t id, void *user_data)
+{
+    uint ledNum = (uint)user_data;
+    setLed(ledNum, true);
+    add_alarm_in_ms(20, ledPulseLowCallback, (void *)ledNum, true);
+    return 0;
+}
+
+void pulseLed(uint ledNum, uint16_t delayMicros)
+{
+    add_alarm_in_us(delayMicros, ledPulseHighCallback, (void *)ledNum, true);
 }
 
 bool updateOutputShiftRegisters(repeating_timer_t *rt)
@@ -851,7 +871,10 @@ int main()
                     }
                 }
                 if((step % (3360/outputPpqn)) == 0) {
-                    pulseGpio(SYNC_OUT, 3000);
+                    int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
+                    //printf("%lld\n", syncOutDelay);
+                    pulseGpio(SYNC_OUT, syncOutDelay);
+                    pulseLed(0, syncOutDelay);
                 }
             }
             lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
