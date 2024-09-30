@@ -219,7 +219,7 @@ void updateTapTempo();
 void doStep();
 void print_buf(const uint8_t *buf, size_t len);
 void initZoom();
-void displayPulse();
+void displayPulse(int pulseStep, uint16_t delayMicros);
 void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
 void showError(const char *msgx);

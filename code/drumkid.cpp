@@ -57,8 +57,12 @@ int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
 int settingsMenuLevel = 0;
 
-int ppqn = 32;
-int outputPpqn = 1;
+const int NUM_PPQN_VALUES = 6;
+int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 16, 32};
+int syncInPpqnIndex = 0;
+int syncOutPpqnIndex = 2;
+int syncInPpqn = ppqnValues[syncInPpqnIndex];
+int syncOutPpqn = ppqnValues[syncOutPpqnIndex];
 uint64_t prevPulseTime = 0; // samples
 uint64_t nextPulseTime = 0; // samples
 uint64_t nextPredictedPulseTime = 0; // samples
@@ -77,6 +81,7 @@ int sampleFolderNum = 0;
 repeating_timer_t outputShiftRegistersTimer;
 repeating_timer_t inputShiftRegistersTimer;
 repeating_timer_t multiplexersTimer;
+repeating_timer_t displayTimer;
 
 void handleSyncPulse() {
     //pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
@@ -197,7 +202,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
         switch (buttonNum)
         {
         case BUTTON_START_STOP:
-            printf("start stop");
             numSteps = newNumSteps;
             if (activeButton == BUTTON_TIME_SIGNATURE)
                 displayTimeSignature();
@@ -225,8 +229,8 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_MENU:
             activeButton = BUTTON_MENU;
-            // settingsMenuLevel = 0;
-            // displaySettings();
+            settingsMenuLevel = 0;
+            displaySettings();
             break;
         case BUTTON_TAP_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
@@ -326,6 +330,64 @@ void handleButtonChange(int buttonNum, bool buttonState)
     }
 }
 
+void handleSubSettingIncDec(bool isInc)
+{
+    // could probably do this with pointers to make it neater but it's hot today so that's not happening
+    int thisInc = isInc ? 1 : -1;
+    switch (activeSetting)
+    {
+    case SETTING_CLOCK_MODE:
+        externalClock = !externalClock;
+        displayClockMode();
+        break;
+
+    case SETTING_OUTPUT_1:
+    case SETTING_OUTPUT_2:
+        // outputSample += isInc ? 1 : -1;
+        // if (outputSample < 0)
+        //     outputSample = 0;
+        // else if (outputSample > NUM_SAMPLES - 1)
+        //     outputSample = NUM_SAMPLES - 1;
+        // displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
+        break;
+
+    case SETTING_GLITCH_CHANNEL:
+        // glitchChannel += thisInc;
+        // glitchChannel = std::max(0, std::min(3, glitchChannel));
+        // glitch1 = !bitRead(glitchChannel, 1);
+        // glitch2 = !bitRead(glitchChannel, 0);
+        break;
+
+    case SETTING_OUTPUT_PULSE_LENGTH:
+        outputPulseLength += thisInc;
+        outputPulseLength = std::max(10, std::min(200, outputPulseLength));
+        break;
+
+    case SETTING_OUTPUT_PPQN:
+        syncOutPpqnIndex += thisInc;
+        syncOutPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncOutPpqnIndex));
+        syncOutPpqn = ppqnValues[syncOutPpqnIndex];
+        break;
+
+    case SETTING_INPUT_PPQN:
+        syncInPpqnIndex += thisInc;
+        syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
+        syncInPpqn = ppqnValues[syncInPpqnIndex];
+        break;
+
+    case SETTING_PITCH_CURVE:
+        pitchCurve += thisInc;
+        pitchCurve = std::max(0, std::min(PITCH_CURVE_FORWARDS, pitchCurve));
+        break;
+
+    case SETTING_INPUT_QUANTIZE:
+        inputQuantizeIndex += thisInc;
+        inputQuantizeIndex = std::max(0, std::min(NUM_QUANTIZE_VALUES - 1, inputQuantizeIndex));
+        inputQuantize = quantizeValues[inputQuantizeIndex];
+        break;
+    }
+}
+
 void handleIncDec(bool isInc, bool isHold)
 {
     // have to declare stuff up here because of switch statement
@@ -400,7 +462,7 @@ void handleIncDec(bool isInc, bool isHold)
         }
         else if (settingsMenuLevel == 1)
         {
-            //handleSubSettingIncDec(isInc);
+            handleSubSettingIncDec(isInc);
         }
         displaySettings();
         break;
@@ -499,7 +561,8 @@ void handleYesNo(bool isYes)
     if (!isYes && useDefaultNoBehaviour)
     {
         activeButton = NO_ACTIVE_BUTTON;
-        bitWrite(singleLedData, 3, false); // clear error LED
+        //bitWrite(singleLedData, 3, false); // clear error LED
+        setLed(3, false);
     }
     //scheduleSaveSettings();
 }
@@ -521,6 +584,24 @@ void updateTapTempo()
             displayTempo();
         }
     }
+}
+
+int64_t displayPulseCallback(alarm_id_t id, void *user_data)
+{
+    uint pulseStep = (uint)user_data;
+    for(int i=0; i<4; i++) {
+        if(i == pulseStep%4) {
+            sevenSegData[i] = pulseStep < 4 ? 0b00100000 : 0b00010000;
+        } else {
+            sevenSegData[i] = 0;
+        }
+    }
+    return 0;
+}
+
+void displayPulse(int pulseStep, uint16_t delayMicros)
+{
+    add_alarm_in_us(delayMicros, displayPulseCallback, (void *)pulseStep, true);
 }
 
 void displayClockMode()
@@ -668,11 +749,11 @@ void displaySettings()
             break;
 
         case SETTING_OUTPUT_PPQN:
-            //updateLedDisplayNumber(syncOutPpqn);
+            updateLedDisplayNumber(syncOutPpqn);
             break;
 
         case SETTING_INPUT_PPQN:
-            //updateLedDisplayNumber(syncInPpqn);
+            updateLedDisplayNumber(syncInPpqn);
             break;
 
         case SETTING_PITCH_CURVE:
@@ -775,6 +856,25 @@ int getRandomHitVelocity(int step) {
     return 0;
 }
 
+bool updateLedDisplay(repeating_timer_t *rt)
+{
+    sevenSegData[0] = rand() % 256;
+    sevenSegData[1] = rand() % 256;
+    sevenSegData[2] = rand() % 256;
+    sevenSegData[3] = rand() % 256;
+
+    if (time_us_32() > 1000000)
+    {
+        activeButton = NO_ACTIVE_BUTTON;
+        displayPulse(0, 0);
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 int main()
 {
     stdio_init_all();
@@ -812,14 +912,15 @@ int main()
     add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
     add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
     add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe, potentially faster
+    add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
 
     struct audio_buffer_pool *ap = init_audio();
 
-    beatPlaying = true;
+    beatPlaying = false;
 
     if (!externalClock)
     {
-        ppqn = 1;
+        syncInPpqn = 1;
         deltaT = 500000;
         nextPulseTime = (44100 * deltaT) / (1000000);
         nextPredictedPulseTime = nextPulseTime;
@@ -848,11 +949,11 @@ int main()
                 if(!externalClock) {
                     nextPredictedPulseTime = nextPulseTime;
                 }
-                pulseStep = (pulseStep + (3360 / ppqn)) % numSteps;
+                pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
             }
 
             // update step
-            int64_t step = pulseStep + (3360 * (currentTime - prevPulseTime)) / (ppqn * (nextPulseTime - prevPulseTime));
+            int64_t step = pulseStep + (3360 * (currentTime - prevPulseTime)) / (syncInPpqn * (nextPulseTime - prevPulseTime));
             bool newStep = false; // only check beat when step has been incremented
 
             // do stuff if step has been incremented
@@ -870,11 +971,18 @@ int main()
                         groupStatus[j] = GROUP_PENDING;
                     }
                 }
-                if((step % (3360/outputPpqn)) == 0) {
+                if((step % (3360/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
                     //printf("%lld\n", syncOutDelay);
                     pulseGpio(SYNC_OUT, syncOutDelay);
                     pulseLed(0, syncOutDelay);
+                }
+                if((step % 3360) == 0) {
+                    int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
+                    if(activeButton == NO_ACTIVE_BUTTON) {
+                        displayPulse(step / 3360, pulseDelay);
+                    }
+                    pulseLed(2, pulseDelay);
                 }
             }
             lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
