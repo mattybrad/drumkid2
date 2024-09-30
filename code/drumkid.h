@@ -230,5 +230,6 @@ bool checkSettingsChange();
 void scheduleSaveSettings();
 int64_t stepAlarmCallback(alarm_id_t id, void *user_data);
 void setStepAlarm();
+void applyDeadZones(int &param);
 
 #endif

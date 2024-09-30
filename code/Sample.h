@@ -4,6 +4,9 @@
 class Sample {
     public:
         static int16_t sampleData[MAX_SAMPLE_STORAGE];
+        static int pitch;
+        static uint crop;
+        static int LERP_BITS;
 
         struct Hit
         {
@@ -15,7 +18,9 @@ class Sample {
 
         int32_t value = 0;
         bool playing = false;
+        int velocity = 4095; // 12-bit resolution (for now)
         int position = 0;
+        int positionAccurate = 0; // position at sub-sample resolution to allow playing samples at different pitches
         bool output1 = true;
         bool output2 = true;
         uint length = 0;
@@ -45,19 +50,42 @@ class Sample {
                     {
                         nextHitTime = INT64_MAX;
                     }
-                    position = 0;
+                    positionAccurate = Sample::pitch >= 0 ? 0 : std::min(length, Sample::crop) << LERP_BITS;
+                    position = Sample::pitch >= 0 ? 0 : std::min(length, Sample::crop);
                     playing = true;
                 }
             }
             if (playing)
             {
-                value = sampleData[position + startPosition];
-                position++;
-                if (position >= length)
+                int y1 = sampleData[position + startPosition];
+                int y2 = sampleData[position + 1 + startPosition]; // might have a fencepost error thingy here
+                value = y1 + ((y2 - y1) * (positionAccurate - (position << LERP_BITS))) / (1 << LERP_BITS);
+                value = (value * velocity) >> 12;
+
+                positionAccurate += Sample::pitch;
+                position = positionAccurate >> LERP_BITS;
+
+                if (pitch > 0)
                 {
-                    playing = false;
-                    value = 0;
-                    position = length;
+                    // playing forwards
+                    if (position >= length || position >= Sample::crop) // temp crop test
+                    {
+                        playing = false;
+                        value = 0;
+                        position = length;
+                        positionAccurate = length << LERP_BITS;
+                    }
+                }
+                else
+                {
+                    // playing backwards
+                    if (position <= 0)
+                    {
+                        playing = false;
+                        value = 0;
+                        position = 0;
+                        positionAccurate = 0;
+                    }
                 }
             }
             return true;
@@ -87,4 +115,7 @@ class Sample {
         }
 };
 
+int Sample::LERP_BITS = 10;
 int16_t Sample::sampleData[MAX_SAMPLE_STORAGE];
+int Sample::pitch = 1 << LERP_BITS;
+uint Sample::crop = MAX_SAMPLE_STORAGE;

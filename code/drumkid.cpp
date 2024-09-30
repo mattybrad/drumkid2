@@ -854,10 +854,13 @@ int zoomValues[NUM_TUPLET_MODES][9] = {
 int getRandomHitVelocity(int step) {
     // first draft...
 
-    int tempZoom = analogReadings[POT_ZOOM] / 456;
+    int tempZoom = analogReadings[POT_ZOOM];
+    applyDeadZones(tempZoom);
+    tempZoom = tempZoom  / 456;
     if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
     {
         int tempChance = analogReadings[POT_CHANCE];
+        applyDeadZones(tempChance);
         if(tempChance > rand()%4095) {
             return 4095;
         }
@@ -953,6 +956,34 @@ int main()
         crush = 4095 - (((4095 - crush) * (4095 - crush)) >> 12);
         crush = crush >> 8;
 
+        // pitch knob maths - looks horrible! the idea is for the knob to have a deadzone at 12 o'clock which corresponds to normal playback speed (1024). to keep the maths efficient (ish), i'm trying to avoid division, because apart from the deadzone section, it doesn't matter too much what the exact values are, so i'm just using bitwise operators to crank up the range until it feels right. CV adjustment happens after the horrible maths, because otherwise CV control (e.g. a sine LFO pitch sweep) would sound weird and disjointed
+        int pitchInt = analogReadings[POT_PITCH];
+        int pitchDeadZone = 500;
+        if (pitchInt > 2048 + pitchDeadZone)
+        {
+            // speed above 100%
+            pitchInt = ((pitchInt - 2048 - pitchDeadZone) << 1) + 1024;
+        }
+        else if (pitchInt < 2048 - pitchDeadZone)
+        {
+            // speed below 100%, and reverse
+            pitchInt = pitchInt - 2048 + pitchDeadZone + 1024;
+            if (pitchInt < 0)
+            {
+                pitchInt = pitchInt << 3;
+            }
+        }
+        else
+        {
+            // speed exactly 100%, in deadzone
+            pitchInt = 1024;
+        }
+        pitchInt += analogReadings[CV_TBC] - 2048;
+        if (pitchInt == 0)
+            pitchInt = 1; // seems sensible, prevents sample getting stuck
+
+        Sample::pitch = pitchInt; // temp...
+
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
@@ -1006,6 +1037,7 @@ int main()
             lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
 
             int tempChance = analogReadings[POT_CHANCE];
+            applyDeadZones(tempChance);
 
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
