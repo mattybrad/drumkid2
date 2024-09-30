@@ -6,3 +6,4 @@ TODO:
 - Tidy up groups feature
 - Allow different sample rates when loading WAV files
 - Allow stereo WAV files (but bounce to mono)
+- Figure out behaviour if desired output pulse length is too long for PPQN value at given tempo

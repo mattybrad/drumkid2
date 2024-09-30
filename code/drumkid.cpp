@@ -57,8 +57,8 @@ int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
 int settingsMenuLevel = 0;
 
-const int NUM_PPQN_VALUES = 6;
-int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 16, 32};
+const int NUM_PPQN_VALUES = 8;
+int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 12, 16, 24, 32};
 int syncInPpqnIndex = 0;
 int syncOutPpqnIndex = 2;
 int syncInPpqn = ppqnValues[syncInPpqnIndex];
@@ -73,6 +73,11 @@ int64_t lastDacUpdateMicros;    // microseconds
 bool beatStarted = false;
 bool firstHit = true;
 int tuplet = TUPLET_STRAIGHT;
+
+uint8_t crushVolume[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 13};
+int glitchChannel = GLITCH_CHANNEL_BOTH;
+bool glitch1 = true;
+bool glitch2 = true;
 
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
@@ -352,10 +357,10 @@ void handleSubSettingIncDec(bool isInc)
         break;
 
     case SETTING_GLITCH_CHANNEL:
-        // glitchChannel += thisInc;
-        // glitchChannel = std::max(0, std::min(3, glitchChannel));
-        // glitch1 = !bitRead(glitchChannel, 1);
-        // glitch2 = !bitRead(glitchChannel, 0);
+        glitchChannel += thisInc;
+        glitchChannel = std::max(0, std::min(3, glitchChannel));
+        glitch1 = !bitRead(glitchChannel, 1);
+        glitch2 = !bitRead(glitchChannel, 0);
         break;
 
     case SETTING_OUTPUT_PULSE_LENGTH:
@@ -373,6 +378,7 @@ void handleSubSettingIncDec(bool isInc)
         syncInPpqnIndex += thisInc;
         syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
         syncInPpqn = ppqnValues[syncInPpqnIndex];
+        pulseStep = (pulseStep / (3360 / syncInPpqn)) * (3360 / syncInPpqn); // quantize pulse step to new PPQN value to prevent annoying phase offset thing
         break;
 
     case SETTING_PITCH_CURVE:
@@ -588,20 +594,23 @@ void updateTapTempo()
 
 int64_t displayPulseCallback(alarm_id_t id, void *user_data)
 {
-    uint pulseStep = (uint)user_data;
+    uint thisPulse = (uint)user_data;
     for(int i=0; i<4; i++) {
-        if(i == pulseStep%4) {
-            sevenSegData[i] = pulseStep < 4 ? 0b00100000 : 0b00010000;
-        } else {
+        if (i == thisPulse % 4)
+        {
+            sevenSegData[i] = thisPulse < 4 ? 0b00100000 : 0b00010000;
+        }
+        else
+        {
             sevenSegData[i] = 0;
         }
     }
     return 0;
 }
 
-void displayPulse(int pulseStep, uint16_t delayMicros)
+void displayPulse(int thisPulse, uint16_t delayMicros)
 {
-    add_alarm_in_us(delayMicros, displayPulseCallback, (void *)pulseStep, true);
+    add_alarm_in_us(delayMicros, displayPulseCallback, (void *)thisPulse, true);
 }
 
 void displayClockMode()
@@ -734,14 +743,14 @@ void displaySettings()
             break;
 
         case SETTING_GLITCH_CHANNEL:
-            // if (glitchChannel == GLITCH_CHANNEL_BOTH)
-            //     updateLedDisplayAlpha("both");
-            // else if (glitchChannel == GLITCH_CHANNEL_1)
-            //     updateLedDisplayAlpha("1");
-            // else if (glitchChannel == GLITCH_CHANNEL_2)
-            //     updateLedDisplayAlpha("2");
-            // else if (glitchChannel == GLITCH_CHANNEL_NONE)
-            //     updateLedDisplayAlpha("none");
+            if (glitchChannel == GLITCH_CHANNEL_BOTH)
+                updateLedDisplayAlpha("both");
+            else if (glitchChannel == GLITCH_CHANNEL_1)
+                updateLedDisplayAlpha("1");
+            else if (glitchChannel == GLITCH_CHANNEL_2)
+                updateLedDisplayAlpha("2");
+            else if (glitchChannel == GLITCH_CHANNEL_NONE)
+                updateLedDisplayAlpha("none");
             break;
 
         case SETTING_OUTPUT_PULSE_LENGTH:
@@ -875,6 +884,11 @@ bool updateLedDisplay(repeating_timer_t *rt)
     }
 }
 
+void applyDeadZones(int &param)
+{
+    param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
+}
+
 int main()
 {
     stdio_init_all();
@@ -934,6 +948,10 @@ int main()
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
+        int crush = analogReadings[POT_CRUSH];
+        applyDeadZones(crush);
+        crush = 4095 - (((4095 - crush) * (4095 - crush)) >> 12);
+        crush = crush >> 8;
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
@@ -1021,9 +1039,16 @@ int main()
                 }
                 samples[j].update(currentTime);
                 out1 += samples[j].value;
+                out2 += samples[j].value;
             }
-            bufferSamples[i] = out1 >> 2;
-            bufferSamples[i + 1] = 0;
+            if (glitch1)
+                bufferSamples[i] = (out1 >> (2 + crush)) << crushVolume[crush];
+            else
+                bufferSamples[i] = out1 >> 2;
+            if (glitch2)
+                bufferSamples[i + 1] = (out2 >> (2 + crush)) << crushVolume[crush];
+            else
+                bufferSamples[i + 1] = out2 >> 2;
 
             currentTime++;
         }
