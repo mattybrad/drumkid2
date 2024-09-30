@@ -951,6 +951,9 @@ int main()
     {
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
+
+        int64_t audioProcessStartTime = time_us_64();
+
         int crush = analogReadings[POT_CRUSH];
         applyDeadZones(crush);
         crush = 4095 - (((4095 - crush) * (4095 - crush)) >> 12);
@@ -1084,6 +1087,10 @@ int main()
 
             currentTime++;
         }
+
+        int64_t audioProcessTime = time_us_64() - audioProcessStartTime; // should be well below 5.8ms (5800us)
+        //printf("%lld\n", audioProcessTime);
+
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
         lastDacUpdateSamples = currentTime;
