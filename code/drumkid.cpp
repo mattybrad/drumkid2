@@ -52,6 +52,7 @@ int numSteps = 4 * 3360;
 int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at start of next bar
 uint64_t lastClockIn = 0; // microseconds
 bool externalClock = false;
+bool prevProcessTimeSlow = false;
 
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
@@ -87,6 +88,7 @@ repeating_timer_t outputShiftRegistersTimer;
 repeating_timer_t inputShiftRegistersTimer;
 repeating_timer_t multiplexersTimer;
 repeating_timer_t displayTimer;
+repeating_timer_t holdTimer;
 
 void handleSyncPulse() {
     //pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
@@ -155,7 +157,6 @@ bool updateOutputShiftRegisters(repeating_timer_t *rt)
     return true;
 }
 
-uint32_t shiftRegInValues = 0;
 bool updateInputShiftRegisters(repeating_timer_t *rt)
 {
     uint32_t data;
@@ -165,36 +166,21 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
     {
         for(int i=0; i<32; i++) {
             bool newVal = bitRead(data, i);
-            if(bitRead(shiftRegInValues, i) != newVal) {
+            if(bitRead(buttonStableStates, i) != newVal && cyclesSinceChange[i] >= 20) {
                 uint8_t buttonNum = (2-(i>>3))*8 + (i%8) + 1; // to match SW num in schematic (SW1 is top left on unit)
                 handleButtonChange(buttonNum, newVal);
+                cyclesSinceChange[i] = 0;
+                bitWrite(buttonStableStates, i, newVal);
+            } else if(cyclesSinceChange[i]<20) {
+                cyclesSinceChange[i] ++;
             }
+        }  
+    } else {
+        for (int i = 0; i < 32; i++)
+        {
+            if (cyclesSinceChange[i] < 20)
+                cyclesSinceChange[i]++;
         }
-        
-        //loop++;
-
-        // if(data!=0) {
-        //     for(int i=0; i<16; i++) {
-        //         printf("%d\t", analogReadings[i]);
-        //     }
-        //     printf("\n");
-        // }
-        // if(data == 0x00010000) {
-        //     beatStarted = !beatStarted;
-        //     if(beatStarted) {
-        //         step = 0;
-        //         prevPulseTime = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
-        //         nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
-        //         nextPredictedPulseTime = nextPulseTime;
-        //     }
-        // }
-
-        // printf("\n%4d 0x%08X\t\t", loop, data);
-        // printf("%08b %08b %08b %08b\n",
-        //         (data >> 24) & 0xFF,
-        //         (data >> 16) & 0xFF,
-        //         (data >> 8) & 0xFF,
-        //         data & 0xFF);
     }
 
     return true;
@@ -887,6 +873,11 @@ bool updateLedDisplay(repeating_timer_t *rt)
     }
 }
 
+bool updateHold(repeating_timer_t *rt) {
+
+    return true;
+}
+
 void applyDeadZones(int &param)
 {
     param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
@@ -930,6 +921,7 @@ int main()
     add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
     add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe, potentially faster
     add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
+    add_repeating_timer_ms(60, updateHold, NULL, &holdTimer);
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -1089,6 +1081,16 @@ int main()
         }
 
         int64_t audioProcessTime = time_us_64() - audioProcessStartTime; // should be well below 5.8ms (5800us)
+        if(audioProcessTime > 4500) {
+            if(prevProcessTimeSlow) {
+                showError("perf");
+                beatPlaying = false;
+            } else {
+                prevProcessTimeSlow = true;
+            }
+        } else {
+            prevProcessTimeSlow = false;
+        }
         //printf("%lld\n", audioProcessTime);
 
         buffer->sample_count = buffer->max_sample_count;
@@ -1121,9 +1123,9 @@ int main()
 
 void showError(const char *msgx)
 {
-    updateLedDisplayAlpha("err");
+    updateLedDisplayAlpha(msgx);
     activeButton = ERROR_DISPLAY;
-    bitWrite(singleLedData, 3, true);
+    setLed(3, true);
 }
 
 void loadSamplesFromSD()

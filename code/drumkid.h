@@ -169,8 +169,8 @@ uint shiftRegOutLoopNum = 0; // 0 to 15
 uint shiftRegOutPhase = 0;   // 0, 1, or 2
 uint sevenSegCharNum = 0;
 
-bool buttonStableStates[24] = {false}; // array of bools not good use of space, change if running out of space
-uint32_t microsSinceChange[24] = {0};  // milliseconds since state change
+uint32_t buttonStableStates = 0;       // array of bools not good use of space, change if running out of space
+uint16_t cyclesSinceChange[32] = {0};  // shift reg updates since state change
 uint shiftRegInLoopNum = 0;            // 0 to 15
 uint shiftRegInPhase = 0;              // 0 or 1
 
