@@ -53,6 +53,9 @@ int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at sta
 uint64_t lastClockIn = 0; // microseconds
 bool externalClock = false;
 bool prevProcessTimeSlow = false;
+uint8_t holdDelayInc = 0;
+uint8_t holdDelayDec = 0;
+int lastStep = -1;
 
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
@@ -165,12 +168,12 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
     if (tempInputChanged)
     {
         for(int i=0; i<32; i++) {
+            uint8_t buttonNum = (2-(i>>3))*8 + (i%8) + 1; // to match SW num in schematic (SW1 is top left on unit) - could be lookup table to improve speed
             bool newVal = bitRead(data, i);
-            if(bitRead(buttonStableStates, i) != newVal && cyclesSinceChange[i] >= 20) {
-                uint8_t buttonNum = (2-(i>>3))*8 + (i%8) + 1; // to match SW num in schematic (SW1 is top left on unit)
+            if(bitRead(buttonStableStates, buttonNum) != newVal && cyclesSinceChange[i] >= 20) {
                 handleButtonChange(buttonNum, newVal);
                 cyclesSinceChange[i] = 0;
-                bitWrite(buttonStableStates, i, newVal);
+                bitWrite(buttonStableStates, buttonNum, newVal);
             } else if(cyclesSinceChange[i]<20) {
                 cyclesSinceChange[i] ++;
             }
@@ -239,6 +242,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             else
             {
                 //nextHoldUpdateInc = currentTime + SAMPLE_RATE;
+                holdDelayInc = 8;
                 handleIncDec(true, false);
             }
             break;
@@ -250,6 +254,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             else
             {
                 //nextHoldUpdateDec = currentTime + SAMPLE_RATE;
+                holdDelayDec = 8;
                 handleIncDec(false, false);
             }
             break;
@@ -275,6 +280,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_BACK:
             activeButton = NO_ACTIVE_BUTTON;
+            displayPulse(lastStep/3360,0);
             //settingsMenuLevel = 0;
             break;
         case BUTTON_KIT:
@@ -874,7 +880,16 @@ bool updateLedDisplay(repeating_timer_t *rt)
 }
 
 bool updateHold(repeating_timer_t *rt) {
-
+    if(holdDelayInc > 0) {
+        holdDelayInc --;
+    } else if(bitRead(buttonStableStates, BUTTON_INC)) {
+        handleIncDec(true, true);
+    }
+    if(holdDelayDec > 0) {
+        holdDelayDec --;
+    } else if(bitRead(buttonStableStates, BUTTON_DEC)) {
+        handleIncDec(false, true);
+    }
     return true;
 }
 
@@ -921,7 +936,7 @@ int main()
     add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
     add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe, potentially faster
     add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
-    add_repeating_timer_ms(60, updateHold, NULL, &holdTimer);
+    add_repeating_timer_ms(125, updateHold, NULL, &holdTimer);
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -937,7 +952,6 @@ int main()
     }
 
     // audio buffer loop, runs forever
-    int lastStep = -1;
     int groupStatus[8] = {GROUP_PENDING};
     while (true)
     {
