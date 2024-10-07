@@ -313,6 +313,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             break;
         case BUTTON_STEP_EDIT:
+            if(activeButton == BUTTON_STEP_EDIT) {
+                editSample = (editSample + 1) % 4;
+            }
             activeButton = BUTTON_STEP_EDIT;
             displayEditBeat();
             break;
@@ -441,11 +444,14 @@ void handleIncDec(bool isInc, bool isHold)
         break;
 
     case BUTTON_STEP_EDIT:
-        editSample += isInc ? 1 : -1;
-        if (editSample < 0)
-            editSample = 0;
-        if (editSample >= NUM_SAMPLES)
-            editSample = NUM_SAMPLES - 1;
+        // editSample += isInc ? 1 : -1;
+        // if (editSample < 0)
+        //     editSample = 0;
+        // if (editSample >= NUM_SAMPLES)
+        //     editSample = NUM_SAMPLES - 1;
+        editStep += isInc ? 1: -1;
+        if(editStep < 0) editStep = 31;
+        if(editStep >= 32) editStep = 0;
         displayEditBeat();
         break;
 
@@ -499,6 +505,7 @@ void handleYesNo(bool isYes)
 {
     // have to declare stuff up here because of switch statement
     int tupletEditStep;
+    int hitNum;
 
     bool useDefaultNoBehaviour = true;
     switch (activeButton)
@@ -509,7 +516,8 @@ void handleYesNo(bool isYes)
         break;
 
     case BUTTON_STEP_EDIT:
-        // useDefaultNoBehaviour = false;
+        useDefaultNoBehaviour = false;
+
         // tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
         // bitWrite(beats[beatNum].beatData[editSample], tupletEditStep, isYes);
         // editStep++;
@@ -519,6 +527,15 @@ void handleYesNo(bool isYes)
         // }
         // if (editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
         //     editStep = 0;
+        hitNum = beats[beatNum].getHit(editSample, editStep*420);
+        if (hitNum >= 0)
+        {
+            // remove existing hit, whether or not we want to add a new one
+            beats[beatNum].removeHit(editSample, editStep * 420);
+        }
+        if(isYes) {
+            beats[beatNum].addHit(editSample, editStep * 420, 255, 255, 0);
+        }
         displayEditBeat();
         break;
 
@@ -653,10 +670,11 @@ void displayEditBeat()
     int humanReadableEditStep = editStep + 1;
     char chars[4];
     chars[0] = editSample + 49;
-    chars[1] = ' ';
-    chars[2] = (humanReadableEditStep < 10) ? ' ' : humanReadableEditStep / 10 + 48;
-    chars[3] = (humanReadableEditStep % 10) + 48;
+    chars[1] = humanReadableEditStep / 10 + 48;
+    chars[2] = (humanReadableEditStep % 10) + 48;
+    chars[3] = beats[beatNum].getHit(editSample, editStep*420)>=0?'_':' ';
     updateLedDisplayAlpha(chars);
+    bitWrite(sevenSegData[0], 7, true);
 }
 
 void displayOutput(int outputNum)
