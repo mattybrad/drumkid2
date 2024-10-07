@@ -389,6 +389,34 @@ void handleSubSettingIncDec(bool isInc)
     }
 }
 
+void backupBeat(int backupBeatNum)
+{
+    for (int i = 0; i < MAX_BEAT_HITS; i++)
+    {
+        // would be neater with memcpy
+        beatBackup.hits[i].sample = beats[backupBeatNum].hits[i].sample;
+        beatBackup.hits[i].step = beats[backupBeatNum].hits[i].step;
+        beatBackup.hits[i].velocity = beats[backupBeatNum].hits[i].velocity;
+        beatBackup.hits[i].probability = beats[backupBeatNum].hits[i].probability;
+        beatBackup.hits[i].group = beats[backupBeatNum].hits[i].group;
+    }
+    beatBackup.numHits = beats[backupBeatNum].numHits;
+}
+
+void revertBeat(int revertBeatNum)
+{
+    for (int i = 0; i < MAX_BEAT_HITS; i++)
+    {
+        // would be neater with memcpy
+        beats[revertBeatNum].hits[i].sample = beatBackup.hits[i].sample;
+        beats[revertBeatNum].hits[i].step = beatBackup.hits[i].step;
+        beats[revertBeatNum].hits[i].velocity = beatBackup.hits[i].velocity;
+        beats[revertBeatNum].hits[i].probability = beatBackup.hits[i].probability;
+        beats[revertBeatNum].hits[i].group = beatBackup.hits[i].group;
+    }
+    beats[revertBeatNum].numHits = beatBackup.numHits;
+}
+
 void handleIncDec(bool isInc, bool isHold)
 {
     // have to declare stuff up here because of switch statement
@@ -437,8 +465,8 @@ void handleIncDec(bool isInc, bool isHold)
             beatNum = 0;
         if (beatNum != prevBeatNum)
         {
-            //revertBeat(prevBeatNum);
-            //backupBeat(beatNum);6
+            revertBeat(prevBeatNum);
+            backupBeat(beatNum);
         }
         displayBeat();
         break;
@@ -1559,18 +1587,9 @@ void loadBeatsFromFlash()
             if(beats[i].hits[j].sample != 255) {
                 beats[i].numHits = j + 1;
             }
-            // std::memcpy(tempBuffer, &flashUserBeats[(i * MAX_BEAT_HITS + j) * 8], 8);
         }
     }
-    //backupBeat(beatNum);
-}
-
-void backupBeat(int backupBeatNum)
-{
-    for (int i = 0; i < NUM_SAMPLES; i++)
-    {
-        //beatBackup.beatData[i] = beats[backupBeatNum].beatData[i];
-    }
+    backupBeat(beatNum);
 }
 
 void initGpio()
