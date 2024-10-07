@@ -94,7 +94,6 @@ repeating_timer_t displayTimer;
 repeating_timer_t holdTimer;
 
 void handleSyncPulse() {
-    //pulseGpio(SYNC_OUT, 10); // todo: allow different output ppqn values
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
     if (lastClockIn > 0)
     {
@@ -596,8 +595,8 @@ void handleYesNo(bool isYes)
         break;
 
     case BUTTON_SAVE:
-        // if (isYes)
-        //     writeBeatsToFlash();
+        if (isYes)
+            saveAllBeats();
         activeButton = NO_ACTIVE_BUTTON;
         break;
     }
@@ -1122,6 +1121,8 @@ int main()
                     thisVel = std::max(thisVel, getRandomHitVelocity(step));
                     if(thisVel > 0) {
                         samples[j].queueHit(currentTime, 0, thisVel);
+                        int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
+                        pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
                     }
                 }
                 samples[j].update(currentTime);
@@ -1151,7 +1152,7 @@ int main()
         } else {
             prevProcessTimeSlow = false;
         }
-        //printf("%lld\n", audioProcessTime);
+        printf("%lld\n", audioProcessTime);
 
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
@@ -1455,6 +1456,23 @@ void writePageToFlash(const uint8_t *buffer, uint address)
 }
 
 void saveAllBeats() {
+    if (beatNum != saveBeatLocation)
+    {
+        for (int i = 0; i < MAX_BEAT_HITS; i++)
+        {
+            // would be neater with memcpy
+            beats[saveBeatLocation].hits[i].sample = beats[beatNum].hits[i].sample;
+            beats[saveBeatLocation].hits[i].step = beats[beatNum].hits[i].step;
+            beats[saveBeatLocation].hits[i].velocity = beats[beatNum].hits[i].velocity;
+            beats[saveBeatLocation].hits[i].probability = beats[beatNum].hits[i].probability;
+            beats[saveBeatLocation].hits[i].group = beats[beatNum].hits[i].group;
+        }
+        beats[saveBeatLocation].numHits = beats[beatNum].numHits;
+        revertBeat(beatNum);
+        beatNum = saveBeatLocation;
+    }
+    backupBeat(beatNum);
+
     uint8_t buffer[FLASH_PAGE_SIZE] = {0};
     int bufferIndex = 0;
     int pageNum = 0;
