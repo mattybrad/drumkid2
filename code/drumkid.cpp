@@ -56,6 +56,7 @@ bool prevProcessTimeSlow = false;
 uint8_t holdDelayInc = 0;
 uint8_t holdDelayDec = 0;
 int lastStep = -1;
+uint16_t tupletEditStepMultipliers[NUM_TUPLET_MODES] = {420,560,672,480};
 
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
@@ -188,6 +189,20 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
     return true;
 }
 
+void doLiveHit(int sampleNum)
+{
+    //samples[sampleNum].queueHit(currentTime, scheduledStep, 4095);
+    //int adjustedStep = (scheduledStep + 1) % numSteps; // offset by 2 to allow some leeway either side , not sure if the maths is right there... then reduce granularity to match beat data
+    //bitWrite(beats[beatNum].beatData[sampleNum], (adjustedStep >> 3) << 1, true);
+    //int64_t thisStep = 
+    // TUESDAY! use pulseStep, lastPulse, nextPulse, etc to calculate next step
+    //printf("%lld %lld %lld %lld\n", prevPulseTime, nextPulseTime, nextPulseTime-prevPulseTime, deltaT);
+    int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - prevPulseTime - SAMPLES_PER_BUFFER;
+    int thisStep = (pulseStep + (samplesSincePulse * 3360) / 22050) % numSteps;
+    int tempCheck = ((thisStep + 3360/4) % numSteps) / (3360/2);
+    beats[beatNum].addHit(sampleNum, tempCheck * (3360/2), 255, 255, 0);
+}
+
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     if (buttonState)
@@ -236,7 +251,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_INC:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                //doLiveHit(0);
+                doLiveHit(0);
             }
             else
             {
@@ -248,7 +263,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_DEC:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                //doLiveHit(1);
+                doLiveHit(1);
             }
             else
             {
@@ -260,7 +275,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CONFIRM:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                //doLiveHit(2);
+                doLiveHit(2);
             }
             else
             {
@@ -270,7 +285,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CANCEL:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                //doLiveHit(3);
+                doLiveHit(3);
             }
             else
             {
@@ -477,8 +492,9 @@ void handleIncDec(bool isInc, bool isHold)
         // if (editSample >= NUM_SAMPLES)
         //     editSample = NUM_SAMPLES - 1;
         editStep += isInc ? 1: -1;
-        if(editStep < 0) editStep = 31;
-        if(editStep >= 32) editStep = 0;
+        if(editStep < 0) editStep = numSteps / tupletEditStepMultipliers[tuplet] - 1;
+        if (editStep >= numSteps / tupletEditStepMultipliers[tuplet])
+            editStep = 0;
         displayEditBeat();
         break;
 
@@ -513,6 +529,10 @@ void handleIncDec(bool isInc, bool isHold)
             tuplet = 0;
         else if (tuplet >= NUM_TUPLET_MODES)
             tuplet = NUM_TUPLET_MODES - 1;
+        else {
+            // tuplet changed, reset edit step
+            editStep = 0;
+        }
         displayTuplet();
         break;
 
@@ -531,7 +551,6 @@ void handleIncDec(bool isInc, bool isHold)
 void handleYesNo(bool isYes)
 {
     // have to declare stuff up here because of switch statement
-    int tupletEditStep;
     int hitNum;
 
     bool useDefaultNoBehaviour = true;
@@ -554,14 +573,14 @@ void handleYesNo(bool isYes)
         // }
         // if (editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
         //     editStep = 0;
-        hitNum = beats[beatNum].getHit(editSample, editStep*420);
+        hitNum = beats[beatNum].getHit(editSample, editStep*tupletEditStepMultipliers[tuplet]);
         if (hitNum >= 0)
         {
             // remove existing hit, whether or not we want to add a new one
-            beats[beatNum].removeHit(editSample, editStep * 420);
+            beats[beatNum].removeHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
         }
         if(isYes) {
-            beats[beatNum].addHit(editSample, editStep * 420, 255, 255, 0);
+            beats[beatNum].addHit(editSample, editStep * tupletEditStepMultipliers[tuplet], 255, 255, 0);
         }
         displayEditBeat();
         break;
@@ -699,7 +718,7 @@ void displayEditBeat()
     chars[0] = editSample + 49;
     chars[1] = humanReadableEditStep / 10 + 48;
     chars[2] = (humanReadableEditStep % 10) + 48;
-    chars[3] = beats[beatNum].getHit(editSample, editStep*420)>=0?'_':' ';
+    chars[3] = beats[beatNum].getHit(editSample, editStep * tupletEditStepMultipliers[tuplet]) >= 0 ? '_' : ' ';
     updateLedDisplayAlpha(chars);
     bitWrite(sevenSegData[0], 7, true);
 }
@@ -1081,7 +1100,7 @@ int main()
                     pulseLed(0, syncOutDelay);
                 }
                 if((step % 3360) == 0) {
-                    int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
+                    int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                     if(activeButton == NO_ACTIVE_BUTTON) {
                         displayPulse(step / 3360, pulseDelay);
                     }
@@ -1152,7 +1171,7 @@ int main()
         } else {
             prevProcessTimeSlow = false;
         }
-        printf("%lld\n", audioProcessTime);
+        //printf("%lld\n", audioProcessTime);
 
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
