@@ -57,6 +57,9 @@ uint8_t holdDelayInc = 0;
 uint8_t holdDelayDec = 0;
 int lastStep = -1;
 uint16_t tupletEditStepMultipliers[NUM_TUPLET_MODES] = {420,560,672,480};
+int metronomeIndex = 0;
+int nextBeatCheckStep[NUM_SAMPLES] = {0};
+bool forceBeatUpdate = false;
 
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
@@ -191,16 +194,12 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
 
 void doLiveHit(int sampleNum)
 {
-    //samples[sampleNum].queueHit(currentTime, scheduledStep, 4095);
-    //int adjustedStep = (scheduledStep + 1) % numSteps; // offset by 2 to allow some leeway either side , not sure if the maths is right there... then reduce granularity to match beat data
-    //bitWrite(beats[beatNum].beatData[sampleNum], (adjustedStep >> 3) << 1, true);
-    //int64_t thisStep = 
-    // TUESDAY! use pulseStep, lastPulse, nextPulse, etc to calculate next step
-    //printf("%lld %lld %lld %lld\n", prevPulseTime, nextPulseTime, nextPulseTime-prevPulseTime, deltaT);
+    int quantizeSteps = tupletEditStepMultipliers[tuplet];
     int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - prevPulseTime - SAMPLES_PER_BUFFER;
     int thisStep = (pulseStep + (samplesSincePulse * 3360) / 22050) % numSteps;
-    int tempCheck = ((thisStep + 3360/4) % numSteps) / (3360/2);
-    beats[beatNum].addHit(sampleNum, tempCheck * (3360/2), 255, 255, 0);
+    int tempCheck = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
+    beats[beatNum].addHit(sampleNum, tempCheck * quantizeSteps, 255, 255, 0);
+    forceBeatUpdate = true;
 }
 
 void handleButtonChange(int buttonNum, bool buttonState)
@@ -482,6 +481,7 @@ void handleIncDec(bool isInc, bool isHold)
             revertBeat(prevBeatNum);
             backupBeat(beatNum);
         }
+        forceBeatUpdate = true;
         displayBeat();
         break;
 
@@ -1101,11 +1101,23 @@ int main()
                 }
                 if((step % 3360) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
-                    if(activeButton == NO_ACTIVE_BUTTON) {
+                    if(activeButton == NO_ACTIVE_BUTTON || activeButton == BUTTON_LIVE_EDIT) {
                         displayPulse(step / 3360, pulseDelay);
                     }
                     pulseLed(2, pulseDelay);
                 }
+                if (forceBeatUpdate)
+                {
+                    for (int j = 0; j < NUM_SAMPLES; j++)
+                    {
+                        nextBeatCheckStep[j] = step;
+                    }
+                    forceBeatUpdate = false;
+                }
+            }
+            if(activeButton == BUTTON_LIVE_EDIT && beatPlaying && (step % 3360) < 840) {
+                out1 += metronomeIndex < 50 ? 5000 : -5000;
+                metronomeIndex = (metronomeIndex + (step < 3360 ? 2 : 1)) % 100;
             }
             lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
 
@@ -1116,7 +1128,11 @@ int main()
             {
                 if(newStep) {
                     int thisVel = 0;
-                    int foundHit = beats[beatNum].getHit(j, step);
+                    int foundHit = -1;
+                    if(step == nextBeatCheckStep[j]) {
+                        foundHit = beats[beatNum].getHit(j, step);
+                        nextBeatCheckStep[j] = beats[beatNum].getNextHitStep(j, step);
+                    }
                     if(foundHit >= 0) {
                         int prob = beats[beatNum].hits[foundHit].probability;
                         int group = beats[beatNum].hits[foundHit].group;
@@ -1161,7 +1177,7 @@ int main()
         }
 
         int64_t audioProcessTime = time_us_64() - audioProcessStartTime; // should be well below 5.8ms (5800us)
-        if(audioProcessTime > 4500) {
+        if(audioProcessTime > 5000) {
             if(prevProcessTimeSlow) {
                 showError("perf");
                 beatPlaying = false;
@@ -1171,7 +1187,7 @@ int main()
         } else {
             prevProcessTimeSlow = false;
         }
-        //printf("%lld\n", audioProcessTime);
+        printf("%lld\n", audioProcessTime);
 
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);

@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <algorithm>
 #include "constants.h"
 
 class Beat {
@@ -32,6 +33,23 @@ class Beat {
                 }
             }
             return -1;
+        }
+        int getNextHitStep(uint8_t sample, uint16_t step) {
+            uint16_t firstHit = UINT16_MAX;
+            uint16_t nextHit = UINT16_MAX;
+            for (int i = 0; i < numHits; i++)
+            {
+                if (hits[i].sample == sample)
+                {
+                    // sample matches
+
+                    firstHit = std::min(hits[i].step, firstHit);
+                    if(hits[i].step > step) {
+                        nextHit = std::min(hits[i].step, nextHit);
+                    }
+                }
+            }
+            return nextHit < UINT16_MAX ? nextHit : firstHit;
         }
         void removeHit(uint8_t sample, uint16_t step)
         {
