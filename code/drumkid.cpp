@@ -117,6 +117,9 @@ void handleSyncPulse() {
 
     }
     lastClockIn = time_us_64();
+    if(activeButton == BUTTON_MANUAL_TEMPO) {
+        displayTempo();
+    }
 }
 
 void gpio_callback(uint gpio, uint32_t events)
@@ -201,7 +204,9 @@ void doLiveHit(int sampleNum)
     int thisStep = (pulseStep + (samplesSincePulse * 3360) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
+    beats[beatNum].addHit(sampleNum, thisStep, 255, 255, 0);
 
+    // if scheduled hit is in the past, directly trigger sample now
     int compareLastStep = lastStep;
     int compareThisStep = thisStep;
     if(lastStep - SAMPLES_PER_BUFFER < 0) {
@@ -213,11 +218,7 @@ void doLiveHit(int sampleNum)
     if (compareThisStep <= compareLastStep)
     {
         samples[sampleNum].queueHit(lastDacUpdateSamples, 0, 255);
-        printf("hit, this: %d, last: %d, true\n", thisStep, lastStep);
-    } else {
-        printf("hit, this: %d, last: %d, false\n", thisStep, lastStep);
     }
-    beats[beatNum].addHit(sampleNum, thisStep, 255, 255, 0);
 
     forceBeatUpdate = true;
 }
@@ -702,8 +703,8 @@ void displayTempo()
 {
     if (externalClock)
     {
-        //int calculatedTempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS);
-        //updateLedDisplayNumber(calculatedTempo);
+        int calculatedTempo = 60000000 / (deltaT * syncInPpqn);
+        updateLedDisplayNumber(calculatedTempo);
     }
     else
     {
@@ -1119,10 +1120,9 @@ int main()
                     }
                 }
                 if((step % (3360/syncOutPpqn)) == 0) {
-                    int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
-                    //printf("%lld\n", syncOutDelay);
-                    pulseGpio(SYNC_OUT, syncOutDelay);
-                    pulseLed(0, syncOutDelay);
+                    int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
+                    pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
+                    pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
                 }
                 if((step % 3360) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
