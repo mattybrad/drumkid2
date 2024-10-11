@@ -57,6 +57,7 @@ uint8_t holdDelayInc = 0;
 uint8_t holdDelayDec = 0;
 int lastStep = -1;
 uint16_t tupletEditStepMultipliers[NUM_TUPLET_MODES] = {420,560,672,480};
+uint16_t tupletEditLiveMultipliers[NUM_TUPLET_MODES] = {840,560,672,480};
 int metronomeIndex = 0;
 int nextBeatCheckStep[NUM_SAMPLES] = {0};
 bool forceBeatUpdate = false;
@@ -194,16 +195,36 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
 
 void doLiveHit(int sampleNum)
 {
-    int quantizeSteps = tupletEditStepMultipliers[tuplet];
+    int quantizeSteps = tupletEditLiveMultipliers[tuplet];
     int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - prevPulseTime - SAMPLES_PER_BUFFER;
-    int thisStep = (pulseStep + (samplesSincePulse * 3360) / 22050) % numSteps;
-    int tempCheck = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
-    beats[beatNum].addHit(sampleNum, tempCheck * quantizeSteps, 255, 255, 0);
+    int samplesPerPulse = nextPulseTime - prevPulseTime;
+    int thisStep = (pulseStep + (samplesSincePulse * 3360) / samplesPerPulse) % numSteps;
+    thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
+    thisStep = thisStep * quantizeSteps;
+
+    int compareLastStep = lastStep;
+    int compareThisStep = thisStep;
+    if(lastStep - SAMPLES_PER_BUFFER < 0) {
+        compareLastStep += numSteps;
+    }
+    if(thisStep - SAMPLES_PER_BUFFER < 0) {
+        compareThisStep += numSteps;
+    }
+    if (compareThisStep <= compareLastStep)
+    {
+        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, 255);
+        printf("hit, this: %d, last: %d, true\n", thisStep, lastStep);
+    } else {
+        printf("hit, this: %d, last: %d, false\n", thisStep, lastStep);
+    }
+    beats[beatNum].addHit(sampleNum, thisStep, 255, 255, 0);
+
     forceBeatUpdate = true;
 }
 
 void handleButtonChange(int buttonNum, bool buttonState)
 {
+    int i;
     if (buttonState)
     {
         switch (buttonNum)
@@ -319,10 +340,14 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CLEAR:
             if (activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT)
             {
-                // for (int i = 0; i < NUM_SAMPLES; i++)
-                // {
-                //     beats[beatNum].beatData[i] = 0;
-                // }
+                for(i=0; i<MAX_BEAT_HITS; i++) {
+                    beats[beatNum].hits[i].sample = 0;
+                    beats[beatNum].hits[i].step = 0;
+                    beats[beatNum].hits[i].velocity = 0;
+                    beats[beatNum].hits[i].probability = 0;
+                    beats[beatNum].hits[i].group = 0;
+                }
+                beats[beatNum].numHits = 0;
             }
             break;
         case BUTTON_STEP_EDIT:
@@ -1187,7 +1212,7 @@ int main()
         } else {
             prevProcessTimeSlow = false;
         }
-        printf("%lld\n", audioProcessTime);
+        //printf("%lld\n", audioProcessTime);
 
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(ap, buffer);
