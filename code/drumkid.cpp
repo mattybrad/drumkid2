@@ -944,7 +944,10 @@ int getRandomHitVelocity(int step) {
         int tempChance = analogReadings[POT_CHANCE];
         applyDeadZones(tempChance);
         if(tempChance > rand()%4095) {
-            return 4095;
+            int returnVel = analogReadings[POT_VELOCITY] + ((analogReadings[POT_RANGE] * (rand() % 4095)) >> 12) - (analogReadings[POT_RANGE]>>1);
+            if(returnVel < 0) returnVel = 0;
+            else if(returnVel > 4095) returnVel = 4095;
+            return returnVel >> 4;
         }
     }
     return 0;
