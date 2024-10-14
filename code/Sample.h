@@ -41,6 +41,7 @@ class Sample {
                     didTrigger = true;
                     queuedHits[nextHitIndex].waiting = false;
                     currentHitIndex = nextHitIndex;
+                    velocity = queuedHits[nextHitIndex].velocity;
                     nextHitIndex = (nextHitIndex + 1) % HIT_QUEUE_SIZE;
                     if (queuedHits[nextHitIndex].waiting)
                     {
@@ -60,7 +61,7 @@ class Sample {
                 int y1 = sampleData[position + startPosition];
                 int y2 = sampleData[position + 1 + startPosition]; // might have a fencepost error thingy here
                 value = y1 + ((y2 - y1) * (positionAccurate - (position << LERP_BITS))) / (1 << LERP_BITS);
-                value = (value * velocity) >> 12;
+                value = (value * velocity) >> 8;
 
                 positionAccurate += Sample::pitch;
                 position = positionAccurate >> LERP_BITS;

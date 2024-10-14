@@ -460,3 +460,6 @@ Have been rebuilding all the old features from the ground up, now that the timin
 
 11/10/24
 Two drumkids now work pretty nicely together, which is very pleasing because that's the issue that sent me down the rabbit hole and made me rewrite basically all the code. Main issue currently is when to reset to step 0, beginning of the bar. Some weird stuff happens where the step counter keeps incrementing even when the unit is "stopped" - I guess it still handles sync pulses, at least partially. Should stop this, and also reset to step 0 on "play"?
+
+14/10/24
+Next test for DK2 is: play along to a manual 1PPQN MIDI tempo track in 3/4 to Chelsea Hotel by Leonard Cohen. Very much failing thus far, keeps skipping beats.

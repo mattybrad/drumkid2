@@ -204,7 +204,7 @@ void doLiveHit(int sampleNum)
     int thisStep = (pulseStep + (samplesSincePulse * 3360) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
-    beats[beatNum].addHit(sampleNum, thisStep, 255, 255, 0);
+    beats[beatNum].addHit(sampleNum, thisStep, analogReadings[POT_VELOCITY]>>4, 255, 0);
 
     // if scheduled hit is in the past, directly trigger sample now
     int compareLastStep = lastStep;
@@ -217,7 +217,7 @@ void doLiveHit(int sampleNum)
     }
     if (compareThisStep <= compareLastStep)
     {
-        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, 255);
+        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, analogReadings[POT_VELOCITY] >> 4);
     }
 
     forceBeatUpdate = true;
@@ -1160,20 +1160,21 @@ int main()
                     }
                     if(foundHit >= 0) {
                         int prob = beats[beatNum].hits[foundHit].probability;
+                        int combinedProb = (prob * tempChance) >> 11;
                         int group = beats[beatNum].hits[foundHit].group;
                         int randNum = rand() % 255;
                         // hits from group 0 are treated independently (group 0 is not a group)
                         if(group>0) {
                             // if the group's status has not yet been determined, calculate it
                             if(groupStatus[group] == GROUP_PENDING) {
-                                groupStatus[group] = (prob>randNum) ? GROUP_YES : GROUP_NO;
+                                groupStatus[group] = (prob > randNum) ? GROUP_YES : GROUP_NO;
                             }
-                            if(groupStatus[group] == GROUP_YES) {
+                            if(groupStatus[group] == GROUP_YES && (tempChance>>3)>randNum) {
                                 thisVel = beats[beatNum].hits[foundHit].velocity;
-                                //samples[j].queueHit(currentTime, 0, 4095);
                             }
-                        } else if(prob>randNum) {
-                            //samples[j].queueHit(currentTime, 0, 4095);
+                        }
+                        else if (combinedProb > randNum)
+                        {
                             thisVel = beats[beatNum].hits[foundHit].velocity;
                         }
                     }
