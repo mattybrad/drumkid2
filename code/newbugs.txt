@@ -1,5 +1,5 @@
 TODO:
-- Restore sample size check/error
+- Add small fade out to stop weird clipping glitch thing
 - Make error text flash
 - New chance algorithm
 - Magnet
@@ -16,8 +16,6 @@ TODO:
 - Tap tempo / external tempo display should use floats and display a decimal point
 - Debounce button pushes
 - Tidy up groups feature
-- Allow different sample rates when loading WAV files
-- Allow stereo WAV files (but bounce to mono)
 - Figure out behaviour if desired output pulse length is too long for PPQN value at given tempo
 - First DAC cycle after start button press is v slow (10ms+, should be 5ms max), no idea why
 - DisplayPulse is scheduled, which means it can override other display functions - needs to be cancellable

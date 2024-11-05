@@ -1300,6 +1300,9 @@ void loadSamplesFromSD()
         char descriptorBuffer[4];
         uint8_t sizeBuffer[4];
         uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
+        uint8_t sampleDataBuffer2[FLASH_PAGE_SIZE]; // required for stereo samples
+        bool useSecondBuffer = false;
+        bool isStereo = false;
 
         // first 3 4-byte sections should be "RIFF", file size, "WAVE"
         for (int i = 0; i < 3; i++)
@@ -1320,7 +1323,7 @@ void loadSamplesFromSD()
             for (;;)
             {
                 uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
-                fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
+                fr = f_read(&fil, useSecondBuffer ? sampleDataBuffer2 : sampleDataBuffer, bytesToRead, &br);
 
                 if(strncmp(descriptorBuffer, "fmt ", 4) == 0) {
                     printf("FORMAT SECTION\n");
@@ -1332,6 +1335,7 @@ void loadSamplesFromSD()
                     std::memcpy(&fmtRate, &sampleDataBuffer[4], 4);
                     printf("type=%d, channels=%d, rate=%d\n", fmtType, fmtChannels, fmtRate);
                     sampleRates[n] = fmtRate;
+                    if(fmtChannels == 2) isStereo = true;
                 }
 
                 if (br == 0)
@@ -1342,18 +1346,46 @@ void loadSamplesFromSD()
                     if (!foundDataChunk)
                     {
                         sampleStartPoints[n] = pageNum * FLASH_PAGE_SIZE;
-                        sampleLengths[n] = chunkSize;
-                        totalSize += chunkSize;
+                        sampleLengths[n] = isStereo ? chunkSize>>1 : chunkSize;
+                        totalSize += sampleLengths[n];
                         printf("sample %d, start on page %d, length %d\n", n, sampleStartPoints[n], sampleLengths[n]);
                     }
                     foundDataChunk = true;
 
                     if (!dryRun)
                     {
-                        writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                        if(!isStereo) {
+                            // mono
+                            writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                            pageNum++;
+                        } else {
+                            // stereo
+                            if(useSecondBuffer) {
+                                int16_t thisSampleLeft;
+                                int16_t thisSampleRight;
+                                for(int i=0; i<FLASH_PAGE_SIZE; i+=2) {
+                                    if(i < FLASH_PAGE_SIZE>>1) {
+                                        std::memcpy(&thisSampleLeft, &sampleDataBuffer[i*2], 2);
+                                        std::memcpy(&thisSampleRight, &sampleDataBuffer[i * 2 + 2], 2);
+                                        //sampleDataBuffer[i] = sampleDataBuffer[i*2];
+                                        //sampleDataBuffer[i+1] = sampleDataBuffer[i * 2 + 1];
+                                    } else {
+                                        std::memcpy(&thisSampleLeft, &sampleDataBuffer2[i * 2 - FLASH_PAGE_SIZE], 2);
+                                        std::memcpy(&thisSampleRight, &sampleDataBuffer2[i * 2 + 2 - FLASH_PAGE_SIZE], 2);
+                                        //sampleDataBuffer[i] = sampleDataBuffer2[i*2-FLASH_PAGE_SIZE];
+                                        //sampleDataBuffer[i+1] = sampleDataBuffer2[i * 2 + 1 - FLASH_PAGE_SIZE];
+                                    }
+                                    int16_t thisSampleMono = (thisSampleLeft>>1) + (thisSampleRight>>1);
+                                    std::memcpy(&sampleDataBuffer[i], &thisSampleMono, 2);
+                                }
+                                writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                                pageNum ++;
+                            }
+                            useSecondBuffer = !useSecondBuffer;
+                        }
                     }
 
-                    pageNum++;
+                    //pageNum++;
                 }
 
                 brTotal += br;
