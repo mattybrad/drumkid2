@@ -1320,6 +1320,18 @@ void loadSamplesFromSD()
             {
                 uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
                 fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
+
+                if(strncmp(descriptorBuffer, "fmt ", 4) == 0) {
+                    printf("FORMAT SECTION\n");
+                    uint16_t fmtType;
+                    uint16_t fmtChannels;
+                    uint32_t fmtRate;
+                    std::memcpy(&fmtType, &sampleDataBuffer[0], 2);
+                    std::memcpy(&fmtChannels, &sampleDataBuffer[2], 2);
+                    std::memcpy(&fmtRate, &sampleDataBuffer[4], 4);
+                    printf("type=%d, channels=%d, rate=%d\n", fmtType, fmtChannels, fmtRate);
+                }
+
                 if (br == 0)
                     break;
 
@@ -1652,7 +1664,7 @@ void initSamplesFromFlash()
 
     if (storageOverflow)
     {
-        //showError("size");
+        showError("size");
     }
 }
 

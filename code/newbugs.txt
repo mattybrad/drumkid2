@@ -1,5 +1,17 @@
 TODO:
-
+- Restore sample size check/error
+- Make error text flash
+- New chance algorithm
+- Magnet
+- Cluster
+- Swing
+- Crop
+- Step resets to zero on stop (int sync?)
+- Step doesn't keep incrementing in ext sync mode when stopped
+- Turn off random hits in edit modes
+- Live edit different display
+- Drop rand
+- Drop sync
 - Tap tempo should average several taps
 - Tap tempo / external tempo display should use floats and display a decimal point
 - Debounce button pushes

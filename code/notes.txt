@@ -463,3 +463,6 @@ Two drumkids now work pretty nicely together, which is very pleasing because tha
 
 14/10/24
 Next test for DK2 is: play along to a manual 1PPQN MIDI tempo track in 3/4 to Chelsea Hotel by Leonard Cohen. Very much failing thus far, keeps skipping beats.
+
+5/11/24
+Had a couple of weeks away from Drumkid because I was going mad with all the coding. 
