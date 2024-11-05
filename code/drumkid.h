@@ -128,6 +128,7 @@ const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_MET
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
+#define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
 
 // Beat variables
 #define NUM_BEATS 16

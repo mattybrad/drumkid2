@@ -25,6 +25,8 @@ class Sample {
         bool output2 = true;
         uint length = 0;
         uint startPosition = 0;
+        uint sampleRate = 44100;
+        uint sampleRateAdjustment = 0;
 
         Hit queuedHits[HIT_QUEUE_SIZE];
         uint8_t hitQueueIndex = 0;
@@ -63,7 +65,7 @@ class Sample {
                 value = y1 + ((y2 - y1) * (positionAccurate - (position << LERP_BITS))) / (1 << LERP_BITS);
                 value = (value * velocity) >> 8;
 
-                positionAccurate += Sample::pitch;
+                positionAccurate += Sample::pitch >> sampleRateAdjustment;
                 position = positionAccurate >> LERP_BITS;
 
                 if (pitch > 0)

@@ -1261,6 +1261,7 @@ void loadSamplesFromSD()
     const char *sampleNames[NUM_SAMPLES] = {"/1.wav", "/2.wav", "/3.wav", "/4.wav"};
     uint32_t sampleStartPoints[NUM_SAMPLES] = {0};
     uint32_t sampleLengths[NUM_SAMPLES] = {0};
+    uint32_t sampleRates[NUM_SAMPLES] = {0};
 
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
@@ -1330,6 +1331,7 @@ void loadSamplesFromSD()
                     std::memcpy(&fmtChannels, &sampleDataBuffer[2], 2);
                     std::memcpy(&fmtRate, &sampleDataBuffer[4], 4);
                     printf("type=%d, channels=%d, rate=%d\n", fmtType, fmtChannels, fmtRate);
+                    sampleRates[n] = fmtRate;
                 }
 
                 if (br == 0)
@@ -1387,6 +1389,7 @@ void loadSamplesFromSD()
         {
             std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
             std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
+            std::memcpy(metadataBuffer + SAMPLE_RATES + n * 4, &sampleRates[n], 4);
         }
         writePageToFlash(metadataBuffer, FLASH_AUDIO_METADATA_ADDRESS);
 
@@ -1637,10 +1640,14 @@ void initSamplesFromFlash()
     {
         uint sampleStart = getIntFromBuffer(flashAudioMetadata, SAMPLE_START_POINTS + n * 4);
         uint sampleLength = getIntFromBuffer(flashAudioMetadata, SAMPLE_LENGTHS + n * 4);
+        uint sampleRate = getIntFromBuffer(flashAudioMetadata, SAMPLE_RATES + n * 4);
         printf("start %d, length %d\n", sampleStart, sampleLength);
 
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
         samples[n].startPosition = sampleStart / 2;
+        samples[n].sampleRate = sampleRate;
+        if(sampleRate == 22050) samples[n].sampleRateAdjustment = 1;
+        else if(sampleRate == 11025) samples[n].sampleRateAdjustment = 2;
         if (samples[n].startPosition + samples[n].length >= MAX_SAMPLE_STORAGE)
         {
             samples[n].startPosition = 0;
