@@ -1,11 +1,10 @@
 TODO:
-- Add small fade out to stop weird clipping glitch thing
+- Rewrite LED/GPIO pulse system, which currently runs out of alarms when there are a lot of notes
 - Make error text flash
 - New chance algorithm
 - Magnet
 - Cluster
 - Swing
-- Crop
 - Step resets to zero on stop (int sync?)
 - Step doesn't keep incrementing in ext sync mode when stopped
 - Turn off random hits in edit modes

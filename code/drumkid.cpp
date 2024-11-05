@@ -1058,6 +1058,14 @@ int main()
         crush = 4095 - (((4095 - crush) * (4095 - crush)) >> 12);
         crush = crush >> 8;
 
+        int crop = analogReadings[POT_CROP];
+        applyDeadZones(crop);
+        if (crop == 4095)
+            crop = MAX_SAMPLE_STORAGE;
+        else
+            crop = (crop * crop) >> 11; // should be 11
+        Sample::crop = crop;
+
         // pitch knob maths - looks horrible! the idea is for the knob to have a deadzone at 12 o'clock which corresponds to normal playback speed (1024). to keep the maths efficient (ish), i'm trying to avoid division, because apart from the deadzone section, it doesn't matter too much what the exact values are, so i'm just using bitwise operators to crank up the range until it feels right. CV adjustment happens after the horrible maths, because otherwise CV control (e.g. a sine LFO pitch sweep) would sound weird and disjointed
         int pitchInt = analogReadings[POT_PITCH];
         int pitchDeadZone = 500;
@@ -1186,7 +1194,7 @@ int main()
                     if(thisVel > 0) {
                         samples[j].queueHit(currentTime, 0, thisVel);
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
-                        pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
+                        //pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
                     }
                 }
                 samples[j].update(currentTime);
@@ -1677,9 +1685,10 @@ void initSamplesFromFlash()
 
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
         samples[n].startPosition = sampleStart / 2;
-        samples[n].sampleRate = sampleRate;
+        samples[n].sampleRate = sampleRate; // unnecessary?
+        samples[n].sampleRateAdjustment = 0;
         if(sampleRate == 22050) samples[n].sampleRateAdjustment = 1;
-        else if(sampleRate == 11025) samples[n].sampleRateAdjustment = 2;
+        else if(sampleRate == 11025) samples[n].sampleRateAdjustment = 2; // could add more if wanted, could even maybe do non-integer multiples..?
         if (samples[n].startPosition + samples[n].length >= MAX_SAMPLE_STORAGE)
         {
             samples[n].startPosition = 0;

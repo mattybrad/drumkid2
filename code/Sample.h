@@ -8,17 +8,9 @@ class Sample {
         static uint crop;
         static int LERP_BITS;
 
-        struct Hit
-        {
-            int64_t time;
-            int16_t step;
-            int16_t velocity;
-            bool waiting;
-        };
-
         int32_t value = 0;
         bool playing = false;
-        int velocity = 4095; // 12-bit resolution (for now)
+        int velocity = 0; // 12-bit resolution (for now)
         int position = 0;
         int positionAccurate = 0; // position at sub-sample resolution to allow playing samples at different pitches
         bool output1 = true;
@@ -28,31 +20,24 @@ class Sample {
         uint sampleRate = 44100;
         uint sampleRateAdjustment = 0;
 
-        Hit queuedHits[HIT_QUEUE_SIZE];
-        uint8_t hitQueueIndex = 0;
         int64_t nextHitTime = INT64_MAX;
         uint8_t nextHitIndex = 0;
         uint8_t currentHitIndex = 0;
+        bool waiting = false;
+
+        int tailVelocity = 0;
+        int tailPosition = 0;
+        int tailPositionAccurate = 0;
 
         bool update(int64_t time) {
             bool didTrigger = false;
             if (nextHitTime <= time)
             {
-                if (queuedHits[nextHitIndex].waiting)
+                if (waiting)
                 {
                     didTrigger = true;
-                    queuedHits[nextHitIndex].waiting = false;
-                    currentHitIndex = nextHitIndex;
-                    velocity = queuedHits[nextHitIndex].velocity;
-                    nextHitIndex = (nextHitIndex + 1) % HIT_QUEUE_SIZE;
-                    if (queuedHits[nextHitIndex].waiting)
-                    {
-                        nextHitTime = queuedHits[nextHitIndex].time;
-                    }
-                    else
-                    {
-                        nextHitTime = INT64_MAX;
-                    }
+                    waiting = false;
+                    nextHitTime = INT64_MAX;
                     positionAccurate = Sample::pitch >= 0 ? 0 : std::min(length, Sample::crop) << LERP_BITS;
                     position = Sample::pitch >= 0 ? 0 : std::min(length, Sample::crop);
                     playing = true;
@@ -60,12 +45,25 @@ class Sample {
             }
             if (playing)
             {
+                // could maybe add a special case for 100% pitch to speed things up
+
                 int y1 = sampleData[position + startPosition];
-                int y2 = sampleData[position + 1 + startPosition]; // might have a fencepost error thingy here
+                int y2 = sampleData[position + 1 + startPosition]; // might have a fencepost error thingy here, perhaps at very end of sample playback
                 value = y1 + ((y2 - y1) * (positionAccurate - (position << LERP_BITS))) / (1 << LERP_BITS);
                 value = (value * velocity) >> 8;
 
-                positionAccurate += Sample::pitch >> sampleRateAdjustment;
+                if(tailVelocity > 0 && tailPosition < length) {
+                    y1 = sampleData[tailPosition + startPosition];
+                    y2 = sampleData[tailPosition + 1 + startPosition];
+                    value += ((y1 + ((y2 - y1) * (tailPositionAccurate - (tailPosition << LERP_BITS))) / (1 << LERP_BITS)) * tailVelocity) >> 8;
+                    tailVelocity -= 4;
+                    if(tailVelocity < 0) tailVelocity = 0;
+
+                    tailPositionAccurate += Sample::pitch >> sampleRateAdjustment; // might be more efficient to do the sample rate calculation when pitch is changed
+                    tailPosition = tailPositionAccurate >> LERP_BITS;
+                }
+
+                positionAccurate += Sample::pitch >> sampleRateAdjustment; // might be more efficient to do the sample rate calculation when pitch is changed
                 position = positionAccurate >> LERP_BITS;
 
                 if (pitch > 0)
@@ -94,27 +92,16 @@ class Sample {
             return true;
         }
         void queueHit(int64_t hitTime, int16_t hitStep, int16_t hitVelocity) {
-            queuedHits[hitQueueIndex].time = hitTime;
-            queuedHits[hitQueueIndex].step = hitStep;
-            queuedHits[hitQueueIndex].velocity = hitVelocity;
-            queuedHits[hitQueueIndex].waiting = true;
-
-            // increment index for next time
-            hitQueueIndex = (hitQueueIndex + 1) % HIT_QUEUE_SIZE;
-
-            // this can be done more efficiently, but here's a first attempt:
-            nextHitTime = INT64_MAX;
-            for (int i = 0; i < HIT_QUEUE_SIZE; i++)
+            nextHitTime = hitTime;
+            if (playing)
             {
-                if (queuedHits[i].waiting)
-                {
-                    if (queuedHits[i].time < nextHitTime)
-                    {
-                        nextHitTime = queuedHits[i].time;
-                        nextHitIndex = i;
-                    }
-                }
+                // retrigger
+                tailPositionAccurate = positionAccurate;
+                tailPosition = position;
+                tailVelocity = velocity;
             }
+            velocity = hitVelocity;
+            waiting = true;
         }
 };
 
