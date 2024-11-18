@@ -34,7 +34,7 @@ class Beat {
             }
             return -1;
         }
-        int getNextHitStep(uint8_t sample, uint16_t step) {
+        int getNextHitStep(uint8_t sample, uint16_t step, uint16_t numSteps) {
             uint16_t firstHit = UINT16_MAX;
             uint16_t nextHit = UINT16_MAX;
             for (int i = 0; i < numHits; i++)
@@ -49,7 +49,7 @@ class Beat {
                     }
                 }
             }
-            return nextHit < UINT16_MAX ? nextHit : firstHit;
+            return nextHit < numSteps ? nextHit : firstHit;
         }
         void removeHit(uint8_t sample, uint16_t step)
         {

@@ -465,4 +465,12 @@ Two drumkids now work pretty nicely together, which is very pleasing because tha
 Next test for DK2 is: play along to a manual 1PPQN MIDI tempo track in 3/4 to Chelsea Hotel by Leonard Cohen. Very much failing thus far, keeps skipping beats.
 
 5/11/24
-Had a couple of weeks away from Drumkid because I was going mad with all the coding. 
+Had a couple of weeks away from Drumkid because I was going mad with all the coding.
+
+18/11/24
+...and then forgot to write about what I'd done when I came back. Anyway. I'm in the BURNDOWN PHASE. I've got 30 tasks to do, hopefully by Dec 6th, after which DK2 will be DONE!! (Obviously it won't). Currently working on the first boot / flash initialisation process, and need to clarify exactly what's happening with flash storage. Here's where we're at with sectors:
+
+0 to 63: Settings sectors, all settings fit on first page of a sector, moving to a new sector each time for wear levelling.
+64: User beats
+127: Audio metadata (sample lengths, positions, rates, etc)
+128 to 255: Audio data

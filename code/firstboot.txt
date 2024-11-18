@@ -10,3 +10,10 @@ Also think about:
 What happens when firmware is first loaded
 What happens when new firmware is loaded
 Backing up settings to SD
+
+BUILDING A NEW DK2:
+Solder everything
+Connect USB (not debug)
+Drag n drop HEX file (or UF2 or whatever)
+If SD card has default kit, load it
+Else do white noise blips (or default kit at some point in future)

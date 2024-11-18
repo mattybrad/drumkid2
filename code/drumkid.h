@@ -28,6 +28,12 @@
 #define SYNC_OUT 17
 const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
+// default sample names
+#define KICK 0
+#define SNARE 1
+#define HAT 2
+#define CLICK 3
+
 // button numbers
 #define BUTTON_START_STOP 1
 #define BUTTON_TAP_TEMPO 2
@@ -53,7 +59,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define BOOTUP_VISUALS -3
 
 // menu settings
-#define NUM_MENU_SETTINGS 9
+#define NUM_MENU_SETTINGS 10
 #define SETTING_CLOCK_MODE 0
 #define SETTING_OUTPUT_1 1
 #define SETTING_OUTPUT_2 2
@@ -63,6 +69,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_INPUT_PPQN 6
 #define SETTING_PITCH_CURVE 7
 #define SETTING_INPUT_QUANTIZE 8
+#define SETTING_FACTORY_RESET 9
 
 // non-menu settings
 #define SETTING_BEAT 8
@@ -124,7 +131,7 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM 111
+#define CHECK_NUM 99
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
@@ -224,7 +231,7 @@ void displayPulse(int pulseStep, uint16_t delayMicros);
 void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
 void showError(const char *msgx);
-void initFlash();
+void initFlash(bool doFactoryReset);
 void saveSettings();
 void loadSettings();
 bool checkSettingsChange();
@@ -232,7 +239,7 @@ void scheduleSaveSettings();
 int64_t stepAlarmCallback(alarm_id_t id, void *user_data);
 void setStepAlarm();
 void applyDeadZones(int &param);
-void saveAllBeats();
+void saveAllBeats(bool isFactoryReset);
 void loadDefaultBeats();
 
 #endif

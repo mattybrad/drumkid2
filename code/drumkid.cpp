@@ -89,6 +89,7 @@ int glitchChannel = GLITCH_CHANNEL_BOTH;
 bool glitch1 = true;
 bool glitch2 = true;
 
+bool doFactoryResetSafe = false;
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
 int sampleFolderNum = 0;
@@ -633,6 +634,12 @@ void handleYesNo(bool isYes)
                 }
                 displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
             }
+            else if(activeSetting == SETTING_FACTORY_RESET)
+            {
+                activeButton = NO_ACTIVE_BUTTON;
+                settingsMenuLevel = 0;
+                doFactoryResetSafe = true;
+            }
             else
             {
                 settingsMenuLevel = 0;
@@ -643,7 +650,7 @@ void handleYesNo(bool isYes)
 
     case BUTTON_SAVE:
         if (isYes)
-            saveAllBeats();
+            saveAllBeats(false);
         activeButton = NO_ACTIVE_BUTTON;
         break;
     }
@@ -808,6 +815,10 @@ void displaySettings()
         case SETTING_INPUT_QUANTIZE:
             updateLedDisplayAlpha("qntz");
             break;
+
+        case SETTING_FACTORY_RESET:
+            updateLedDisplayAlpha("rset");
+            break;
         }
     }
     else if (settingsMenuLevel == 1)
@@ -860,6 +871,10 @@ void displaySettings()
 
         case SETTING_INPUT_QUANTIZE:
             updateLedDisplayNumber(inputQuantize);
+            break;
+
+        case SETTING_FACTORY_RESET:
+            updateLedDisplayAlpha("yes?");
             break;
         }
     }
@@ -1013,12 +1028,10 @@ int main()
     //     beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
     // }
 
-    initFlash();
+    initFlash(false);
     initGpio();
     loadSamplesFromFlash();
     loadBeatsFromFlash();
-
-    beats[0].addHit(3, 0, 255, 255, 0);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -1170,7 +1183,7 @@ int main()
                     int foundHit = -1;
                     if(step == nextBeatCheckStep[j]) {
                         foundHit = beats[beatNum].getHit(j, step);
-                        nextBeatCheckStep[j] = beats[beatNum].getNextHitStep(j, step);
+                        nextBeatCheckStep[j] = beats[beatNum].getNextHitStep(j, step, numSteps);
                     }
                     if(foundHit >= 0) {
                         int prob = beats[beatNum].hits[foundHit].probability;
@@ -1233,6 +1246,11 @@ int main()
         give_audio_buffer(ap, buffer);
         lastDacUpdateSamples = currentTime;
         lastDacUpdateMicros = time_us_64();
+
+        if(doFactoryResetSafe) {
+            doFactoryResetSafe = false;
+            initFlash(true);
+        }
 
         if (sdSafeLoadTemp)
         {
@@ -1577,7 +1595,7 @@ void writePageToFlash(const uint8_t *buffer, uint address)
     // todo: check data has been written? check buffer is right size? basically more checks
 }
 
-void saveAllBeats() {
+void saveAllBeats(bool isFactoryReset) {
     if (beatNum != saveBeatLocation)
     {
         for (int i = 0; i < MAX_BEAT_HITS; i++)
@@ -1619,7 +1637,7 @@ void saveAllBeats() {
 #define FLASH_SETTINGS_START 0
 #define FLASH_SETTINGS_END 63
 int currentSettingsSector = 0;
-void initFlash()
+void initFlash(bool doFactoryReset)
 {
     // settings are saved in a different sector each time to prevent wearing out the flash memory - if no valid sector is found, assume first boot and initialise everything
     bool foundValidSector = false;
@@ -1640,41 +1658,65 @@ void initFlash()
             }
         }
     }
-    if (!foundValidSector)
+    if (!foundValidSector || doFactoryReset)
     {
         // no valid sectors, which means the flash needs to be initialised:
-        uint8_t buffer[FLASH_PAGE_SIZE];
+        uint8_t dataBuffer[FLASH_PAGE_SIZE] = {0};
+
+        // overwrite previous data with zeros
+        for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
+            for(int j=0; j<FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE; j++) {
+                writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE + i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
+            }
+        }
+
         int32_t refCheckNum = CHECK_NUM;
-        std::memcpy(buffer, &refCheckNum, 4); // copy check number
+        std::memcpy(dataBuffer, &refCheckNum, 4); // copy check number
         int32_t refZero = 0;
-        std::memcpy(buffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
+        std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
+        writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
+
+        // create dummy noise samples (as emergency fallback in case SD card not present on reset)
+        uint8_t audioBuffer[FLASH_PAGE_SIZE];
         uint32_t dummySampleLength = 1024;
+        uint32_t dummySampleRate = 44100;
         for (int i = 0; i < NUM_SAMPLES; i++)
         {
-            uint32_t dummySampleStart = i * dummySampleLength * 2;
-            std::memcpy(buffer + SAMPLE_START_POINTS + 4 * i, &dummySampleStart, 4);
-            std::memcpy(buffer + SAMPLE_LENGTHS + 4 * i, &dummySampleLength, 4);
+            uint32_t dummySampleStart = i * dummySampleLength * 2; // *2 for 16-bit
+            std::memcpy(audioBuffer + SAMPLE_START_POINTS + 4 * i, &dummySampleStart, 4);
+            std::memcpy(audioBuffer + SAMPLE_LENGTHS + 4 * i, &dummySampleLength, 4);
+            std::memcpy(audioBuffer + SAMPLE_RATES + 4 * i, &dummySampleRate, 4);
         }
-        writePageToFlash(buffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
+        writePageToFlash(audioBuffer, FLASH_AUDIO_METADATA_ADDRESS);
 
-        // fill audio buffer with random noise
+        // fill audio buffer with random noise (for emergency fallback samples)
         for (int i = 0; i < dummySampleLength * 2 * NUM_SAMPLES; i += FLASH_PAGE_SIZE)
         {
             for (int j = 0; j < FLASH_PAGE_SIZE; j++)
             {
-                buffer[j] = rand() % 256; // random byte
+                audioBuffer[j] = rand() % 256; // random byte
             }
-            writePageToFlash(buffer, FLASH_AUDIO_ADDRESS + i);
+            writePageToFlash(audioBuffer, FLASH_AUDIO_ADDRESS + i);
         }
 
+        // load first sample folder if available
+        scanSampleFolders();
+        loadSamplesFromSD();
+
+        // TO DO: reset all (RAM) settings to default before saving to flash, otherwise factory reset is meaningless
         saveSettings(); // save current (default) settings to flash
         loadDefaultBeats(); // load default beats into RAM
-        saveAllBeats(); // save current (default) beats to flash
+        saveAllBeats(true); // save current (default) beats to flash
+        // something weird happens here where current beat gets saved to beat 0 and beat 0 is now beatNum...
     }
     else
     {
         currentSettingsSector = mostRecentValidSector;
     }
+}
+
+void generateDrumSample(int samplePos, int sineFreq, int sineLength, int sineVol, int noiseLength, int noiseVol) {
+    
 }
 
 void loadSamplesFromFlash()
@@ -1845,13 +1887,14 @@ void pulseGpio(uint gpioNum, uint16_t delayMicros)
 
 void loadDefaultBeats()
 {
-    beats[0].addHit(0, 0*QUARTER_NOTE_STEPS, 255, 255, 0);
-    beats[0].addHit(0, 1*QUARTER_NOTE_STEPS, 255, 255, 0);
-    beats[0].addHit(0, 2*QUARTER_NOTE_STEPS, 255, 255, 0);
-    beats[0].addHit(0, 3*QUARTER_NOTE_STEPS, 255, 255, 0);
-
-    beats[1].addHit(0, 0 * QUARTER_NOTE_STEPS, 255, 255, 0);
-    beats[1].addHit(2, 1 * QUARTER_NOTE_STEPS, 255, 255, 0);
-    beats[1].addHit(1, 2 * QUARTER_NOTE_STEPS, 255, 255, 0);
-    beats[1].addHit(2, 3 * QUARTER_NOTE_STEPS, 255, 255, 0);
+    for(int i=0; i<NUM_DEFAULT_BEATS; i++) {
+        beats[i].numHits = 0;
+        for(int j=0; j<NUM_SAMPLES; j++) {
+            for(int k=0; k<32; k++) {
+                if(bitRead(defaultBeats[i][j], 31-k)) {
+                    beats[i].addHit(j, k*QUARTER_NOTE_STEPS/4, 255, 255, 0);
+                }
+            }
+        }
+    }
 }
