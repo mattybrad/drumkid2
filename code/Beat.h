@@ -17,11 +17,11 @@ class Beat {
         void addHit(uint8_t sample, uint16_t step, uint8_t velocity, uint8_t probability, uint8_t group)
         {
             if(numHits < MAX_BEAT_HITS) {
-                hits[numHits].sample = sample;
-                hits[numHits].step = step;
-                hits[numHits].velocity = velocity;
-                hits[numHits].probability = probability;
-                hits[numHits].group = group;
+                hits[numHits].sample = sample; // 0 to 3, 255 means not valid
+                hits[numHits].step = step; // 3360 per quarter note
+                hits[numHits].velocity = velocity; // 0 to 255
+                hits[numHits].probability = probability; // 0 to 255
+                hits[numHits].group = group; // 0 to 255 (0 is no group)
             }
             numHits ++;
         }

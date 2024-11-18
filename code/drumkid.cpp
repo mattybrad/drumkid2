@@ -40,6 +40,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // Drumkid classes
 #include "Sample.h"
 #include "Beat.h"
+#include "defaultbeats.h"
 #include "sevensegcharacters.h"
 #include "drumkid.h"
 #include "sn74595.pio.h"
@@ -252,6 +253,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
                 pulseStep = 0;
+                displayPulse(0, 0);
 
                 //scheduleSaveSettings();
             }
@@ -943,6 +945,7 @@ int getRandomHitVelocity(int step) {
     {
         int tempChance = analogReadings[POT_CHANCE];
         applyDeadZones(tempChance);
+        tempChance = std::max(tempChance - 2048, 0) << 1;
         if(tempChance > rand()%4095) {
             int returnVel = analogReadings[POT_VELOCITY] + ((analogReadings[POT_RANGE] * (rand() % 4095)) >> 12) - (analogReadings[POT_RANGE]>>1);
             if(returnVel < 0) returnVel = 0;
@@ -1010,9 +1013,9 @@ int main()
     //     beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
     // }
 
-    findCurrentFlashSettingsSector();
+    initFlash();
     initGpio();
-    initSamplesFromFlash();
+    loadSamplesFromFlash();
     loadBeatsFromFlash();
 
     beats[0].addHit(3, 0, 255, 255, 0);
@@ -1433,7 +1436,7 @@ void loadSamplesFromSD()
         }
         writePageToFlash(metadataBuffer, FLASH_AUDIO_METADATA_ADDRESS);
 
-        initSamplesFromFlash();
+        loadSamplesFromFlash();
     }
 }
 
@@ -1616,8 +1619,9 @@ void saveAllBeats() {
 #define FLASH_SETTINGS_START 0
 #define FLASH_SETTINGS_END 63
 int currentSettingsSector = 0;
-void findCurrentFlashSettingsSector()
+void initFlash()
 {
+    // settings are saved in a different sector each time to prevent wearing out the flash memory - if no valid sector is found, assume first boot and initialise everything
     bool foundValidSector = false;
     int mostRecentValidSector = 0;
     int highestWriteNum = 0;
@@ -1663,8 +1667,9 @@ void findCurrentFlashSettingsSector()
             writePageToFlash(buffer, FLASH_AUDIO_ADDRESS + i);
         }
 
-        saveSettings();
-        saveAllBeats();
+        saveSettings(); // save current (default) settings to flash
+        loadDefaultBeats(); // load default beats into RAM
+        saveAllBeats(); // save current (default) beats to flash
     }
     else
     {
@@ -1672,7 +1677,7 @@ void findCurrentFlashSettingsSector()
     }
 }
 
-void initSamplesFromFlash()
+void loadSamplesFromFlash()
 {
     int startPos = 0;
     int storageOverflow = false;
@@ -1836,4 +1841,17 @@ int64_t gpioPulseHighCallback(alarm_id_t id, void *user_data)
 void pulseGpio(uint gpioNum, uint16_t delayMicros)
 {
     add_alarm_in_us(delayMicros, gpioPulseHighCallback, (void *)gpioNum, true);
+}
+
+void loadDefaultBeats()
+{
+    beats[0].addHit(0, 0*QUARTER_NOTE_STEPS, 255, 255, 0);
+    beats[0].addHit(0, 1*QUARTER_NOTE_STEPS, 255, 255, 0);
+    beats[0].addHit(0, 2*QUARTER_NOTE_STEPS, 255, 255, 0);
+    beats[0].addHit(0, 3*QUARTER_NOTE_STEPS, 255, 255, 0);
+
+    beats[1].addHit(0, 0 * QUARTER_NOTE_STEPS, 255, 255, 0);
+    beats[1].addHit(2, 1 * QUARTER_NOTE_STEPS, 255, 255, 0);
+    beats[1].addHit(1, 2 * QUARTER_NOTE_STEPS, 255, 255, 0);
+    beats[1].addHit(2, 3 * QUARTER_NOTE_STEPS, 255, 255, 0);
 }

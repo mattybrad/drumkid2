@@ -1,0 +1,6 @@
+#ifndef DEFAULTBEATS_H
+#define DEFAULTBEATS_H
+
+#define NUM_DEFAULT_BEATS 4
+
+#endif

@@ -1,0 +1,12 @@
+What happens on first boot?
+Factory reset should do same
+
+Flash memory is random/blank and must be initialised
+SD card might not be present
+Generate temporary/default samples
+Generate default beats
+
+Also think about:
+What happens when firmware is first loaded
+What happens when new firmware is loaded
+Backing up settings to SD

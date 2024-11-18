@@ -124,7 +124,7 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM 127
+#define CHECK_NUM 111
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
@@ -208,7 +208,7 @@ void loadSamplesFromSD();
 void updateLeds();
 void pulseGpio(uint gpioNum, uint16_t delayMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
-void initSamplesFromFlash();
+void loadSamplesFromFlash();
 void loadBeatsFromFlash();
 void writeBeatsToFlash();
 void writePageToFlash(const uint8_t *buffer, uint address);
@@ -224,7 +224,7 @@ void displayPulse(int pulseStep, uint16_t delayMicros);
 void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
 void showError(const char *msgx);
-void findCurrentFlashSettingsSector();
+void initFlash();
 void saveSettings();
 void loadSettings();
 bool checkSettingsChange();
@@ -233,5 +233,6 @@ int64_t stepAlarmCallback(alarm_id_t id, void *user_data);
 void setStepAlarm();
 void applyDeadZones(int &param);
 void saveAllBeats();
+void loadDefaultBeats();
 
 #endif
