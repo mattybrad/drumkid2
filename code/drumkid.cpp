@@ -236,6 +236,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
             numSteps = newNumSteps;
             if (activeButton == BUTTON_TIME_SIGNATURE)
                 displayTimeSignature();
+            else {
+                activeButton = NO_ACTIVE_BUTTON;
+            }
             beatPlaying = !beatPlaying;
             if (beatPlaying)
             {
@@ -251,10 +254,13 @@ void handleButtonChange(int buttonNum, bool buttonState)
             else
             {
                 // handle beat stop
+                pulseStep = 0;
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
-                pulseStep = 0;
-                displayPulse(0, 0);
+                else {
+                    activeButton = NO_ACTIVE_BUTTON;
+                    displayPulse(0, 0);
+                }
 
                 //scheduleSaveSettings();
             }
@@ -650,7 +656,7 @@ void handleYesNo(bool isYes)
 
     case BUTTON_SAVE:
         if (isYes)
-            saveAllBeats(false);
+            saveAllBeats();
         activeButton = NO_ACTIVE_BUTTON;
         break;
     }
@@ -1595,7 +1601,7 @@ void writePageToFlash(const uint8_t *buffer, uint address)
     // todo: check data has been written? check buffer is right size? basically more checks
 }
 
-void saveAllBeats(bool isFactoryReset) {
+void saveAllBeats() {
     if (beatNum != saveBeatLocation)
     {
         for (int i = 0; i < MAX_BEAT_HITS; i++)
@@ -1706,8 +1712,8 @@ void initFlash(bool doFactoryReset)
         // TO DO: reset all (RAM) settings to default before saving to flash, otherwise factory reset is meaningless
         saveSettings(); // save current (default) settings to flash
         loadDefaultBeats(); // load default beats into RAM
-        saveAllBeats(true); // save current (default) beats to flash
-        // something weird happens here where current beat gets saved to beat 0 and beat 0 is now beatNum...
+        saveBeatLocation = beatNum; // prevents weird behaviour
+        saveAllBeats(); // save current (default) beats to flash
     }
     else
     {

@@ -131,14 +131,14 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM 99
+#define CHECK_NUM 100
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
 #define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
 
 // Beat variables
-#define NUM_BEATS 16
+#define NUM_BEATS 24
 #define MASTER_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
 uint16_t tempo = 120;                                       // BPM
 uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds
@@ -239,7 +239,7 @@ void scheduleSaveSettings();
 int64_t stepAlarmCallback(alarm_id_t id, void *user_data);
 void setStepAlarm();
 void applyDeadZones(int &param);
-void saveAllBeats(bool isFactoryReset);
+void saveAllBeats();
 void loadDefaultBeats();
 
 #endif
