@@ -65,6 +65,15 @@ int nextBeatCheckStep[NUM_SAMPLES] = {0};
 bool forceBeatUpdate = false;
 alarm_id_t displayPulseAlarm = 0;
 
+alarm_id_t eventAlarm = 0; // single alarm to handle all events
+struct Event
+{
+    uint64_t time = UINT64_MAX;
+    void (*callback)(int);
+    int user_data = 0;
+};
+Event events[100];
+
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
 int settingsMenuLevel = 0;
@@ -1077,6 +1086,11 @@ int main()
     add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
     add_repeating_timer_ms(125, updateHold, NULL, &holdTimer);
 
+    // test...
+    addEvent(1000000, testEventCallback, 123);
+    addEvent(2000000, testEventCallback, 456);
+    addEvent(3000000, testEventCallback, 789);
+
     struct audio_buffer_pool *ap = init_audio();
 
     beatPlaying = false;
@@ -1926,6 +1940,55 @@ void loadDefaultBeats()
     }
 }
 
-void resetAllSettings() {
-    // all initial values should be set here, such that when a factory reset is performed, 
+void testEventCallback(int user_data)
+{
+    printf("event! %d\n", user_data);
+}
+int64_t eventManager(alarm_id_t id, void *user_data)
+{
+    printf("event manager triggered, t=%llu\n", time_us_64());
+    bool foundLastCurrentEvent = false;
+    int numEventsFired = 0;
+    for(int i=0; i<100 && !foundLastCurrentEvent; i++) {
+        if(events[i].time <= time_us_64()) {
+            events[i].callback(events[i].user_data);
+            numEventsFired ++;
+        } else {
+            foundLastCurrentEvent = true;
+        }
+    }
+    for(int i=0; i<100; i++) {
+        if(i+numEventsFired < 100) {
+            events[i] = events[i+numEventsFired];
+        } else {
+            events[i].time = UINT64_MAX;
+        }
+    }
+    if(events[0].time < UINT64_MAX) {
+        eventAlarm = add_alarm_in_us(events[0].time - time_us_64(), eventManager, NULL, true);
+    }
+
+    return 0;
+}
+void addEvent(uint64_t delay, void (*callback)(int), int user_data)
+{
+    bool foundQueuePlace = false;
+    uint64_t time = time_us_64() + delay;
+    for(int i=0; i<100 && !foundQueuePlace; i++) {
+        if(time < events[i].time) {
+            // shift all other events one place back in queue and insert this event
+            for(int j=99; j>i; j--) {
+                events[j] = events[j-1];
+            }
+            events[i].time = time;
+            events[i].callback = callback;
+            events[i].user_data = user_data;
+            foundQueuePlace = true;
+            if(i==0) {
+                // first in queue, need to cancel current alarm and reschedule it
+                cancel_alarm(eventAlarm);
+                eventAlarm = add_alarm_in_us(delay, eventManager, NULL, true);
+            }
+        }
+    }
 }
