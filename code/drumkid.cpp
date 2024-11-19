@@ -72,7 +72,7 @@ struct Event
     void (*callback)(int);
     int user_data = 0;
 };
-Event events[100];
+Event events[MAX_EVENTS];
 
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
@@ -152,24 +152,24 @@ void setLed(uint8_t ledNum, bool value) {
     bitWrite(shiftRegOutBase, 15-ledNum, value);
 }
 
-int64_t ledPulseLowCallback(alarm_id_t id, void *user_data)
+void ledPulseLowCallback(int user_data)
 {
     uint ledNum = (uint)user_data;
     setLed(ledNum, false);
-    return 0;
 }
 
-int64_t ledPulseHighCallback(alarm_id_t id, void *user_data)
+void ledPulseHighCallback(int user_data)
 {
     uint ledNum = (uint)user_data;
     setLed(ledNum, true);
-    add_alarm_in_ms(20, ledPulseLowCallback, (void *)ledNum, true);
-    return 0;
+    //add_alarm_in_ms(20, ledPulseLowCallback, (void *)ledNum, true);
+    addEvent(20000, ledPulseLowCallback, ledNum);
 }
 
 void pulseLed(uint ledNum, uint16_t delayMicros)
 {
-    add_alarm_in_us(delayMicros, ledPulseHighCallback, (void *)ledNum, true);
+    //add_alarm_in_us(delayMicros, ledPulseHighCallback, (void *)ledNum, true);
+    addEvent(delayMicros, ledPulseHighCallback, ledNum);
 }
 
 bool updateOutputShiftRegisters(repeating_timer_t *rt)
@@ -1254,7 +1254,7 @@ int main()
                     if(thisVel > 0) {
                         samples[j].queueHit(currentTime, 0, thisVel);
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
-                        //pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
+                        pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
                     }
                 }
                 samples[j].update(currentTime);
@@ -1906,24 +1906,23 @@ int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
     return thisInt;
 }
 
-int64_t gpioPulseLowCallback(alarm_id_t id, void *user_data)
+void gpioPulseLowCallback(int user_data)
 {
-    uint gpioNum = (uint)user_data;
+    uint gpioNum = user_data;
     gpio_put(gpioNum, 0);
-    return 0;
 }
 
-int64_t gpioPulseHighCallback(alarm_id_t id, void *user_data)
+void gpioPulseHighCallback(int user_data)
 {
-    uint gpioNum = (uint)user_data;
+    uint gpioNum = user_data;
     gpio_put(gpioNum, 1);
-    add_alarm_in_ms(15, gpioPulseLowCallback, (void *)gpioNum, true);
-    return 0;
+    addEvent(1000, gpioPulseLowCallback, gpioNum);
 }
 
 void pulseGpio(uint gpioNum, uint16_t delayMicros)
 {
-    add_alarm_in_us(delayMicros, gpioPulseHighCallback, (void *)gpioNum, true);
+    //add_alarm_in_us(delayMicros, gpioPulseHighCallback, (void *)gpioNum, true);
+    addEvent(delayMicros, gpioPulseHighCallback, gpioNum);
 }
 
 void loadDefaultBeats()
@@ -1944,12 +1943,13 @@ void testEventCallback(int user_data)
 {
     printf("event! %d\n", user_data);
 }
+int highestQueueNum = 0;
 int64_t eventManager(alarm_id_t id, void *user_data)
 {
-    printf("event manager triggered, t=%llu\n", time_us_64());
+    //printf("event manager triggered, t=%llu\n", time_us_64());
     bool foundLastCurrentEvent = false;
     int numEventsFired = 0;
-    for(int i=0; i<100 && !foundLastCurrentEvent; i++) {
+    for(int i=0; i<MAX_EVENTS && !foundLastCurrentEvent; i++) {
         if(events[i].time <= time_us_64()) {
             events[i].callback(events[i].user_data);
             numEventsFired ++;
@@ -1957,9 +1957,16 @@ int64_t eventManager(alarm_id_t id, void *user_data)
             foundLastCurrentEvent = true;
         }
     }
-    for(int i=0; i<100; i++) {
-        if(i+numEventsFired < 100) {
+    for(int i=0; i<MAX_EVENTS; i++) {
+        if(i+numEventsFired < MAX_EVENTS) {
             events[i] = events[i+numEventsFired];
+            // if(events[i].time < UINT64_MAX) {
+            //     if (i > highestQueueNum)
+            //     {
+            //         printf("highest queue num %d\n", i);
+            //         highestQueueNum = i;
+            //     }
+            // }
         } else {
             events[i].time = UINT64_MAX;
         }
@@ -1974,10 +1981,10 @@ void addEvent(uint64_t delay, void (*callback)(int), int user_data)
 {
     bool foundQueuePlace = false;
     uint64_t time = time_us_64() + delay;
-    for(int i=0; i<100 && !foundQueuePlace; i++) {
+    for(int i=0; i<MAX_EVENTS && !foundQueuePlace; i++) {
         if(time < events[i].time) {
             // shift all other events one place back in queue and insert this event
-            for(int j=99; j>i; j--) {
+            for(int j=MAX_EVENTS-1; j>i; j--) {
                 events[j] = events[j-1];
             }
             events[i].time = time;

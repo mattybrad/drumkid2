@@ -37,3 +37,4 @@ FUTURE STUFF:
 - More beats, plus empty ones for users
 - Soft reset?
 - Extra protection ("no") for factory reset
+- Move some stuff to second core, maybe events, maybe hit calculation

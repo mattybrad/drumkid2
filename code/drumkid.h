@@ -10,6 +10,7 @@
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 256 // was 32 but anything under 256 appears to cause timing issues
+#define MAX_EVENTS 20
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
