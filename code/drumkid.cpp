@@ -31,6 +31,7 @@ Aleatoric drum machine
 #include "hardware/flash.h"
 #include "hardware/irq.h"
 #include "hardware/pio.h"
+#include "hardware/watchdog.h"
 #include "pico/stdlib.h"
 // #include "pico/multicore.h"
 #include "pico/audio_i2s.h"
@@ -62,10 +63,14 @@ uint16_t tupletEditLiveMultipliers[NUM_TUPLET_MODES] = {840,560,672,480};
 int metronomeIndex = 0;
 int nextBeatCheckStep[NUM_SAMPLES] = {0};
 bool forceBeatUpdate = false;
+alarm_id_t displayPulseAlarm = 0;
 
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
 int settingsMenuLevel = 0;
+
+// variables, after adjustments such as deadzones/CV
+int chance;
 
 const int NUM_PPQN_VALUES = 8;
 int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 12, 16, 24, 32};
@@ -706,7 +711,7 @@ int64_t displayPulseCallback(alarm_id_t id, void *user_data)
 
 void displayPulse(int thisPulse, uint16_t delayMicros)
 {
-    add_alarm_in_us(delayMicros, displayPulseCallback, (void *)thisPulse, true);
+    displayPulseAlarm = add_alarm_in_us(delayMicros, displayPulseCallback, (void *)thisPulse, true);
 }
 
 void displayClockMode()
@@ -898,6 +903,7 @@ char getNthDigit(int x, int n)
 
 void updateLedDisplayNumber(int num)
 {
+    cancel_alarm(displayPulseAlarm);
     int compare = 1;
     for (int i = 0; i < 4; i++)
     {
@@ -915,6 +921,7 @@ void updateLedDisplayNumber(int num)
 
 void updateLedDisplayAlpha(const char *word)
 {
+    cancel_alarm(displayPulseAlarm);
     bool foundWordEnd = false;
     for (int i = 0; i < 4; i++)
     {
@@ -960,14 +967,14 @@ int getRandomHitVelocity(int step) {
     // first draft...
 
     int tempZoom = analogReadings[POT_ZOOM];
-    applyDeadZones(tempZoom);
+    applyDeadZones(tempZoom, false);
     tempZoom = tempZoom  / 456;
     if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
     {
-        int tempChance = analogReadings[POT_CHANCE];
-        applyDeadZones(tempChance);
-        tempChance = std::max(tempChance - 2048, 0) << 1;
-        if(tempChance > rand()%4095) {
+        int thisChance = chance;
+        thisChance = std::max(chance - 2048, 0) << 1;
+        if (thisChance > rand() % 4095)
+        {
             int returnVel = analogReadings[POT_VELOCITY] + ((analogReadings[POT_RANGE] * (rand() % 4095)) >> 12) - (analogReadings[POT_RANGE]>>1);
             if(returnVel < 0) returnVel = 0;
             else if(returnVel > 4095) returnVel = 4095;
@@ -1010,9 +1017,26 @@ bool updateHold(repeating_timer_t *rt) {
     return true;
 }
 
-void applyDeadZones(int &param)
+// stolen from the arduino codebase
+int map(int x, int in_min, int in_max, int out_min, int out_max)
+{
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+void applyDeadZones(int &param, bool centreDeadZone)
 {
     param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
+    int deadZoneStart = 2047-200;
+    int deadZoneEnd = 2047+200;
+    if(centreDeadZone) {
+        if(param < deadZoneStart) {
+            param = map(param, 0, deadZoneStart, 0, 2047);
+        } else if(param > deadZoneEnd) {
+            param = map(param, deadZoneEnd, 4095, 2047, 4095);
+        } else {
+            param = 2047;
+        }
+    }
 }
 
 int main()
@@ -1076,12 +1100,12 @@ int main()
         int64_t audioProcessStartTime = time_us_64();
 
         int crush = analogReadings[POT_CRUSH];
-        applyDeadZones(crush);
+        applyDeadZones(crush, false);
         crush = 4095 - (((4095 - crush) * (4095 - crush)) >> 12);
         crush = crush >> 8;
 
         int crop = analogReadings[POT_CROP];
-        applyDeadZones(crop);
+        applyDeadZones(crop, false);
         if (crop == 4095)
             crop = MAX_SAMPLE_STORAGE;
         else
@@ -1115,6 +1139,9 @@ int main()
             pitchInt = 1; // seems sensible, prevents sample getting stuck
 
         Sample::pitch = pitchInt; // temp...
+
+        chance = analogReadings[POT_CHANCE];
+        applyDeadZones(chance, true);
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
@@ -1179,9 +1206,6 @@ int main()
             }
             lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
 
-            int tempChance = analogReadings[POT_CHANCE];
-            applyDeadZones(tempChance);
-
             for (int j = 0; j < NUM_SAMPLES; j++)
             {
                 if(newStep) {
@@ -1193,7 +1217,7 @@ int main()
                     }
                     if(foundHit >= 0) {
                         int prob = beats[beatNum].hits[foundHit].probability;
-                        int combinedProb = (prob * tempChance) >> 11;
+                        int combinedProb = (prob * chance) >> 11;
                         int group = beats[beatNum].hits[foundHit].group;
                         int randNum = rand() % 255;
                         // hits from group 0 are treated independently (group 0 is not a group)
@@ -1202,7 +1226,7 @@ int main()
                             if(groupStatus[group] == GROUP_PENDING) {
                                 groupStatus[group] = (prob > randNum) ? GROUP_YES : GROUP_NO;
                             }
-                            if(groupStatus[group] == GROUP_YES && (tempChance>>3)>randNum) {
+                            if(groupStatus[group] == GROUP_YES && (chance>>3)>randNum) {
                                 thisVel = beats[beatNum].hits[foundHit].velocity;
                             }
                         }
@@ -1256,6 +1280,7 @@ int main()
         if(doFactoryResetSafe) {
             doFactoryResetSafe = false;
             initFlash(true);
+            watchdog_enable(0, 1); // causes reboot so we don't need to bother trying to reset all the variables
         }
 
         if (sdSafeLoadTemp)
@@ -1721,10 +1746,6 @@ void initFlash(bool doFactoryReset)
     }
 }
 
-void generateDrumSample(int samplePos, int sineFreq, int sineLength, int sineVol, int noiseLength, int noiseVol) {
-    
-}
-
 void loadSamplesFromFlash()
 {
     int startPos = 0;
@@ -1903,4 +1924,8 @@ void loadDefaultBeats()
             }
         }
     }
+}
+
+void resetAllSettings() {
+    // all initial values should be set here, such that when a factory reset is performed, 
 }

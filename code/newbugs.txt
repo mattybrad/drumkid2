@@ -29,3 +29,11 @@ TODO:
 - Write manual headings
 - Write manual copy
 - Record demo video
+
+STUFF SINCE BURNDOWN LIST:
+- Factory reset doesn't wipe saved beat(s?), at least the currently used one...
+
+FUTURE STUFF:
+- More beats, plus empty ones for users
+- Soft reset?
+- Extra protection ("no") for factory reset
