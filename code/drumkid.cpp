@@ -80,6 +80,8 @@ int settingsMenuLevel = 0;
 
 // variables, after adjustments such as deadzones/CV
 int chance;
+int swing;
+uint8_t swingMode = SWING_STRAIGHT;
 
 const int NUM_PPQN_VALUES = 8;
 int ppqnValues[NUM_PPQN_VALUES] = {1, 2, 4, 8, 12, 16, 24, 32};
@@ -1035,15 +1037,15 @@ int map(int x, int in_min, int in_max, int out_min, int out_max)
 void applyDeadZones(int &param, bool centreDeadZone)
 {
     param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
-    int deadZoneStart = 2047-200;
-    int deadZoneEnd = 2047+200;
+    int deadZoneStart = 2048-200;
+    int deadZoneEnd = 2048+200;
     if(centreDeadZone) {
         if(param < deadZoneStart) {
-            param = map(param, 0, deadZoneStart, 0, 2047);
+            param = map(param, 0, deadZoneStart, 0, 2048);
         } else if(param > deadZoneEnd) {
-            param = map(param, deadZoneEnd, 4095, 2047, 4095);
+            param = map(param, deadZoneEnd, 4095, 2048, 4095);
         } else {
-            param = 2047;
+            param = 2048;
         }
     }
 }
@@ -1176,7 +1178,7 @@ int main()
 
             // update step
             int64_t step = pulseStep + (3360 * (currentTime - prevPulseTime)) / (syncInPpqn * (nextPulseTime - prevPulseTime));
-            bool newStep = false; // only check beat when step has been incremented
+            bool newStep = false; // only check beat when step has been incremented (i.e. loop will probably run several times on, say, step 327, but don't need to do stuff repeatedly for that step)
 
             // do stuff if step has been incremented
             if(beatStarted && beatPlaying && currentTime < nextPredictedPulseTime && step != lastStep) {
@@ -1204,6 +1206,25 @@ int main()
                         displayPulse(step / 3360, pulseDelay);
                     }
                     pulseLed(2, pulseDelay);
+
+                    // swing gets set here because it prevents issue where fluctuating pot reading causes skipped hits
+                    swing = analogReadings[POT_SWING];
+                    applyDeadZones(swing, true);
+                    if (swing == 2048)
+                    {
+                        swing = 0;
+                        swingMode = SWING_STRAIGHT;
+                    }
+                    else if (swing < 2048)
+                    {
+                        swingMode = SWING_EIGHTH;
+                        swing = map(swing, 2047, 0, 1680, 3359);
+                    }
+                    else
+                    {
+                        swingMode = SWING_SIXTEENTH;
+                        swing = map(swing, 2049, 4095, 840, 1679);
+                    }
                 }
                 if (forceBeatUpdate)
                 {
@@ -1225,9 +1246,38 @@ int main()
                 if(newStep) {
                     int thisVel = 0;
                     int foundHit = -1;
-                    if(step == nextBeatCheckStep[j]) {
-                        foundHit = beats[beatNum].getHit(j, step);
-                        nextBeatCheckStep[j] = beats[beatNum].getNextHitStep(j, step, numSteps);
+
+                    // temporary swing testing
+                    int swingStep = step;
+                    bool skipStep = false;
+                    if(swingMode == SWING_EIGHTH) {
+                        if(step % 3360 == 1680) {
+                            // eighth note, skip it
+                            skipStep = true;
+                        } else if(step % 3360 == swing) {
+                            swingStep = 1680 + (step / 3360) * 3360;
+                        }
+                    } else if(swingMode == SWING_SIXTEENTH) {
+                        if (step % 1680 == 840)
+                        {
+                            // eighth note, skip it
+                            skipStep = true;
+                        }
+                        else if (step % 1680 == swing)
+                        {
+                            swingStep = 840 + (step / 1680) * 1680;
+                        }
+                    }
+
+                    if(!skipStep) {
+                        if(swingStep == nextBeatCheckStep[j]) {
+                            foundHit = beats[beatNum].getHit(j, swingStep);
+                            nextBeatCheckStep[j] = beats[beatNum].getNextHitStep(j, step, numSteps);
+                        } else if(step == nextBeatCheckStep[j]) {
+                            // special (rare) case for if swingStep has no hit but the step it mapped onto does have a hit
+                            foundHit = beats[beatNum].getHit(j, step);
+                            nextBeatCheckStep[j] = beats[beatNum].getNextHitStep(j, step, numSteps);
+                        }
                     }
                     if(foundHit >= 0) {
                         int prob = beats[beatNum].hits[foundHit].probability;

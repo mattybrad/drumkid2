@@ -32,9 +32,12 @@ TODO:
 
 STUFF SINCE BURNDOWN LIST:
 - Factory reset doesn't wipe saved beat(s?), at least the currently used one...
+- Possible missed hits...? Check chance deadzone
 
 FUTURE STUFF:
+- Seed the rand function
 - More beats, plus empty ones for users
 - Soft reset?
 - Extra protection ("no") for factory reset
 - Move some stuff to second core, maybe events, maybe hit calculation
+- Dotted notes in tuplet mode?

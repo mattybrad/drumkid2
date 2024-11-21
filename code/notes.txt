@@ -474,3 +474,7 @@ Had a couple of weeks away from Drumkid because I was going mad with all the cod
 64: User beats
 127: Audio metadata (sample lengths, positions, rates, etc)
 128 to 255: Audio data
+
+19/11/24
+Woah, cracking through the issues. Next thing to tackle is errors, not a big deal but should work like this:
+Array of bools, length of array is number of possible errors. True means there is currently an error. Any time an error could possibly be caused or solved, set the specific error to true or false then call the checkErrors function to determine if all errors are solved, in which case the error LED can be turned off.

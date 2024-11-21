@@ -113,6 +113,11 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define TUPLET_QUINTUPLET 2
 #define TUPLET_SEPTUPLET 3
 
+// swing modes
+#define SWING_STRAIGHT 0
+#define SWING_EIGHTH 1
+#define SWING_SIXTEENTH 2
+
 // group statuses
 #define GROUP_PENDING 0
 #define GROUP_YES 1
