@@ -980,6 +980,13 @@ int getRandomHitVelocity(int step) {
     int tempZoom = analogReadings[POT_ZOOM];
     applyDeadZones(tempZoom, false);
     tempZoom = tempZoom  / 456;
+    if(swingMode == SWING_EIGHTH) {
+        tempZoom = std::min(tempZoom, 4);
+    }
+    else if (swingMode == SWING_SIXTEENTH)
+    {
+        tempZoom = std::min(tempZoom, 5);
+    }
     if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
     {
         int thisChance = chance;

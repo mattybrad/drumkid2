@@ -31,10 +31,13 @@ TODO:
 - Record demo video
 
 STUFF SINCE BURNDOWN LIST:
+- Reset nextHitStep or whatever when beat starts
 - Factory reset doesn't wipe saved beat(s?), at least the currently used one...
 - Possible missed hits...? Check chance deadzone
 
 FUTURE STUFF:
+- Swing zoom cutout is optional in settings
+- Scrolling text for longer settings labels
 - Seed the rand function
 - More beats, plus empty ones for users
 - Soft reset?
