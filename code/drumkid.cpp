@@ -1300,7 +1300,9 @@ int main()
                         }
                     }
                     // calculate whether random hit should occur, even if a beat hit has already been found (random hit could be higher velocity)
-                    thisVel = std::max(thisVel, getRandomHitVelocity(step));
+                    if(!skipStep) {
+                        thisVel = std::max(thisVel, getRandomHitVelocity(swingStep));
+                    }
                     if(thisVel > 0) {
                         samples[j].queueHit(currentTime, 0, thisVel);
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
