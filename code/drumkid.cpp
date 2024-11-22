@@ -68,6 +68,21 @@ bool clusterReady[NUM_SAMPLES] = {false}; // if true, it means a sample was trig
 int magnetCurve[6][32]; // i don't remember why these numbers are like this...
 int magnetZoomValue = 0;
 
+// NB order = NA,NA,NA,NA,tom,hat,snare,kick
+uint8_t dropRef[11] = {
+    0b11110000,
+    0b11110001,
+    0b11111001,
+    0b11111101,
+    0b11111111,
+    0b11111111, // extra copies of full (no drop) value to provide deadzone
+    0b11111111,
+    0b11111110,
+    0b11110110,
+    0b11110100,
+    0b11110000
+};
+
 alarm_id_t eventAlarm = 0; // single alarm to handle all events
 struct Event
 {
@@ -89,6 +104,8 @@ int cluster;
 int magnet;
 int velRange;
 int velocity;
+int drop;
+int dropRandom;
 uint8_t swingMode = SWING_STRAIGHT;
 
 const int NUM_PPQN_VALUES = 8;
@@ -1226,6 +1243,8 @@ int main()
         velocity = std::max(0, velocity);
         velRange = analogReadings[POT_RANGE];
         applyDeadZones(velRange, false);
+        drop = analogReadings[POT_DROP] / 373; // gives range of 0 to 10
+        dropRandom = analogReadings[POT_DROP_RANDOM] / 373; // gives range of 0 to 10
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
@@ -1369,11 +1388,13 @@ int main()
                         }
                     }
                     // calculate whether random hit should occur, even if a beat hit has already been found (random hit could be higher velocity)
-                    if(!skipStep && activeButton != BUTTON_LIVE_EDIT) {
+                    bool dropHit = !bitRead(dropRef[drop], j);
+                    bool dropHitRandom = !bitRead(dropRef[dropRandom], j);
+                    if(!skipStep && activeButton != BUTTON_LIVE_EDIT && !dropHitRandom) {
                         int randomVel = getRandomHitVelocity(swingStep, j);
                         thisVel = std::max(thisVel, randomVel);
                     }
-                    if(thisVel > 0) {
+                    if(thisVel > 0 && !dropHit) {
                         samples[j].queueHit(currentTime, 0, thisVel);
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
                         pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
