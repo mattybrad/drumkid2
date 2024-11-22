@@ -146,9 +146,8 @@ const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_MET
 // Beat variables
 #define NUM_BEATS 24
 #define MASTER_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
-uint16_t tempo = 120;                                       // BPM
-uint64_t stepTime = 2646000 / (tempo * QUARTER_NOTE_STEPS); // microseconds
-int samplesPerStep;                                         // slower tempos give higher values
+int tempo = 1200;                                       // 10xBPM
+uint64_t stepTime = 26460000 / (tempo * QUARTER_NOTE_STEPS); // microseconds
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
 int beatNum = 0;
@@ -166,7 +165,7 @@ char folderNames[MAX_SAMPLE_FOLDERS][MAX_FOLDER_NAME_LENGTH];
 char path[] = "samples/";
 int numSampleFolders = 0;
 
-// temporary (ish?) LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
+// LED variables (first 8 bits are the segments, next 4 are the character selects, final 4 are 3mm LEDs)
 #define LED_PULSE_LENGTH 10000
 uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
 uint8_t singleLedData = 0b0000; // 4 x 3mm LEDs
@@ -200,7 +199,8 @@ bool performanceCheck(repeating_timer_t *rt);
 bool mainTimerLogic(repeating_timer_t *rt);
 struct audio_buffer_pool *init_audio();
 char getNthDigit(int x, int n);
-void updateLedDisplayNumber(int num);
+void updateLedDisplayInt(int num);
+void updateLedDisplayFloat(float num);
 void updateLedDisplayAlpha(const char *word);
 void handleIncDec(bool isInc, bool isHold);
 void handleYesNo(bool isYes);

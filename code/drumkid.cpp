@@ -412,7 +412,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_SAVE:
             saveBeatLocation = beatNum;
             activeButton = BUTTON_SAVE;
-            updateLedDisplayNumber(saveBeatLocation);
+            updateLedDisplayInt(saveBeatLocation);
             break;
         default:
             printf("(button %d not assigned)\n", buttonNum);
@@ -526,11 +526,11 @@ void handleIncDec(bool isInc, bool isHold)
             {
                 tempo += isInc ? 1 : -1;
             }
-            if (tempo > 9999)
-                tempo = 9999;
-            else if (tempo < 10)
-                tempo = 10;
-            deltaT = 60000000 / tempo;
+            if (tempo > 99999)
+                tempo = 99999;
+            else if (tempo < 100)
+                tempo = 100;
+            deltaT = 600000000 / tempo;
             displayTempo();
         }
         break;
@@ -597,7 +597,7 @@ void handleIncDec(bool isInc, bool isHold)
             saveBeatLocation = 0;
         if (saveBeatLocation >= NUM_BEATS)
             saveBeatLocation = NUM_BEATS - 1;
-        updateLedDisplayNumber(saveBeatLocation);
+        updateLedDisplayInt(saveBeatLocation);
         break;
 
     case BUTTON_TUPLET:
@@ -724,7 +724,7 @@ void updateTapTempo()
             deltaT = newDeltaT;
             //stepTime = (44100 * deltaT) / 32000000;
             //tempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS); // temp...
-            tempo = 60000000 / deltaT;
+            tempo = 600000000 / deltaT;
             displayTempo();
         }
     }
@@ -763,12 +763,21 @@ void displayTempo()
 {
     if (externalClock)
     {
-        int calculatedTempo = 60000000 / (deltaT * syncInPpqn);
-        updateLedDisplayNumber(calculatedTempo);
+        int calculatedTempo = 600000000 / (deltaT * syncInPpqn);
+        updateLedDisplayInt(calculatedTempo);
+        if (calculatedTempo <= 9999)
+        {
+            // 999.9 BPM or less
+            bitWrite(sevenSegData[2], 7, true);
+        }
     }
     else
     {
-        updateLedDisplayNumber((int)tempo);
+        updateLedDisplayInt(tempo);
+        if(tempo<=9999) {
+            // 999.9 BPM or less
+            bitWrite(sevenSegData[2], 7, true);
+        }
     }
 }
 
@@ -794,7 +803,7 @@ void displayTuplet()
 
 void displayBeat()
 {
-    updateLedDisplayNumber(beatNum);
+    updateLedDisplayInt(beatNum);
 }
 
 void displayEditBeat()
@@ -900,15 +909,15 @@ void displaySettings()
             break;
 
         case SETTING_OUTPUT_PULSE_LENGTH:
-            updateLedDisplayNumber(outputPulseLength);
+            updateLedDisplayInt(outputPulseLength);
             break;
 
         case SETTING_OUTPUT_PPQN:
-            updateLedDisplayNumber(syncOutPpqn);
+            updateLedDisplayInt(syncOutPpqn);
             break;
 
         case SETTING_INPUT_PPQN:
-            updateLedDisplayNumber(syncInPpqn);
+            updateLedDisplayInt(syncInPpqn);
             break;
 
         case SETTING_PITCH_CURVE:
@@ -921,7 +930,7 @@ void displaySettings()
             break;
 
         case SETTING_INPUT_QUANTIZE:
-            updateLedDisplayNumber(inputQuantize);
+            updateLedDisplayInt(inputQuantize);
             break;
 
         case SETTING_FACTORY_RESET:
@@ -941,7 +950,7 @@ char getNthDigit(int x, int n)
     return x % 10;
 }
 
-void updateLedDisplayNumber(int num)
+void updateLedDisplayInt(int num)
 {
     cancel_alarm(displayPulseAlarm);
     int compare = 1;
@@ -978,6 +987,15 @@ void updateLedDisplayAlpha(const char *word)
         {
             sevenSegData[i] = sevenSegAsciiCharacters[word[i]];
         }
+    }
+}
+
+void updateLedDisplayFloat(float num) {
+    if(num >= 999.5) {
+        updateLedDisplayInt((int)(num+0.5));
+    } else {
+        num = num * 10;
+
     }
 }
 
@@ -1030,15 +1048,15 @@ int getRandomHitVelocity(int step, int sample) {
         int thisChance = std::max(chance - 2048, 0) << 1; // check that this can actually reach 4095...
         if (magnetZoomValue == 0 || chance == 4095)
         {
-            thisChance = chance;
+            // leave chance as is
         }
         else if (magnet < 2048)
         {
-            thisChance = (magnet * magnetCurve[magnetZoomValue][chance >> 7] + (2048 - magnet) * ((chance * chance) >> 12)) >> 11;
+            thisChance = (magnet * magnetCurve[magnetZoomValue][thisChance >> 7] + (2048 - magnet) * ((thisChance * thisChance) >> 12)) >> 11;
         }
         else
         {
-            thisChance = ((4095 - magnet) * magnetCurve[magnetZoomValue][chance >> 7]) >> 11;
+            thisChance = ((4095 - magnet) * magnetCurve[magnetZoomValue][thisChance >> 7]) >> 11;
         }
         if(clusterReady[sample]) {
             thisChance = std::max(cluster, thisChance);
@@ -1335,7 +1353,7 @@ int main()
                     int thisVel = 0;
                     int foundHit = -1;
 
-                    // temporary swing testing
+                    // swing logic
                     int swingStep = step;
                     bool skipStep = false;
                     if(swingMode == SWING_EIGHTH) {
