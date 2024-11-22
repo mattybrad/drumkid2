@@ -65,6 +65,8 @@ int nextBeatCheckStep[NUM_SAMPLES] = {0};
 bool forceBeatUpdate = false;
 alarm_id_t displayPulseAlarm = 0;
 bool clusterReady[NUM_SAMPLES] = {false}; // if true, it means a sample was triggered on the previous possible step (according to zoom level), so the cluster value will be taken into account
+int magnetCurve[6][32]; // i don't remember why these numbers are like this...
+int magnetZoomValue = 0;
 
 alarm_id_t eventAlarm = 0; // single alarm to handle all events
 struct Event
@@ -83,6 +85,7 @@ int settingsMenuLevel = 0;
 int chance;
 int swing;
 int cluster;
+int magnet;
 uint8_t swingMode = SWING_STRAIGHT;
 
 const int NUM_PPQN_VALUES = 8;
@@ -976,6 +979,17 @@ int zoomValues[NUM_TUPLET_MODES][9] = {
     {-1, 13440, 13440, 3360, 480, 240, 120, 60, 30},
 };
 
+int getMagnetZoomValue(int step) {
+    bool foundLowest = false;
+    int i;
+    for(i=1;i<9&&!foundLowest;i++) {
+        if(step%zoomValues[tuplet][i]==0) {
+            foundLowest = true;
+        }
+    }
+    return foundLowest ? std::max(0, i-4) : -1; // -4 because quarter note should be 0 (shift by -3), and i has been incremented at end of loop, which needs to be undone (extra -1)
+}
+
 int getRandomHitVelocity(int step, int sample) {
     // first draft...
 
@@ -991,8 +1005,19 @@ int getRandomHitVelocity(int step, int sample) {
     }
     if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
     {
-        int thisChance = chance;
-        thisChance = std::max(chance - 2048, 0) << 1; // check that this can actually reach 4095...
+        int thisChance = std::max(chance - 2048, 0) << 1; // check that this can actually reach 4095...
+        if (magnetZoomValue == 0 || chance == 4095)
+        {
+            thisChance = chance;
+        }
+        else if (magnet < 2048)
+        {
+            thisChance = (magnet * magnetCurve[magnetZoomValue][chance >> 7] + (2048 - magnet) * ((chance * chance) >> 12)) >> 11;
+        }
+        else
+        {
+            thisChance = ((4095 - magnet) * magnetCurve[magnetZoomValue][chance >> 7]) >> 11;
+        }
         if(clusterReady[sample]) {
             thisChance = std::max(cluster, thisChance);
         }
@@ -1083,6 +1108,19 @@ int main()
     //     beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
     // }
 
+    // temp, populating magnet curve
+    printf("magnet curve:\n");
+    for (int i = 0; i < 6; i++)
+    {
+        for (int j = 0; j < 32; j++)
+        {
+            float accurateValue = pow(((float)j * 1.0) / 31.0, 4.0 * (float)i + 1.0);
+            magnetCurve[i][j] = 4095.0 * accurateValue;
+            printf("%d ", magnetCurve[i][j]);
+        }
+        printf("\n");
+    }
+
     initFlash(false);
     initGpio();
     loadSamplesFromFlash();
@@ -1169,6 +1207,8 @@ int main()
         applyDeadZones(chance, true);
         cluster = analogReadings[POT_CLUSTER];
         applyDeadZones(cluster, false);
+        magnet = analogReadings[POT_MAGNET];
+        applyDeadZones(magnet, true);
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
@@ -1245,6 +1285,7 @@ int main()
                     }
                     forceBeatUpdate = false;
                 }
+                magnetZoomValue = getMagnetZoomValue(step);
             }
             if(activeButton == BUTTON_LIVE_EDIT && beatPlaying && (step % 3360) < 840) {
                 out1 += metronomeIndex < 50 ? 5000 : -5000;

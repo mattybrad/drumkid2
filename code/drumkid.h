@@ -250,5 +250,6 @@ void loadDefaultBeats();
 void addEvent(uint64_t delay, void (*callback)(int), int user_data);
 void testEventCallback(int user_data);
 int64_t eventManager(alarm_id_t id, void *user_data);
+int getMagnetZoomValue(int step);
 
 #endif
