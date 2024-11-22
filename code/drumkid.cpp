@@ -301,6 +301,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_LIVE_EDIT:
             activeButton = BUTTON_LIVE_EDIT;
+            displayPulse(pulseStep / 3360, 0);
             break;
         case BUTTON_INC:
             if (activeButton == BUTTON_LIVE_EDIT)
@@ -723,6 +724,9 @@ int64_t displayPulseCallback(alarm_id_t id, void *user_data)
         else
         {
             sevenSegData[i] = 0;
+        }
+        if(activeButton == BUTTON_LIVE_EDIT) {
+            bitWrite(sevenSegData[i],3,true);
         }
     }
     return 0;
@@ -1365,7 +1369,7 @@ int main()
                         }
                     }
                     // calculate whether random hit should occur, even if a beat hit has already been found (random hit could be higher velocity)
-                    if(!skipStep) {
+                    if(!skipStep && activeButton != BUTTON_LIVE_EDIT) {
                         int randomVel = getRandomHitVelocity(swingStep, j);
                         thisVel = std::max(thisVel, randomVel);
                     }
