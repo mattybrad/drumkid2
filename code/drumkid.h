@@ -104,8 +104,8 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 // CV input numbers
 #define CV_CHANCE 12
 #define CV_ZOOM 15
-#define CV_MIDPOINT 13
-#define CV_TBC 14
+#define CV_VELOCITY 13
+#define CV_PITCH 14
 
 // tuplet modes
 #define TUPLET_STRAIGHT 0

@@ -31,9 +31,11 @@ TODO:
 - Record demo video
 
 STUFF SINCE BURNDOWN LIST:
+- Crashes on beat 16 (fair enough, doesn't exist)
 - Reset nextHitStep or whatever when beat starts
 - Factory reset doesn't wipe saved beat(s?), at least the currently used one...
 - Possible missed hits...? Check chance deadzone
+- Chance maybe not totally stable, hard to lock at 4095, especially when including CV (bigger top deadzone?)
 
 FUTURE STUFF:
 - Swing zoom cutout is optional in settings

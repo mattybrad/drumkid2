@@ -83,9 +83,12 @@ int settingsMenuLevel = 0;
 
 // variables, after adjustments such as deadzones/CV
 int chance;
+int zoom;
 int swing;
 int cluster;
 int magnet;
+int velRange;
+int velocity;
 uint8_t swingMode = SWING_STRAIGHT;
 
 const int NUM_PPQN_VALUES = 8;
@@ -227,7 +230,7 @@ void doLiveHit(int sampleNum)
     int thisStep = (pulseStep + (samplesSincePulse * 3360) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
-    beats[beatNum].addHit(sampleNum, thisStep, analogReadings[POT_VELOCITY]>>4, 255, 0);
+    beats[beatNum].addHit(sampleNum, thisStep, velocity>>4, 255, 0);
 
     // if scheduled hit is in the past, directly trigger sample now
     int compareLastStep = lastStep;
@@ -240,7 +243,7 @@ void doLiveHit(int sampleNum)
     }
     if (compareThisStep <= compareLastStep)
     {
-        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, analogReadings[POT_VELOCITY] >> 4);
+        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, velocity >> 4);
     }
 
     forceBeatUpdate = true;
@@ -993,17 +996,15 @@ int getMagnetZoomValue(int step) {
 int getRandomHitVelocity(int step, int sample) {
     // first draft...
 
-    int tempZoom = analogReadings[POT_ZOOM];
-    applyDeadZones(tempZoom, false);
-    tempZoom = tempZoom  / 456;
+    int thisZoom = zoom  / 456; // gives range from 0 to 8 inclusive
     if(swingMode == SWING_EIGHTH) {
-        tempZoom = std::min(tempZoom, 4);
+        thisZoom = std::min(thisZoom, 4);
     }
     else if (swingMode == SWING_SIXTEENTH)
     {
-        tempZoom = std::min(tempZoom, 5);
+        thisZoom = std::min(thisZoom, 5);
     }
-    if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
+    if (zoomValues[tuplet][thisZoom] >= 0 && (step % zoomValues[tuplet][thisZoom]) == 0)
     {
         int thisChance = std::max(chance - 2048, 0) << 1; // check that this can actually reach 4095...
         if (magnetZoomValue == 0 || chance == 4095)
@@ -1024,7 +1025,7 @@ int getRandomHitVelocity(int step, int sample) {
         clusterReady[sample] = false;
         if (thisChance > rand() % 4095)
         {
-            int returnVel = analogReadings[POT_VELOCITY] + ((analogReadings[POT_RANGE] * (rand() % 4095)) >> 12) - (analogReadings[POT_RANGE]>>1);
+            int returnVel = velocity + ((velRange * (rand() % 4095)) >> 12) - (velRange>>1);
             if(returnVel < 0) returnVel = 0;
             else if(returnVel > 4095) returnVel = 4095;
             if(returnVel > 0) clusterReady[sample] = true;
@@ -1197,18 +1198,30 @@ int main()
             // speed exactly 100%, in deadzone
             pitchInt = 1024;
         }
-        pitchInt += analogReadings[CV_TBC] - 2048;
+        pitchInt += analogReadings[CV_PITCH] - 2048;
         if (pitchInt == 0)
             pitchInt = 1; // seems sensible, prevents sample getting stuck
 
         Sample::pitch = pitchInt; // temp...
 
-        chance = analogReadings[POT_CHANCE];
+        chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
         applyDeadZones(chance, true);
+        chance = std::min(4095, chance);
+        chance = std::max(0, chance);
+        zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
+        applyDeadZones(zoom, false);
+        zoom = std::min(4095, zoom);
+        zoom = std::max(0, zoom);
         cluster = analogReadings[POT_CLUSTER];
         applyDeadZones(cluster, false);
         magnet = analogReadings[POT_MAGNET];
         applyDeadZones(magnet, true);
+        velocity = analogReadings[POT_VELOCITY] + analogReadings[CV_VELOCITY] - 2048;
+        applyDeadZones(velocity, false);
+        velocity = std::min(4095, velocity);
+        velocity = std::max(0, velocity);
+        velRange = analogReadings[POT_RANGE];
+        applyDeadZones(velRange, false);
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
