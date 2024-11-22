@@ -64,6 +64,7 @@ int metronomeIndex = 0;
 int nextBeatCheckStep[NUM_SAMPLES] = {0};
 bool forceBeatUpdate = false;
 alarm_id_t displayPulseAlarm = 0;
+bool clusterReady[NUM_SAMPLES] = {false}; // if true, it means a sample was triggered on the previous possible step (according to zoom level), so the cluster value will be taken into account
 
 alarm_id_t eventAlarm = 0; // single alarm to handle all events
 struct Event
@@ -81,6 +82,7 @@ int settingsMenuLevel = 0;
 // variables, after adjustments such as deadzones/CV
 int chance;
 int swing;
+int cluster;
 uint8_t swingMode = SWING_STRAIGHT;
 
 const int NUM_PPQN_VALUES = 8;
@@ -974,7 +976,7 @@ int zoomValues[NUM_TUPLET_MODES][9] = {
     {-1, 13440, 13440, 3360, 480, 240, 120, 60, 30},
 };
 
-int getRandomHitVelocity(int step) {
+int getRandomHitVelocity(int step, int sample) {
     // first draft...
 
     int tempZoom = analogReadings[POT_ZOOM];
@@ -990,12 +992,17 @@ int getRandomHitVelocity(int step) {
     if (zoomValues[tuplet][tempZoom] >= 0 && (step % zoomValues[tuplet][tempZoom]) == 0)
     {
         int thisChance = chance;
-        thisChance = std::max(chance - 2048, 0) << 1;
+        thisChance = std::max(chance - 2048, 0) << 1; // check that this can actually reach 4095...
+        if(clusterReady[sample]) {
+            thisChance = std::max(cluster, thisChance);
+        }
+        clusterReady[sample] = false;
         if (thisChance > rand() % 4095)
         {
             int returnVel = analogReadings[POT_VELOCITY] + ((analogReadings[POT_RANGE] * (rand() % 4095)) >> 12) - (analogReadings[POT_RANGE]>>1);
             if(returnVel < 0) returnVel = 0;
             else if(returnVel > 4095) returnVel = 4095;
+            if(returnVel > 0) clusterReady[sample] = true;
             return returnVel >> 4;
         }
     }
@@ -1095,11 +1102,6 @@ int main()
     add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
     add_repeating_timer_ms(125, updateHold, NULL, &holdTimer);
 
-    // test...
-    addEvent(1000000, testEventCallback, 123);
-    addEvent(2000000, testEventCallback, 456);
-    addEvent(3000000, testEventCallback, 789);
-
     struct audio_buffer_pool *ap = init_audio();
 
     beatPlaying = false;
@@ -1165,6 +1167,8 @@ int main()
 
         chance = analogReadings[POT_CHANCE];
         applyDeadZones(chance, true);
+        cluster = analogReadings[POT_CLUSTER];
+        applyDeadZones(cluster, false);
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
@@ -1308,7 +1312,8 @@ int main()
                     }
                     // calculate whether random hit should occur, even if a beat hit has already been found (random hit could be higher velocity)
                     if(!skipStep) {
-                        thisVel = std::max(thisVel, getRandomHitVelocity(swingStep));
+                        int randomVel = getRandomHitVelocity(swingStep, j);
+                        thisVel = std::max(thisVel, randomVel);
                     }
                     if(thisVel > 0) {
                         samples[j].queueHit(currentTime, 0, thisVel);
