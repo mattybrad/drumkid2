@@ -475,6 +475,11 @@ Had a couple of weeks away from Drumkid because I was going mad with all the cod
 127: Audio metadata (sample lengths, positions, rates, etc)
 128 to 255: Audio data
 
+And here's the breakdown of a settings page, in terms of byte addresses:
+0: Check number (32-bit int)
+4: Incremental write number, total number of writes since factory reset
+8, 12, 16, 20, etc: one 4-byte (32-bit) slot per setting, max 62 settings (256/4, minus 2 for the wear levelling stuff)
+
 19/11/24
 Woah, cracking through the issues. Next thing to tackle is errors, not a big deal but should work like this:
 Array of bools, length of array is number of possible errors. True means there is currently an error. Any time an error could possibly be caused or solved, set the specific error to true or false then call the checkErrors function to determine if all errors are solved, in which case the error LED can be turned off.

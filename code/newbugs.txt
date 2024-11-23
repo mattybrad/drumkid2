@@ -34,12 +34,14 @@ STUFF SINCE BURNDOWN LIST:
 - External clock mode needs attention, especially switching from internal mode to external
 - Crashes on beat 16 (fair enough, doesn't exist)
 - Reset nextHitStep or whatever when beat starts
-- Factory reset doesn't wipe saved beat(s?), at least the currently used one...
+- Factory reset doesn't wipe saved beat(s?), at least the currently used one. Actually factory reset doesn't seem to reset very much at all! CHECK IT
 - Possible missed hits...? Check chance deadzone
 - Chance maybe not totally stable, hard to lock at 4095, especially when including CV (bigger top deadzone?)
 - Relaxed pass through the code to add comments while still fresh in head
 
 FUTURE STUFF:
+- Try incrementing settings writes onto next page, not next sector
+- Try Pico 2, should be better
 - Swing zoom cutout is optional in settings
 - Scrolling text for longer settings labels
 - Seed the rand function
@@ -48,3 +50,5 @@ FUTURE STUFF:
 - Extra protection ("no") for factory reset
 - Move some stuff to second core, maybe events, maybe hit calculation
 - Dotted notes in tuplet mode?
+- Manual save vs auto save, setting
+- Backup to SD

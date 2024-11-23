@@ -95,6 +95,7 @@ Event events[MAX_EVENTS];
 int activeButton = BOOTUP_VISUALS;
 int activeSetting = 0;
 int settingsMenuLevel = 0;
+int outputSample = 0;
 
 // variables, after adjustments such as deadzones/CV
 int chance;
@@ -126,9 +127,9 @@ bool firstHit = true;
 int tuplet = TUPLET_STRAIGHT;
 
 uint8_t crushVolume[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 13};
-int glitchChannel = GLITCH_CHANNEL_BOTH;
-bool glitch1 = true;
-bool glitch2 = true;
+int crushChannel = CRUSH_CHANNEL_BOTH;
+bool crush1 = true;
+bool crush2 = true;
 
 bool doFactoryResetSafe = false;
 bool sdSafeLoadTemp = false;
@@ -303,7 +304,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     displayPulse(0, 0);
                 }
 
-                //scheduleSaveSettings();
+                scheduleSaveSettings();
             }
             break;
         case BUTTON_MENU:
@@ -314,7 +315,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_TAP_TEMPO:
             activeButton = BUTTON_MANUAL_TEMPO;
             updateTapTempo();
-            // scheduleSaveSettings();
+            scheduleSaveSettings();
             break;
         case BUTTON_LIVE_EDIT:
             activeButton = BUTTON_LIVE_EDIT;
@@ -365,9 +366,14 @@ void handleButtonChange(int buttonNum, bool buttonState)
             }
             break;
         case BUTTON_BACK:
-            activeButton = NO_ACTIVE_BUTTON;
-            displayPulse(lastStep/3360,0);
-            //settingsMenuLevel = 0;
+            if (activeButton == BUTTON_MENU && (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2 || activeSetting == SETTING_CRUSH_CHANNEL))
+            {
+                settingsMenuLevel = 0;
+                displaySettings();
+            } else {
+                activeButton = NO_ACTIVE_BUTTON;
+                displayPulse(lastStep/3360,0);
+            }
             break;
         case BUTTON_KIT:
             activeButton = BUTTON_KIT;
@@ -433,19 +439,19 @@ void handleSubSettingIncDec(bool isInc)
 
     case SETTING_OUTPUT_1:
     case SETTING_OUTPUT_2:
-        // outputSample += isInc ? 1 : -1;
-        // if (outputSample < 0)
-        //     outputSample = 0;
-        // else if (outputSample > NUM_SAMPLES - 1)
-        //     outputSample = NUM_SAMPLES - 1;
-        // displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
+        outputSample += isInc ? 1 : -1;
+        if (outputSample < 0)
+            outputSample = 0;
+        else if (outputSample > NUM_SAMPLES - 1)
+            outputSample = NUM_SAMPLES - 1;
+        displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
         break;
 
-    case SETTING_GLITCH_CHANNEL:
-        glitchChannel += thisInc;
-        glitchChannel = std::max(0, std::min(3, glitchChannel));
-        glitch1 = !bitRead(glitchChannel, 1);
-        glitch2 = !bitRead(glitchChannel, 0);
+    case SETTING_CRUSH_CHANNEL:
+        crushChannel += thisInc;
+        crushChannel = std::max(0, std::min(3, crushChannel));
+        crush1 = !bitRead(crushChannel, 1);
+        crush2 = !bitRead(crushChannel, 0);
         break;
 
     case SETTING_OUTPUT_PULSE_LENGTH:
@@ -622,7 +628,7 @@ void handleIncDec(bool isInc, bool isHold)
         sdShowFolderTemp = true;
         break;
     }
-    //scheduleSaveSettings();
+    scheduleSaveSettings();
 }
 
 void handleYesNo(bool isYes)
@@ -674,11 +680,11 @@ void handleYesNo(bool isYes)
                 useDefaultNoBehaviour = false;
                 if (activeSetting == SETTING_OUTPUT_1)
                 {
-                    //samples[outputSample].output1 = isYes;
+                    samples[outputSample].output1 = isYes;
                 }
                 else
                 {
-                    //samples[outputSample].output2 = isYes;
+                    samples[outputSample].output2 = isYes;
                 }
                 displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
             }
@@ -708,7 +714,28 @@ void handleYesNo(bool isYes)
         //bitWrite(singleLedData, 3, false); // clear error LED
         setLed(3, false);
     }
-    //scheduleSaveSettings();
+    scheduleSaveSettings();
+}
+
+alarm_id_t saveSettingsAlarm = 0;
+
+int64_t onSaveSettingsTimeout(alarm_id_t id, void *user_data)
+{
+    if (!beatPlaying)
+    {
+        saveSettingsToFlash();
+    }
+    saveSettingsAlarm = 0;
+    return 0;
+}
+
+void scheduleSaveSettings()
+{
+    if (saveSettingsAlarm > 0)
+    {
+        cancel_alarm(saveSettingsAlarm);
+    }
+    saveSettingsAlarm = add_alarm_in_ms(3000, onSaveSettingsTimeout, NULL, true);
 }
 
 uint64_t lastTapTempoTime;
@@ -835,18 +862,18 @@ void displayEditBeat()
 
 void displayOutput(int outputNum)
 {
-    // for (int i = 0; i < 4 && i < NUM_SAMPLES; i++)
-    // {
-    //     if (outputNum == 1)
-    //     {
-    //         sevenSegData[i] = samples[i].output1 ? 0b10000000 : 0b00000000;
-    //     }
-    //     else if (outputNum == 2)
-    //     {
-    //         sevenSegData[i] = samples[i].output2 ? 0b10000000 : 0b00000000;
-    //     }
-    // }
-    // bitWrite(sevenSegData[outputSample], 4, true);
+    for (int i = 0; i < 4 && i < NUM_SAMPLES; i++)
+    {
+        if (outputNum == 1)
+        {
+            sevenSegData[i] = samples[i].output1 ? 0b00001000 : 0b00000000;
+        }
+        else if (outputNum == 2)
+        {
+            sevenSegData[i] = samples[i].output2 ? 0b00001000 : 0b00000000;
+        }
+    }
+    bitWrite(sevenSegData[outputSample], 6, true);
 }
 
 void displaySettings()
@@ -867,8 +894,8 @@ void displaySettings()
             updateLedDisplayAlpha("out2");
             break;
 
-        case SETTING_GLITCH_CHANNEL:
-            updateLedDisplayAlpha("glit");
+        case SETTING_CRUSH_CHANNEL:
+            updateLedDisplayAlpha("crsh");
             break;
 
         case SETTING_OUTPUT_PULSE_LENGTH:
@@ -912,14 +939,14 @@ void displaySettings()
             displayOutput(2);
             break;
 
-        case SETTING_GLITCH_CHANNEL:
-            if (glitchChannel == GLITCH_CHANNEL_BOTH)
+        case SETTING_CRUSH_CHANNEL:
+            if (crushChannel == CRUSH_CHANNEL_BOTH)
                 updateLedDisplayAlpha("both");
-            else if (glitchChannel == GLITCH_CHANNEL_1)
+            else if (crushChannel == CRUSH_CHANNEL_1)
                 updateLedDisplayAlpha("1");
-            else if (glitchChannel == GLITCH_CHANNEL_2)
+            else if (crushChannel == CRUSH_CHANNEL_2)
                 updateLedDisplayAlpha("2");
-            else if (glitchChannel == GLITCH_CHANNEL_NONE)
+            else if (crushChannel == CRUSH_CHANNEL_NONE)
                 updateLedDisplayAlpha("none");
             break;
 
@@ -1178,6 +1205,7 @@ int main()
 
     initFlash(false);
     initGpio();
+    loadSettingsFromFlash();
     loadSamplesFromFlash();
     loadBeatsFromFlash();
 
@@ -1434,14 +1462,14 @@ int main()
                     }
                 }
                 samples[j].update(currentTime);
-                out1 += samples[j].value;
-                out2 += samples[j].value;
+                if(samples[j].output1) out1 += samples[j].value;
+                if(samples[j].output2) out2 += samples[j].value;
             }
-            if (glitch1)
+            if (crush1)
                 bufferSamples[i] = (out1 >> (2 + crush)) << crushVolume[crush];
             else
                 bufferSamples[i] = out1 >> 2;
-            if (glitch2)
+            if (crush2)
                 bufferSamples[i + 1] = (out2 >> (2 + crush)) << crushVolume[crush];
             else
                 bufferSamples[i + 1] = out2 >> 2;
@@ -1757,43 +1785,117 @@ void scanSampleFolders()
     f_closedir(&dir);
 }
 
-void saveSettings()
+// should be called after current sector has been found
+void loadSettingsFromFlash()
 {
-    // if (checkSettingsChange())
-    // {
-    //     uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
-    //     uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
-    //     currentSettingsSector = saveSector;
-    //     printf("save settings to sector %d\n", currentSettingsSector);
+    printf("load settings from sector %d\n", currentSettingsSector);
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
+    externalClock = getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE);
+    crushChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_CRUSH_CHANNEL);
+    crush1 = !bitRead(crushChannel, 1);
+    crush2 = !bitRead(crushChannel, 0);
+    outputPulseLength = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH);
+    syncOutPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN);
+    syncOutPpqn = ppqnValues[syncOutPpqnIndex];
+    syncInPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN);
+    syncInPpqn = ppqnValues[syncInPpqnIndex];
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
+    beatNum = getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT);
+    tempo = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO);
+    deltaT = 600000000 / tempo;
+    tuplet = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TUPLET);
+    newNumSteps = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG);
+    numSteps = newNumSteps;
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT);
+    uint32_t output1Loaded = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_1);
+    uint32_t output2Loaded = getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_2);
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        samples[i].output1 = bitRead(output1Loaded, i);
+        samples[i].output2 = bitRead(output2Loaded, i);
+    }
+}
 
-    //     uint8_t buffer[FLASH_PAGE_SIZE];
-    //     int32_t refCheckNum = CHECK_NUM;
-    //     int32_t refExternalClock = externalClock ? 1 : 0;
-    //     int32_t refOutput1 = 0;
-    //     int32_t refOutput2 = 0;
-    //     for (int i = 0; i < NUM_SAMPLES; i++)
-    //     {
-    //         bitWrite(refOutput1, i, samples[i].output1);
-    //         bitWrite(refOutput2, i, samples[i].output2);
-    //     }
-    //     std::memcpy(buffer, &refCheckNum, 4);
-    //     std::memcpy(buffer + 4, &saveNum, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_GLITCH_CHANNEL, &glitchChannel, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4);    // temp
-    //     std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
-    //     std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 2);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
-    //     std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+bool checkSettingsChange()
+{
+    printf("checking settings changes...\n");
+    bool anyChanged = false;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
 
-    //     writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
-    // }
+    if (externalClock != getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE))
+        anyChanged = true;
+    if (crushChannel != getIntFromBuffer(flashData, startPoint + 4 * SETTING_CRUSH_CHANNEL))
+        anyChanged = true;
+    if (outputPulseLength != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PULSE_LENGTH))
+        anyChanged = true;
+    if (syncOutPpqnIndex != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_PPQN))
+        anyChanged = true;
+    if (syncInPpqnIndex != getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN))
+        anyChanged = true;
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
+    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
+    if (beatNum != getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT))
+        anyChanged = true;
+    if (tempo != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO))
+        anyChanged = true;
+    if (tuplet != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TUPLET))
+        anyChanged = true;
+    if (newNumSteps != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TIME_SIG))
+        anyChanged = true;
+
+    int32_t refOutput1 = 0;
+    int32_t refOutput2 = 0;
+    for (int i = 0; i < NUM_SAMPLES; i++)
+    {
+        bitWrite(refOutput1, i, samples[i].output1);
+        bitWrite(refOutput2, i, samples[i].output2);
+    }
+    if (refOutput1 != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_1))
+        anyChanged = true;
+    if (refOutput2 != getIntFromBuffer(flashData, startPoint + 4 * SETTING_OUTPUT_2))
+        anyChanged = true;
+
+    return anyChanged;
+}
+
+void saveSettingsToFlash()
+{
+    if (checkSettingsChange())
+    {
+        uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
+        uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
+        currentSettingsSector = saveSector;
+        printf("save settings to sector %d\n", currentSettingsSector);
+
+        uint8_t buffer[FLASH_PAGE_SIZE];
+        int32_t refCheckNum = CHECK_NUM;
+        int32_t refExternalClock = externalClock ? 1 : 0;
+        int32_t refOutput1 = 0;
+        int32_t refOutput2 = 0;
+        for (int i = 0; i < NUM_SAMPLES; i++)
+        {
+            bitWrite(refOutput1, i, samples[i].output1);
+            bitWrite(refOutput2, i, samples[i].output2);
+        }
+        std::memcpy(buffer, &refCheckNum, 4);
+        std::memcpy(buffer + 4, &saveNum, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4);    // temp
+        std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
+        std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
+        std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+
+        writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+    }
 }
 
 // Writes a page of data (256 bytes) to a flash address. If the page number is at the start of a sector, that sector is erased first. Function designed to be called several times for consecutive pages, starting at the start of a sector, otherwise data won't be written properly.
@@ -1855,9 +1957,6 @@ void saveAllBeats() {
     }
 }
 
-#define FLASH_SETTINGS_START 0
-#define FLASH_SETTINGS_END 63
-int currentSettingsSector = 0;
 void initFlash(bool doFactoryReset)
 {
     // settings are saved in a different sector each time to prevent wearing out the flash memory - if no valid sector is found, assume first boot and initialise everything
@@ -1925,7 +2024,7 @@ void initFlash(bool doFactoryReset)
         loadSamplesFromSD();
 
         // TO DO: reset all (RAM) settings to default before saving to flash, otherwise factory reset is meaningless
-        saveSettings(); // save current (default) settings to flash
+        saveSettingsToFlash(); // save current (default) settings to flash
         loadDefaultBeats(); // load default beats into RAM
         saveBeatLocation = beatNum; // prevents weird behaviour
         saveAllBeats(); // save current (default) beats to flash
@@ -2080,6 +2179,11 @@ int32_t getIntFromBuffer(const uint8_t *buffer, uint position)
     // potentially a silly way of doing this, written before I knew about std::memcpy? but it works
     int32_t thisInt = buffer[position] | buffer[position + 1] << 8 | buffer[position + 2] << 16 | buffer[position + 3] << 24;
     return thisInt;
+}
+
+bool getBoolFromBuffer(const uint8_t *buffer, uint position)
+{
+    return getIntFromBuffer(buffer, position) != 0;
 }
 
 void gpioPulseLowCallback(int user_data)

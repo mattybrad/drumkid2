@@ -59,12 +59,13 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define ERROR_DISPLAY -2
 #define BOOTUP_VISUALS -3
 
+// NB Should probably separate SETTING_ variables from maybe DATA_ or something because they're trying to do two different things
 // menu settings
 #define NUM_MENU_SETTINGS 10
 #define SETTING_CLOCK_MODE 0
 #define SETTING_OUTPUT_1 1
 #define SETTING_OUTPUT_2 2
-#define SETTING_GLITCH_CHANNEL 3
+#define SETTING_CRUSH_CHANNEL 3
 #define SETTING_OUTPUT_PULSE_LENGTH 4
 #define SETTING_OUTPUT_PPQN 5
 #define SETTING_INPUT_PPQN 6
@@ -72,16 +73,16 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_INPUT_QUANTIZE 8
 #define SETTING_FACTORY_RESET 9
 
-// non-menu settings
-#define SETTING_BEAT 8
-#define SETTING_TEMPO 9
-#define SETTING_TUPLET 10
-#define SETTING_TIME_SIG 11
+// non-menu settings (starting at 32 so as not to accidentally conflict with menu settings)
+#define SETTING_BEAT 32
+#define SETTING_TEMPO 33
+#define SETTING_TUPLET 34
+#define SETTING_TIME_SIG 35
 
-#define GLITCH_CHANNEL_BOTH 0
-#define GLITCH_CHANNEL_1 1
-#define GLITCH_CHANNEL_2 2
-#define GLITCH_CHANNEL_NONE 3
+#define CRUSH_CHANNEL_BOTH 0
+#define CRUSH_CHANNEL_1 1
+#define CRUSH_CHANNEL_2 2
+#define CRUSH_CHANNEL_NONE 3
 
 #define PITCH_CURVE_DEFAULT 0
 #define PITCH_CURVE_LINEAR 1
@@ -129,6 +130,8 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define ANALOG_EFFECTIVE_RANGE (ANALOG_DEAD_ZONE_UPPER - ANALOG_DEAD_ZONE_LOWER)
 
 // flash data storage
+#define FLASH_SETTINGS_START 0
+#define FLASH_SETTINGS_END 63
 #define FLASH_DATA_ADDRESS (1024 * 1024)
 #define FLASH_USER_BEATS_ADDRESS (FLASH_DATA_ADDRESS + 64 * FLASH_SECTOR_SIZE)
 #define FLASH_AUDIO_METADATA_ADDRESS (FLASH_DATA_ADDRESS + 127 * FLASH_SECTOR_SIZE)
@@ -137,18 +140,18 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM 100
+#define CHECK_NUM 333
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
 #define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
+int currentSettingsSector = 0;
 
 // Beat variables
 #define MAX_TAPS 8
 #define NUM_BEATS 24
 #define MASTER_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
 int tempo = 1200;                                       // 10xBPM
-uint64_t stepTime = 26460000 / (tempo * QUARTER_NOTE_STEPS); // microseconds
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
 int beatNum = 0;
@@ -228,6 +231,7 @@ void writeBeatsToFlash();
 void writePageToFlash(const uint8_t *buffer, uint address);
 void checkFlashData();
 int32_t getIntFromBuffer(const uint8_t *buffer, uint position);
+bool getBoolFromBuffer(const uint8_t *buffer, uint position);
 float getFloatFromBuffer(const uint8_t *buffer, uint position);
 void updateSyncIn();
 void updateTapTempo();
@@ -239,8 +243,8 @@ void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
 void showError(const char *msgx);
 void initFlash(bool doFactoryReset);
-void saveSettings();
-void loadSettings();
+void saveSettingsToFlash();
+void loadSettingsFromFlash();
 bool checkSettingsChange();
 void scheduleSaveSettings();
 int64_t stepAlarmCallback(alarm_id_t id, void *user_data);
