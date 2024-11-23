@@ -144,6 +144,7 @@ const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_MET
 #define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
 
 // Beat variables
+#define MAX_TAPS 8
 #define NUM_BEATS 24
 #define MASTER_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
 int tempo = 1200;                                       // 10xBPM

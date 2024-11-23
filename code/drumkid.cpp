@@ -712,21 +712,36 @@ void handleYesNo(bool isYes)
 }
 
 uint64_t lastTapTempoTime;
+uint64_t tapTempoTaps[MAX_TAPS] = {0};
+int8_t tapIndex = 0;
+int8_t numTaps = 0;
 void updateTapTempo()
 {
     if (!externalClock)
     {
-        //uint64_t deltaT = time_us_64() - lastTapTempoTime;
-        uint64_t newDeltaT = time_us_64() - lastTapTempoTime;
-        lastTapTempoTime = time_us_64();
-        if (newDeltaT < 5000000)
-        {
-            deltaT = newDeltaT;
-            //stepTime = (44100 * deltaT) / 32000000;
-            //tempo = 2646000 / (stepTime * QUARTER_NOTE_STEPS); // temp...
+        uint64_t thisDeltaT = time_us_64() - tapTempoTaps[tapIndex];
+        if (thisDeltaT < 5000000) {
+            numTaps ++;
+        } else {
+            numTaps = 1;
+        }
+        tapIndex = (tapIndex + 1) % MAX_TAPS;
+        tapTempoTaps[tapIndex] = time_us_64();
+        uint64_t meanDeltaT = 0;
+        if(numTaps < 2) {
+            updateLedDisplayAlpha("....");
+        } else {
+            numTaps = std::min(numTaps, (int8_t)MAX_TAPS);
+            for(int i=0;i<numTaps-1;i++) {
+                meanDeltaT += tapTempoTaps[(tapIndex + MAX_TAPS - i) % MAX_TAPS] - tapTempoTaps[(tapIndex + MAX_TAPS - i - 1) % MAX_TAPS];
+            }
+            meanDeltaT = meanDeltaT / (numTaps-1);
+            deltaT = meanDeltaT;
             tempo = 600000000 / deltaT;
             displayTempo();
         }
+    } else {
+        updateLedDisplayAlpha("ext");
     }
 }
 
