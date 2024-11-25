@@ -67,6 +67,8 @@ alarm_id_t displayPulseAlarm = 0;
 bool clusterReady[NUM_SAMPLES] = {false}; // if true, it means a sample was triggered on the previous possible step (according to zoom level), so the cluster value will be taken into account
 int magnetCurve[6][32]; // i don't remember why these numbers are like this...
 int magnetZoomValue = 0;
+uint32_t gpioPulseStatuses = 0;
+uint8_t ledPulseStatuses = 0;
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[11] = {
@@ -184,19 +186,21 @@ void ledPulseLowCallback(int user_data)
 {
     uint ledNum = (uint)user_data;
     setLed(ledNum, false);
+    bitWrite(ledPulseStatuses, ledNum, false);
 }
 
 void ledPulseHighCallback(int user_data)
 {
     uint ledNum = (uint)user_data;
-    setLed(ledNum, true);
-    //add_alarm_in_ms(20, ledPulseLowCallback, (void *)ledNum, true);
-    addEvent(20000, ledPulseLowCallback, ledNum);
+    if (!bitRead(ledPulseStatuses, ledNum)) {
+        setLed(ledNum, true);
+        bitWrite(ledPulseStatuses, ledNum, true);
+        addEvent(20000, ledPulseLowCallback, ledNum);
+    }
 }
 
 void pulseLed(uint ledNum, uint16_t delayMicros)
 {
-    //add_alarm_in_us(delayMicros, ledPulseHighCallback, (void *)ledNum, true);
     addEvent(delayMicros, ledPulseHighCallback, ledNum);
 }
 
@@ -456,7 +460,7 @@ void handleSubSettingIncDec(bool isInc)
 
     case SETTING_OUTPUT_PULSE_LENGTH:
         outputPulseLength += thisInc;
-        outputPulseLength = std::max(10, std::min(200, outputPulseLength));
+        outputPulseLength = std::max(1, std::min(200, outputPulseLength));
         break;
 
     case SETTING_OUTPUT_PPQN:
@@ -2190,18 +2194,21 @@ void gpioPulseLowCallback(int user_data)
 {
     uint gpioNum = user_data;
     gpio_put(gpioNum, 0);
+    bitWrite(gpioPulseStatuses, gpioNum, false);
 }
 
 void gpioPulseHighCallback(int user_data)
 {
     uint gpioNum = user_data;
-    gpio_put(gpioNum, 1);
-    addEvent(1000, gpioPulseLowCallback, gpioNum);
+    if(!bitRead(gpioPulseStatuses,gpioNum)) {
+        gpio_put(gpioNum, 1);
+        bitWrite(gpioPulseStatuses, gpioNum, true);
+        addEvent(outputPulseLength * 1000, gpioPulseLowCallback, gpioNum);
+    }
 }
 
 void pulseGpio(uint gpioNum, uint16_t delayMicros)
 {
-    //add_alarm_in_us(delayMicros, gpioPulseHighCallback, (void *)gpioNum, true);
     addEvent(delayMicros, gpioPulseHighCallback, gpioNum);
 }
 
