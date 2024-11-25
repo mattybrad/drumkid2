@@ -71,5 +71,6 @@
     "streambuf": "cpp",
     "cinttypes": "cpp",
     "typeinfo": "cpp"
-  }
+  },
+  "cortex-debug.variableUseNaturalFormat": true
 }

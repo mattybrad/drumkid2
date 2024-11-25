@@ -1,36 +1,7 @@
 TODO:
-- Rewrite LED/GPIO pulse system, which currently runs out of alarms when there are a lot of notes
-- Make error text flash
-- Magnet
-- Cluster
-- Swing
-- Zoom cutout setting in swing mode
 - Step doesn't keep incrementing in ext sync mode when stopped
-- Turn off random hits in edit modes
-- Live edit different display
-- Drop rand
-- Drop all
-- Tap tempo should average several taps
-- Tap tempo / external tempo display should use floats and display a decimal point
-- Debounce button pushes
 - Tidy up groups feature
-- Figure out behaviour if desired output pulse length is too long for PPQN value at given tempo
 - First DAC cycle after start button press is v slow (10ms+, should be 5ms max), no idea why
-- DisplayPulse is scheduled, which means it can override other display functions - needs to be cancellable
-- Double hits in live edit mode (direct hit followed by scheduled hit) (MAYBE FIXED?)
-- Chance centre deadzone similar to pitch
-- Create 16+ preset beats (more later)
-- Create 8 preset kits
-- Check CV inputs
-- Check settings save works properly
-- Function to generate basic samples without SD (sine waves, noise, etc)
-- Figure out first bootup behaviour (clear/init flash, loading samples, etc)
-- Factory reset mode
-- Write manual headings
-- Write manual copy
-- Record demo video
-
-STUFF SINCE BURNDOWN LIST:
 - External clock mode needs attention, especially switching from internal mode to external
 - Crashes on beat 16 (fair enough, doesn't exist)
 - Reset nextHitStep or whatever when beat starts
@@ -38,6 +9,9 @@ STUFF SINCE BURNDOWN LIST:
 - Possible missed hits...? Check chance deadzone
 - Chance maybe not totally stable, hard to lock at 4095, especially when including CV (bigger top deadzone?)
 - Relaxed pass through the code to add comments while still fresh in head
+- Create 8 preset kits
+- Write manual copy
+- Record demo video
 
 FUTURE STUFF:
 - Pressing "X" after selecting beat/tempo/tuplet etc should revert to previous setting for that param (niche but logical)

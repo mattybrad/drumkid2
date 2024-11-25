@@ -216,6 +216,7 @@ bool updateOutputShiftRegisters(repeating_timer_t *rt)
     return true;
 }
 
+uint32_t lastValidData = 0;
 bool updateInputShiftRegisters(repeating_timer_t *rt)
 {
     uint32_t data;
@@ -223,25 +224,34 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
     data = sn74165::shiftreg_get(&tempInputChanged);
     if (tempInputChanged)
     {
+        lastValidData = data;
         for(int i=0; i<32; i++) {
             uint8_t buttonNum = (2-(i>>3))*8 + (i%8) + 1; // to match SW num in schematic (SW1 is top left on unit) - could be lookup table to improve speed
             bool newVal = bitRead(data, i);
-            if (bitRead(buttonStableStates, buttonNum) != newVal && cyclesSinceChange[i] >= DEBOUNCING_CYCLES)
-            {
-                handleButtonChange(buttonNum, newVal);
-                cyclesSinceChange[i] = 0;
-                bitWrite(buttonStableStates, buttonNum, newVal);
-            }
-            else if (cyclesSinceChange[i] < DEBOUNCING_CYCLES)
-            {
-                cyclesSinceChange[i] ++;
+            if(bitRead(buttonStableStates, buttonNum) != newVal) {
+                if(cyclesSinceChange[i] >= DEBOUNCING_CYCLES) {
+                    bitWrite(buttonStableStates, buttonNum, newVal);
+                    handleButtonChange(buttonNum, newVal);
+                    cyclesSinceChange[i] = 0;
+                }
             }
         }  
     } else {
         for (int i = 0; i < 32; i++)
         {
-            if (cyclesSinceChange[i] < DEBOUNCING_CYCLES)
+            if (cyclesSinceChange[i] < DEBOUNCING_CYCLES) {
                 cyclesSinceChange[i]++;
+                if(cyclesSinceChange[i] == DEBOUNCING_CYCLES) {
+                    uint8_t buttonNum = (2 - (i >> 3)) * 8 + (i % 8) + 1; // to match SW num in schematic (SW1 is top left on unit) - could be lookup table to improve speed
+                    bool newVal = bitRead(lastValidData, i);
+                    if (bitRead(buttonStableStates, buttonNum) != newVal)
+                    {
+                        bitWrite(buttonStableStates, buttonNum, newVal);
+                        handleButtonChange(buttonNum, newVal);
+                        cyclesSinceChange[i] = 0;
+                    }
+                }
+            }
         }
     }
 
@@ -1151,6 +1161,7 @@ bool updateLedDisplay(repeating_timer_t *rt)
 }
 
 bool updateHold(repeating_timer_t *rt) {
+    //printf("inc button: %d\n", bitRead(buttonStableStates, BUTTON_INC) ? 1 : 0);
     if(holdDelayInc > 0) {
         holdDelayInc --;
     } else if(bitRead(buttonStableStates, BUTTON_INC)) {
