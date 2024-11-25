@@ -10,7 +10,7 @@
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 256 // was 32 but anything under 256 appears to cause timing issues
-#define MAX_EVENTS 20
+#define MAX_EVENTS 32
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19
@@ -58,6 +58,13 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define NO_ACTIVE_BUTTON -1
 #define ERROR_DISPLAY -2
 #define BOOTUP_VISUALS -3
+
+#define ERROR_PERFORMANCE 0
+#define ERROR_SD_MISSING 1
+#define ERROR_SD_OPEN 2
+#define ERROR_SD_CLOSE 3
+#define ERROR_SD_MOUNT 4
+#define ERROR_SAMPLE_SIZE 5
 
 // NB Should probably separate SETTING_ variables from maybe DATA_ or something because they're trying to do two different things
 // menu settings
@@ -256,5 +263,7 @@ void addEvent(uint64_t delay, void (*callback)(int), int user_data);
 void testEventCallback(int user_data);
 int64_t eventManager(alarm_id_t id, void *user_data);
 int getMagnetZoomValue(int step);
+void flagError(uint8_t errorNum);
+void clearError(uint8_t errorNum);
 
 #endif

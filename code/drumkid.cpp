@@ -69,6 +69,7 @@ int magnetCurve[6][32]; // i don't remember why these numbers are like this...
 int magnetZoomValue = 0;
 uint32_t gpioPulseStatuses = 0;
 uint8_t ledPulseStatuses = 0;
+uint32_t errorStatuses = 0;
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[11] = {
@@ -289,6 +290,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             if (beatPlaying)
             {
                 // handle beat start
+                clearError(ERROR_PERFORMANCE);
                 if (!externalClock)
                 {
                     pulseStep = 0;
@@ -375,6 +377,12 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 settingsMenuLevel = 0;
                 displaySettings();
             } else {
+                // clear almost all errors on pressing back button (but don't clear sample size error because ideally that should be fixed by loading different samples)
+                clearError(ERROR_PERFORMANCE);
+                clearError(ERROR_SD_MISSING);
+                clearError(ERROR_SD_OPEN);
+                clearError(ERROR_SD_CLOSE);
+                clearError(ERROR_SD_MOUNT);
                 activeButton = NO_ACTIVE_BUTTON;
                 displayPulse(lastStep/3360,0);
             }
@@ -1484,7 +1492,7 @@ int main()
         int64_t audioProcessTime = time_us_64() - audioProcessStartTime; // should be well below 5.8ms (5800us)
         if(audioProcessTime > 5000) {
             if(prevProcessTimeSlow) {
-                showError("perf");
+                flagError(ERROR_PERFORMANCE);
                 beatPlaying = false;
             } else {
                 prevProcessTimeSlow = true;
@@ -1535,6 +1543,25 @@ void showError(const char *msgx)
     setLed(3, true);
 }
 
+void flagError(uint8_t errorNum) {
+    bitWrite(errorStatuses, errorNum, true);
+    setLed(3, true);
+    activeButton = ERROR_DISPLAY;
+    char errorMessage[4];
+    errorMessage[0] = 'e';
+    errorMessage[1] = 'r';
+    errorMessage[2] = ' ';
+    errorMessage[3] = errorNum + 48; // convert error num to ascii code
+    updateLedDisplayAlpha(errorMessage); // temp
+}
+
+void clearError(uint8_t errorNum) {
+    bitWrite(errorStatuses, errorNum, false);
+    if(errorStatuses == 0) {
+        setLed(3, false);
+    }
+}
+
 void loadSamplesFromSD()
 {
     uint totalSize = 0;
@@ -1551,16 +1578,18 @@ void loadSamplesFromSD()
         sd_card_t *pSD = sd_get_by_num(0);
         if (!pSD->sd_test_com(pSD))
         {
-            showError("card");
+            flagError(ERROR_SD_MISSING);
             return;
         }
+        clearError(ERROR_SD_MISSING);
         FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
         if (FR_OK != fr)
         {
             printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-            showError("err");
+            flagError(ERROR_SD_MOUNT);
             return;
         }
+        clearError(ERROR_SD_MOUNT);
         FIL fil;
         char filename[255];
         strcpy(filename, "samples/");
@@ -1570,9 +1599,10 @@ void loadSamplesFromSD()
         if (FR_OK != fr)
         {
             printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-            showError("err");
+            flagError(ERROR_SD_OPEN);
             return;
         }
+        clearError(ERROR_SD_OPEN);
 
         // below is my first proper stab at a WAV file parser. it's messy but it works as long as you supply a mono, 16-bit, 44.1kHz file. need to make it handle more edge cases in future
 
@@ -1752,16 +1782,18 @@ void scanSampleFolders()
     sd_card_t *pSD = sd_get_by_num(0);
     if (!pSD->sd_test_com(pSD))
     {
-        showError("card");
+        flagError(ERROR_SD_MISSING);
         return;
     }
+    clearError(ERROR_SD_MISSING);
     FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
     if (FR_OK != fr)
     {
         printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
-        showError("card");
+        flagError(ERROR_SD_MOUNT);
         return;
     }
+    clearError(ERROR_SD_MOUNT);
     static FILINFO fno;
     int foundNum = -1;
     DIR dir;
@@ -1769,9 +1801,10 @@ void scanSampleFolders()
     if (FR_OK != fr)
     {
         printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
-        showError("err");
+        flagError(ERROR_SD_OPEN);
         return;
     }
+    clearError(ERROR_SD_OPEN);
     resetSampleFolderList();
     for (;;)
     {
@@ -2079,7 +2112,9 @@ void loadSamplesFromFlash()
 
     if (storageOverflow)
     {
-        showError("size");
+        flagError(ERROR_SAMPLE_SIZE);
+    } else {
+        clearError(ERROR_SAMPLE_SIZE);
     }
 }
 
