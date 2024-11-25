@@ -40,6 +40,7 @@ STUFF SINCE BURNDOWN LIST:
 - Relaxed pass through the code to add comments while still fresh in head
 
 FUTURE STUFF:
+- Pressing "X" after selecting beat/tempo/tuplet etc should revert to previous setting for that param (niche but logical)
 - Try incrementing settings writes onto next page, not next sector
 - Try Pico 2, should be better
 - Swing zoom cutout is optional in settings
