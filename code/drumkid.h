@@ -11,6 +11,7 @@
 
 #define SAMPLES_PER_BUFFER 256 // was 32 but anything under 256 appears to cause timing issues
 #define MAX_EVENTS 32
+#define DEBOUNCING_CYCLES 100
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19

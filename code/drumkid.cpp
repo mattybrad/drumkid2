@@ -226,18 +226,21 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
         for(int i=0; i<32; i++) {
             uint8_t buttonNum = (2-(i>>3))*8 + (i%8) + 1; // to match SW num in schematic (SW1 is top left on unit) - could be lookup table to improve speed
             bool newVal = bitRead(data, i);
-            if(bitRead(buttonStableStates, buttonNum) != newVal && cyclesSinceChange[i] >= 20) {
+            if (bitRead(buttonStableStates, buttonNum) != newVal && cyclesSinceChange[i] >= DEBOUNCING_CYCLES)
+            {
                 handleButtonChange(buttonNum, newVal);
                 cyclesSinceChange[i] = 0;
                 bitWrite(buttonStableStates, buttonNum, newVal);
-            } else if(cyclesSinceChange[i]<20) {
+            }
+            else if (cyclesSinceChange[i] < DEBOUNCING_CYCLES)
+            {
                 cyclesSinceChange[i] ++;
             }
         }  
     } else {
         for (int i = 0; i < 32; i++)
         {
-            if (cyclesSinceChange[i] < 20)
+            if (cyclesSinceChange[i] < DEBOUNCING_CYCLES)
                 cyclesSinceChange[i]++;
         }
     }
@@ -1242,7 +1245,7 @@ int main()
     if (!externalClock)
     {
         syncInPpqn = 1;
-        deltaT = 500000;
+        deltaT = 600000000 / tempo;
         nextPulseTime = (44100 * deltaT) / (1000000);
         nextPredictedPulseTime = nextPulseTime;
         beatStarted = true;
@@ -1264,6 +1267,7 @@ int main()
 
         int crop = analogReadings[POT_CROP];
         applyDeadZones(crop, false);
+        crop = 4095 - crop; // feels better with no effect at 0
         if (crop == 4095)
             crop = MAX_SAMPLE_STORAGE;
         else

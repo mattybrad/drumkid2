@@ -16,8 +16,8 @@ The easiest way to start with Drumkid is to play a simple beat without any rando
 2. Set the controls as follows: (image of chance 50, zoom 50(?), range 0, vel 100, plus other defaults)
 3. Press “start”
 4. Select a preset beat by pressing “beat”, then using the +/- buttons
-5. Slowly increase the “chance” control and notice how more and more hits are added to the beat, until at 100% you hear every sample being triggered over and over
-6. Set the “chance” back to 50%, and now try adjusting the “zoom” control. As you increase the zoom, the beat will become busier as hits are triggered at smaller note values (8th-notes, 16th-notes, 32nd-notes, etc). These first two controls, chance and zoom, are the heart of the machine, and I would recommend playing around with them for a while to get a feel of how they affect the beat.
+5. Slowly increase the “chance” control and notice how more and more hits are added to the beat, until at 100% you hear every sample being triggered over and over.
+6. THIS NO LONGER MATCHES THE NEW CHANCE ALGORITHM Set the “chance” back to 50%, and now try adjusting the “zoom” control. As you increase the zoom, the beat will become busier as hits are triggered at smaller note values (8th-notes, 16th-notes, 32nd-notes, etc). These first two controls, chance and zoom, are the heart of the machine, and I would recommend playing around with them for a while to get a feel of how they affect the beat.
 7. Slowly reduce the “velocity” control from +100% to 0% (in the middle) - the extra random hits will become quieter. If you set velocity to be negative, it will quieten or mute hits from the original beat.
 8. Set “velocity” to +50%, and “range” to 100% (in the middle). 
 
