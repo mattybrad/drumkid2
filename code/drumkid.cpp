@@ -134,6 +134,7 @@ int crushChannel = CRUSH_CHANNEL_BOTH;
 bool crush1 = true;
 bool crush2 = true;
 
+bool factoryResetCodeFound = false;
 bool doFactoryResetSafe = false;
 bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
@@ -310,6 +311,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     prevPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER; // ?
                     nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
                     nextPredictedPulseTime = nextPulseTime;
+                    for(i=0; i<NUM_SAMPLES; i++) {
+                        nextBeatCheckStep[i] = 0;
+                    }
                 }
             }
             else
@@ -1229,11 +1233,27 @@ int main()
         printf("\n");
     }
 
-    initFlash(false);
     initGpio();
-    loadSettingsFromFlash();
-    loadSamplesFromFlash();
-    loadBeatsFromFlash();
+    checkFlashStatus();
+    if(currentSettingsSector == -1) {
+        // wipe flash data
+        wipeFlash(false);
+        loadDefaultBeats();
+        saveAllBeats();
+        saveSettingsToFlash();
+        scanSampleFolders();
+        loadSamplesFromSD();
+    } else if(factoryResetCodeFound) {
+        loadDefaultBeats();
+        saveAllBeats();
+        saveSettingsToFlash();
+        scanSampleFolders();
+        loadSamplesFromSD();
+    } else {
+        loadSettingsFromFlash();
+        loadSamplesFromFlash();
+        loadBeatsFromFlash();
+    }
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
@@ -1523,9 +1543,11 @@ int main()
         lastDacUpdateMicros = time_us_64();
 
         if(doFactoryResetSafe) {
-            doFactoryResetSafe = false;
-            initFlash(true);
+            wipeFlash(true);
             watchdog_enable(0, 1); // causes reboot so we don't need to bother trying to reset all the variables
+            while(true) {
+                // wait forever (i.e. until reboot!)
+            }
         }
 
         if (sdSafeLoadTemp)
@@ -1841,7 +1863,7 @@ void scanSampleFolders()
 void loadSettingsFromFlash()
 {
     printf("load settings from sector %d\n", currentSettingsSector);
-    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 12;
     externalClock = getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE);
     crushChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_CRUSH_CHANNEL);
     crush1 = !bitRead(crushChannel, 1);
@@ -1873,7 +1895,7 @@ bool checkSettingsChange()
 {
     printf("checking settings changes...\n");
     bool anyChanged = false;
-    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 8;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 12;
 
     if (externalClock != getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE))
         anyChanged = true;
@@ -1932,19 +1954,19 @@ void saveSettingsToFlash()
         }
         std::memcpy(buffer, &refCheckNum, 4);
         std::memcpy(buffer + 4, &saveNum, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4);    // temp
-        std::memcpy(buffer + 8 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
-        std::memcpy(buffer + 8 + 4 * SETTING_BEAT, &beatNum, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_TEMPO, &tempo, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_TUPLET, &tuplet, 4);
-        std::memcpy(buffer + 8 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4);    // temp
+        std::memcpy(buffer + 12 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
+        std::memcpy(buffer + 12 + 4 * SETTING_BEAT, &beatNum, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_TEMPO, &tempo, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_TUPLET, &tuplet, 4);
+        std::memcpy(buffer + 12 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
 
         writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
     }
@@ -2009,7 +2031,27 @@ void saveAllBeats() {
     }
 }
 
-void initFlash(bool doFactoryReset)
+void wipeFlash(bool flagReset) {
+    uint8_t dataBuffer[FLASH_PAGE_SIZE] = {0};
+
+    // overwrite previous data with zeros
+    for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
+        for(int j=0; j<FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE; j++) {
+            writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE + i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
+        }
+    }
+
+    int32_t refCheckNum = CHECK_NUM;
+    int32_t refZero = 0;
+    int32_t refFactoryReset = flagReset ? RESET_NUM : 0;
+    std::memcpy(dataBuffer, &refCheckNum, 4); // copy check number
+    std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
+    std::memcpy(dataBuffer + 8, &refFactoryReset, 4); // copy factory reset flag
+    writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
+    currentSettingsSector = 0;
+}
+
+void checkFlashStatus()
 {
     // settings are saved in a different sector each time to prevent wearing out the flash memory - if no valid sector is found, assume first boot and initialise everything
     bool foundValidSector = false;
@@ -2030,61 +2072,69 @@ void initFlash(bool doFactoryReset)
             }
         }
     }
-    if (!foundValidSector || doFactoryReset)
-    {
-        // no valid sectors, which means the flash needs to be initialised:
-        uint8_t dataBuffer[FLASH_PAGE_SIZE] = {0};
-
-        // overwrite previous data with zeros
-        for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
-            for(int j=0; j<FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE; j++) {
-                writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE + i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
-            }
-        }
-
-        int32_t refCheckNum = CHECK_NUM;
-        std::memcpy(dataBuffer, &refCheckNum, 4); // copy check number
-        int32_t refZero = 0;
-        std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
-        writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
-
-        // create dummy noise samples (as emergency fallback in case SD card not present on reset)
-        uint8_t audioBuffer[FLASH_PAGE_SIZE];
-        uint32_t dummySampleLength = 1024;
-        uint32_t dummySampleRate = 44100;
-        for (int i = 0; i < NUM_SAMPLES; i++)
-        {
-            uint32_t dummySampleStart = i * dummySampleLength * 2; // *2 for 16-bit
-            std::memcpy(audioBuffer + SAMPLE_START_POINTS + 4 * i, &dummySampleStart, 4);
-            std::memcpy(audioBuffer + SAMPLE_LENGTHS + 4 * i, &dummySampleLength, 4);
-            std::memcpy(audioBuffer + SAMPLE_RATES + 4 * i, &dummySampleRate, 4);
-        }
-        writePageToFlash(audioBuffer, FLASH_AUDIO_METADATA_ADDRESS);
-
-        // fill audio buffer with random noise (for emergency fallback samples)
-        for (int i = 0; i < dummySampleLength * 2 * NUM_SAMPLES; i += FLASH_PAGE_SIZE)
-        {
-            for (int j = 0; j < FLASH_PAGE_SIZE; j++)
-            {
-                audioBuffer[j] = rand() % 256; // random byte
-            }
-            writePageToFlash(audioBuffer, FLASH_AUDIO_ADDRESS + i);
-        }
-
-        // load first sample folder if available
-        scanSampleFolders();
-        loadSamplesFromSD();
-
-        // TO DO: reset all (RAM) settings to default before saving to flash, otherwise factory reset is meaningless
-        saveSettingsToFlash(); // save current (default) settings to flash
-        loadDefaultBeats(); // load default beats into RAM
-        saveBeatLocation = beatNum; // prevents weird behaviour
-        saveAllBeats(); // save current (default) beats to flash
-    }
-    else
-    {
+    if(foundValidSector) {
         currentSettingsSector = mostRecentValidSector;
+        int thisResetCode = getIntFromBuffer(flashData + currentSettingsSector * FLASH_SECTOR_SIZE, 8);
+        if(thisResetCode == RESET_NUM) {
+            factoryResetCodeFound = true;
+        }
     }
+    // if (!foundValidSector || doFactoryReset)
+    // {
+    //     // no valid sectors, which means the flash needs to be initialised:
+    //     uint8_t dataBuffer[FLASH_PAGE_SIZE] = {0};
+
+    //     // overwrite previous data with zeros
+    //     for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
+    //         for(int j=0; j<FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE; j++) {
+    //             writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE + i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
+    //         }
+    //     }
+
+    //     int32_t refCheckNum = CHECK_NUM;
+    //     std::memcpy(dataBuffer, &refCheckNum, 4); // copy check number
+    //     int32_t refZero = 0;
+    //     std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
+    //     writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
+    //     currentSettingsSector = 0;
+
+    //     // create dummy noise samples (as emergency fallback in case SD card not present on reset)
+    //     uint8_t audioBuffer[FLASH_PAGE_SIZE];
+    //     uint32_t dummySampleLength = 1024;
+    //     uint32_t dummySampleRate = 44100;
+    //     for (int i = 0; i < NUM_SAMPLES; i++)
+    //     {
+    //         uint32_t dummySampleStart = i * dummySampleLength * 2; // *2 for 16-bit
+    //         std::memcpy(audioBuffer + SAMPLE_START_POINTS + 4 * i, &dummySampleStart, 4);
+    //         std::memcpy(audioBuffer + SAMPLE_LENGTHS + 4 * i, &dummySampleLength, 4);
+    //         std::memcpy(audioBuffer + SAMPLE_RATES + 4 * i, &dummySampleRate, 4);
+    //     }
+    //     writePageToFlash(audioBuffer, FLASH_AUDIO_METADATA_ADDRESS);
+
+    //     // fill audio buffer with random noise (for emergency fallback samples)
+    //     for (int i = 0; i < dummySampleLength * 2 * NUM_SAMPLES; i += FLASH_PAGE_SIZE)
+    //     {
+    //         for (int j = 0; j < FLASH_PAGE_SIZE; j++)
+    //         {
+    //             audioBuffer[j] = rand() % 256; // random byte
+    //         }
+    //         writePageToFlash(audioBuffer, FLASH_AUDIO_ADDRESS + i);
+    //     }
+
+    //     // load first sample folder if available
+    //     scanSampleFolders();
+    //     loadSamplesFromSD();
+
+    //     // TO DO: reset all (RAM) settings to default before saving to flash, otherwise factory reset is meaningless
+    //     saveSettingsToFlash(); // save current (default) settings to flash
+    //     loadDefaultBeats(); // load default beats into RAM
+    //     saveBeatLocation = beatNum; // prevents weird behaviour
+    //     saveAllBeats(); // save current (default) beats to flash
+    // }
+    // else
+    // {
+    //     currentSettingsSector = mostRecentValidSector;
+    // }
 }
 
 void loadSamplesFromFlash()

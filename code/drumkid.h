@@ -148,12 +148,13 @@ const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
 const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
 const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
-#define CHECK_NUM 333
+#define CHECK_NUM 1234267
+#define RESET_NUM 153956
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
 #define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
-int currentSettingsSector = 0;
+int currentSettingsSector = -1; // -1 means invalid, set when reading flash for first time after boot
 
 // Beat variables
 #define MAX_TAPS 8
@@ -250,7 +251,8 @@ void displayPulse(int pulseStep, uint16_t delayMicros);
 void revertBeat(int revertBeatNum);
 void backupBeat(int backupBeatNum);
 void showError(const char *msgx);
-void initFlash(bool doFactoryReset);
+void checkFlashStatus();
+void wipeFlash(bool flagReset);
 void saveSettingsToFlash();
 void loadSettingsFromFlash();
 bool checkSettingsChange();

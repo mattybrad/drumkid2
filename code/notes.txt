@@ -478,7 +478,8 @@ Had a couple of weeks away from Drumkid because I was going mad with all the cod
 And here's the breakdown of a settings page, in terms of byte addresses:
 0: Check number (32-bit int)
 4: Incremental write number, total number of writes since factory reset
-8, 12, 16, 20, etc: one 4-byte (32-bit) slot per setting, max 62 settings (256/4, minus 2 for the wear levelling stuff)
+8: Is factory reset? Boolean, ridiculous use of space, can adjust later
+12, 16, 20, 24, etc: one 4-byte (32-bit) slot per setting, max 61 settings (256/4, minus 3 for the wear levelling stuff)
 
 19/11/24
 Woah, cracking through the issues. Next thing to tackle is errors, not a big deal but should work like this:
