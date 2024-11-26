@@ -156,7 +156,7 @@ void handleSyncPulse() {
             nextPredictedPulseTime = nextPulseTime + (44100 * deltaT) / (1000000);
             prevPulseTime = nextPulseTime - (44100 * deltaT) / (1000000); // for completeness, but maybe not used?
             firstHit = false;
-            beatStarted = true;
+            //beatStarted = true;
         } else {
             nextPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
             nextPredictedPulseTime = nextPulseTime + (44100 * deltaT) / (1000000);
@@ -174,6 +174,7 @@ void gpio_callback(uint gpio, uint32_t events)
 {
     if(externalClock) {
         handleSyncPulse();
+        pulseLed(1, 0);
     }
 }
 
@@ -1271,7 +1272,7 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    beatPlaying = false;
+    beatPlaying = externalClock;
 
     if (!externalClock)
     {
@@ -1279,7 +1280,7 @@ int main()
         deltaT = 600000000 / tempo;
         nextPulseTime = (44100 * deltaT) / (1000000);
         nextPredictedPulseTime = nextPulseTime;
-        beatStarted = true;
+        //beatStarted = true;
     }
 
     // audio buffer loop, runs forever
@@ -1362,7 +1363,7 @@ int main()
             int32_t out2 = 0;
 
             // update step at PPQN level
-            if(beatStarted && beatPlaying && currentTime >= nextPulseTime) {
+            if(beatPlaying && currentTime >= nextPulseTime) {
                 prevPulseTime = nextPulseTime;
                 nextPulseTime += (44100*deltaT)/(1000000);
                 if(!externalClock) {
@@ -1376,7 +1377,7 @@ int main()
             bool newStep = false; // only check beat when step has been incremented (i.e. loop will probably run several times on, say, step 327, but don't need to do stuff repeatedly for that step)
 
             // do stuff if step has been incremented
-            if(beatStarted && beatPlaying && currentTime < nextPredictedPulseTime && step != lastStep) {
+            if(beatPlaying && currentTime < nextPredictedPulseTime && step != lastStep) {
                 newStep = true;
                 if(step == 0 && numSteps != newNumSteps) {
                     numSteps = newNumSteps;

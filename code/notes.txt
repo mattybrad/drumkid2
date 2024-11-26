@@ -484,3 +484,14 @@ And here's the breakdown of a settings page, in terms of byte addresses:
 19/11/24
 Woah, cracking through the issues. Next thing to tackle is errors, not a big deal but should work like this:
 Array of bools, length of array is number of possible errors. True means there is currently an error. Any time an error could possibly be caused or solved, set the specific error to true or false then call the checkErrors function to determine if all errors are solved, in which case the error LED can be turned off.
+
+26/11/24
+Very good progress overall. Now trying to get external clock working properly, which means tidying up the timing system. Am going to define all the variables needed here, focusing on external mode for now:
+
+currentTime - current time in samples according to the DAC, gets incremented in bursts when the DAC is updated
+currentTimeSamples - confusingly named, an estimate of the current time in samples, interpolating between DAC updates, not updated in bursts
+currentPulseTime (renamed) - the time (in samples) of the most recent clock pulse
+nextPredictedPulseTime - the time (in samples) of the next predicted pulse, based on time since last pulse (could be -1 if no prediction possible?)
+currentPulseStep (renamed) - the step corresponding to currentPulseTime (e.g. 0 for the first pulse, 3360 for the second pulse at 1 PPQN) (not sure if this should be updated when pulse received or when audio update goes past currentTime)
+step - the current step according to the DAC, updated using interpolation/forecasting on every DAC step
+prevPulseTime - time in samples of the pulse before currentPulseTime, possibly needed for some timing calculations, although I guess something weird would have to happen for currentPulseTime to be in the future..? Unless this is necessary to deal with latency, i.e. maybe you have to forecast forward by one DAC window
