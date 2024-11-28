@@ -291,7 +291,14 @@ void handleButtonChange(int buttonNum, bool buttonState)
         {
         case BUTTON_START_STOP:
             if(externalClock) {
-
+                // reset to start of bar on next hit
+                pulseStep = numSteps - (3360/syncInPpqn);
+                for(int i=0; i<NUM_SAMPLES; i++) {
+                    nextBeatCheckStep[i] = 0;
+                }
+                if(activeButton == NO_ACTIVE_BUTTON) {
+                    displayPulse(0, 0);
+                }
             } else {
                 numSteps = newNumSteps;
                 if (activeButton == BUTTON_TIME_SIGNATURE)
@@ -497,7 +504,7 @@ void handleSubSettingIncDec(bool isInc)
         syncInPpqnIndex += thisInc;
         syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
         syncInPpqn = ppqnValues[syncInPpqnIndex];
-        pulseStep = (pulseStep / (3360 / syncInPpqn)) * (3360 / syncInPpqn); // quantize pulse step to new PPQN value to prevent annoying phase offset thing
+        if(externalClock) pulseStep = (pulseStep / (3360 / syncInPpqn)) * (3360 / syncInPpqn); // quantize pulse step to new PPQN value to prevent annoying phase offset thing
         break;
 
     case SETTING_PITCH_CURVE:
@@ -774,11 +781,21 @@ void updateTapTempo()
 {
     if (!externalClock)
     {
-        uint64_t thisDeltaT = time_us_64() - tapTempoTaps[tapIndex];
-        if (thisDeltaT < 5000000) {
-            numTaps ++;
-        } else {
+        bool newTapSession = true;
+        if(numTaps == 1) {
+            newTapSession = false;
+        } else if(numTaps >= 2) {
+            int64_t thisTap = time_us_64() - tapTempoTaps[tapIndex];
+            int64_t lastTap = tapTempoTaps[tapIndex] - tapTempoTaps[(tapIndex + MAX_TAPS - 1) % MAX_TAPS];
+            if(std::abs(thisTap-lastTap) < std::max(thisTap, lastTap)/5) {
+                newTapSession = false;
+            }
+        }
+
+        if (newTapSession) {
             numTaps = 1;
+        } else {
+            numTaps ++;
         }
         tapIndex = (tapIndex + 1) % MAX_TAPS;
         tapTempoTaps[tapIndex] = time_us_64();
@@ -786,14 +803,24 @@ void updateTapTempo()
         if(numTaps < 2) {
             updateLedDisplayAlpha("....");
         } else {
-            numTaps = std::min(numTaps, (int8_t)MAX_TAPS);
-            for(int i=0;i<numTaps-1;i++) {
+            int thisNumTaps = std::min(numTaps, (int8_t)MAX_TAPS);
+            for (int i = 0; i < thisNumTaps - 1; i++)
+            {
                 meanDeltaT += tapTempoTaps[(tapIndex + MAX_TAPS - i) % MAX_TAPS] - tapTempoTaps[(tapIndex + MAX_TAPS - i - 1) % MAX_TAPS];
             }
-            meanDeltaT = meanDeltaT / (numTaps-1);
+            meanDeltaT = meanDeltaT / (thisNumTaps - 1);
             deltaT = meanDeltaT;
             tempo = 600000000 / deltaT;
             displayTempo();
+        }
+        pulseStep = ((numTaps - 1) * 3360) % numSteps;
+        int64_t currentTimeSamples = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
+        currentPulseFound = false;
+        prevPulseTime = currentPulseTime;
+        currentPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
+        nextPredictedPulseTime = currentPulseTime + (44100 * deltaT) / (1000000);
+        for(int i=0; i<NUM_SAMPLES; i++) {
+            nextBeatCheckStep[i] = pulseStep;
         }
     } else {
         updateLedDisplayAlpha("ext");
@@ -983,11 +1010,11 @@ void displaySettings()
             break;
 
         case SETTING_OUTPUT_PPQN:
-            updateLedDisplayInt(syncOutPpqn);
+            updateLedDisplayInt(ppqnValues[syncOutPpqnIndex]);
             break;
 
         case SETTING_INPUT_PPQN:
-            updateLedDisplayInt(syncInPpqn);
+            updateLedDisplayInt(ppqnValues[syncInPpqnIndex]);
             break;
 
         case SETTING_PITCH_CURVE:
@@ -1264,18 +1291,15 @@ int main()
 
     beatPlaying = false;
 
-    if (!externalClock)
-    {
-        syncInPpqn = 1;
-        deltaT = 600000000 / tempo;
-        nextPredictedPulseTime = (44100 * deltaT) / (1000000);
-        //beatStarted = true;
-    }
-
     // audio buffer loop, runs forever
     int groupStatus[8] = {GROUP_PENDING};
     while (true)
     {
+        if (!externalClock)
+        {
+            syncInPpqn = 1;
+        }
+
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
@@ -1363,9 +1387,10 @@ int main()
                     prevPulseTime = currentPulseTime;
                     currentPulseTime = currentTime;
                     nextPredictedPulseTime = currentTime + (44100*deltaT)/(1000000);
-                    pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
+                    pulseStep = (pulseStep + 3360) % numSteps;
                 }
             }
+
             // if(beatPlaying && currentTime >= nextPulseTime) {
             //     prevPulseTime = nextPulseTime;
             //     nextPulseTime += (44100*deltaT)/(1000000);
@@ -1378,10 +1403,21 @@ int main()
             // update step
             int64_t step = pulseStep;
             bool interpolateSteps = true && (!externalClock || totalPulses >= 2);
-            if(interpolateSteps) {
-                int64_t t0 = (currentPulseFound || !externalClock) ? currentPulseTime : prevPulseTime;
-                int64_t t1 = (currentPulseFound || !externalClock) ? nextPredictedPulseTime : currentPulseTime;
-                step += (3360 * (currentTime - t0)) / (syncInPpqn * (t1 - t0));
+            // bit messy, could be streamlined
+            if (interpolateSteps)
+            {
+                if (externalClock)
+                {
+                    int64_t t0 = currentPulseFound ? currentPulseTime : prevPulseTime;
+                    int64_t t1 = currentPulseFound ? nextPredictedPulseTime : currentPulseTime;
+                    step += (3360 * (currentTime - t0)) / (syncInPpqn * (t1 - t0));
+                }
+                else
+                {
+                    int64_t t0 = currentPulseTime;
+                    int64_t t1 = nextPredictedPulseTime;
+                    step += (3360 * (currentTime - t0)) / (t1 - t0);
+                }
             }
             bool newStep = false; // only check beat when step has been incremented (i.e. loop will probably run several times on, say, step 327, but don't need to do stuff repeatedly for that step)
 
@@ -1389,6 +1425,12 @@ int main()
             if ((externalClock || beatPlaying) && currentTime < nextPredictedPulseTime && step != lastStep)
             {
                 newStep = true;
+                // reset nextBeatCheckStep values if any steps have been skipped
+                for(int j=0; j<NUM_SAMPLES;j++) {
+                    if(step - lastStep != 1) {
+                        nextBeatCheckStep[j] = step;
+                    }
+                }
                 if(step == 0 && numSteps != newNumSteps) {
                     numSteps = newNumSteps;
                     if(activeButton == BUTTON_TIME_SIGNATURE) {
