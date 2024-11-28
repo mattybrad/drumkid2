@@ -3,15 +3,12 @@ TODO:
 - Tidy up groups feature
 - First DAC cycle after start button press is v slow (10ms+, should be 5ms max), no idea why
 - External clock mode needs attention, especially switching from internal mode to external
-- Crashes on beat 16 (fair enough, doesn't exist)
-- Reset nextHitStep or whatever when beat starts
-- Factory reset doesn't wipe saved beat(s?), at least the currently used one. Actually factory reset doesn't seem to reset very much at all! CHECK IT
-- Possible missed hits...? Check chance deadzone
 - Chance maybe not totally stable, hard to lock at 4095, especially when including CV (bigger top deadzone?)
 - Relaxed pass through the code to add comments while still fresh in head
 - Create 8 preset kits
 - Write manual copy
 - Record demo video
+- When to save settings in external clock mode if no start/stop?!
 
 FUTURE STUFF:
 - Pressing "X" after selecting beat/tempo/tuplet etc should revert to previous setting for that param (niche but logical)

@@ -52,6 +52,10 @@ int64_t currentTime = 0; // samples
 uint16_t pulseStep = 0;
 int numSteps = 4 * 3360;
 int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at start of next bar
+bool validDeltaT = false;
+int64_t currentPulseTime = INT64_MAX;
+bool currentPulseFound = false;
+uint64_t totalPulses = 0;
 uint64_t lastClockIn = 0; // microseconds
 bool externalClock = false;
 bool prevProcessTimeSlow = false;
@@ -148,24 +152,15 @@ repeating_timer_t holdTimer;
 
 void handleSyncPulse() {
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
-    if (lastClockIn > 0)
-    {
-        int64_t currentTimeSamples = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
-        if(firstHit) {
-            nextPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
-            nextPredictedPulseTime = nextPulseTime + (44100 * deltaT) / (1000000);
-            prevPulseTime = nextPulseTime - (44100 * deltaT) / (1000000); // for completeness, but maybe not used?
-            firstHit = false;
-            //beatStarted = true;
-        } else {
-            nextPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
-            nextPredictedPulseTime = nextPulseTime + (44100 * deltaT) / (1000000);
-            prevPulseTime = nextPulseTime - (44100 * deltaT) / (1000000);
-        }
-
-    }
+    
+    int64_t currentTimeSamples = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
+    currentPulseFound = false;
+    prevPulseTime = currentPulseTime;
+    currentPulseTime = currentTimeSamples + SAMPLES_PER_BUFFER;
+    nextPredictedPulseTime = currentPulseTime + (44100 * deltaT) / (1000000);
     lastClockIn = time_us_64();
-    if(activeButton == BUTTON_MANUAL_TEMPO) {
+    totalPulses ++;
+    if (activeButton == BUTTON_MANUAL_TEMPO) {
         displayTempo();
     }
 }
@@ -295,40 +290,43 @@ void handleButtonChange(int buttonNum, bool buttonState)
         switch (buttonNum)
         {
         case BUTTON_START_STOP:
-            numSteps = newNumSteps;
-            if (activeButton == BUTTON_TIME_SIGNATURE)
-                displayTimeSignature();
-            else {
-                activeButton = NO_ACTIVE_BUTTON;
-            }
-            beatPlaying = !beatPlaying;
-            if (beatPlaying)
-            {
-                // handle beat start
-                clearError(ERROR_PERFORMANCE);
-                if (!externalClock)
-                {
-                    pulseStep = 0;
-                    prevPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER; // ?
-                    nextPulseTime = prevPulseTime + (44100 * deltaT) / (1000000);
-                    nextPredictedPulseTime = nextPulseTime;
-                    for(i=0; i<NUM_SAMPLES; i++) {
-                        nextBeatCheckStep[i] = 0;
-                    }
-                }
-            }
-            else
-            {
-                // handle beat stop
-                pulseStep = 0;
+            if(externalClock) {
+
+            } else {
+                numSteps = newNumSteps;
                 if (activeButton == BUTTON_TIME_SIGNATURE)
                     displayTimeSignature();
                 else {
                     activeButton = NO_ACTIVE_BUTTON;
-                    displayPulse(0, 0);
                 }
+                beatPlaying = !beatPlaying;
+                if (beatPlaying)
+                {
+                    // handle beat start
+                    clearError(ERROR_PERFORMANCE);
+                    if (!externalClock)
+                    {
+                        pulseStep = 0;
+                        currentPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER;
+                        nextPredictedPulseTime = currentPulseTime + (44100 * deltaT) / (1000000);
+                        for(i=0; i<NUM_SAMPLES; i++) {
+                            nextBeatCheckStep[i] = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    // handle beat stop
+                    pulseStep = 0;
+                    if (activeButton == BUTTON_TIME_SIGNATURE)
+                        displayTimeSignature();
+                    else {
+                        activeButton = NO_ACTIVE_BUTTON;
+                        displayPulse(0, 0);
+                    }
 
-                scheduleSaveSettings();
+                    scheduleSaveSettings();
+                }
             }
             break;
         case BUTTON_MENU:
@@ -1024,7 +1022,9 @@ char getNthDigit(int x, int n)
 
 void updateLedDisplayInt(int num)
 {
-    cancel_alarm(displayPulseAlarm);
+    if(displayPulseAlarm > 0) {
+        cancel_alarm(displayPulseAlarm);
+    }
     int compare = 1;
     for (int i = 0; i < 4; i++)
     {
@@ -1042,7 +1042,9 @@ void updateLedDisplayInt(int num)
 
 void updateLedDisplayAlpha(const char *word)
 {
-    cancel_alarm(displayPulseAlarm);
+    if(displayPulseAlarm > 0) {
+        cancel_alarm(displayPulseAlarm);
+    }
     bool foundWordEnd = false;
     for (int i = 0; i < 4; i++)
     {
@@ -1209,18 +1211,6 @@ int main()
 
     printf("Drumkid V2\n");
 
-    // temp beat setting
-    // beats[0].addHit(0, 0, 255, 255, 0);
-    // beats[0].addHit(1, 2*3360, 255, 255, 0);
-    // beats[0].addHit(1, 12*3360/4, 255, 127, 1);
-    // beats[0].addHit(1, 13*3360/4, 255, 127, 1);
-    // beats[0].addHit(1, 14*3360/4, 255, 127, 1);
-    // beats[0].addHit(1, 15*3360/4, 255, 127, 1);
-    // int numHatsTemp = 16;
-    // for(int i=0; i<numHatsTemp; i++) {
-    //     beats[0].addHit(2, (i*4*3360)/numHatsTemp, 64, 255, 0);
-    // }
-
     // temp, populating magnet curve
     printf("magnet curve:\n");
     for (int i = 0; i < 6; i++)
@@ -1272,14 +1262,13 @@ int main()
 
     struct audio_buffer_pool *ap = init_audio();
 
-    beatPlaying = externalClock;
+    beatPlaying = false;
 
     if (!externalClock)
     {
         syncInPpqn = 1;
         deltaT = 600000000 / tempo;
-        nextPulseTime = (44100 * deltaT) / (1000000);
-        nextPredictedPulseTime = nextPulseTime;
+        nextPredictedPulseTime = (44100 * deltaT) / (1000000);
         //beatStarted = true;
     }
 
@@ -1363,21 +1352,42 @@ int main()
             int32_t out2 = 0;
 
             // update step at PPQN level
-            if(beatPlaying && currentTime >= nextPulseTime) {
-                prevPulseTime = nextPulseTime;
-                nextPulseTime += (44100*deltaT)/(1000000);
-                if(!externalClock) {
-                    nextPredictedPulseTime = nextPulseTime;
+            if(externalClock) {
+                if(currentTime >= currentPulseTime && !currentPulseFound) {
+                    currentPulseFound = true;
+                    pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
                 }
-                pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
+            } else {
+                if (beatPlaying && currentTime >= nextPredictedPulseTime)
+                {
+                    prevPulseTime = currentPulseTime;
+                    currentPulseTime = currentTime;
+                    nextPredictedPulseTime = currentTime + (44100*deltaT)/(1000000);
+                    pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
+                }
             }
+            // if(beatPlaying && currentTime >= nextPulseTime) {
+            //     prevPulseTime = nextPulseTime;
+            //     nextPulseTime += (44100*deltaT)/(1000000);
+            //     if(!externalClock) {
+            //         nextPredictedPulseTime = nextPulseTime;
+            //     }
+            //     pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
+            // }
 
             // update step
-            int64_t step = pulseStep + (3360 * (currentTime - prevPulseTime)) / (syncInPpqn * (nextPulseTime - prevPulseTime));
+            int64_t step = pulseStep;
+            bool interpolateSteps = true && (!externalClock || totalPulses >= 2);
+            if(interpolateSteps) {
+                int64_t t0 = (currentPulseFound || !externalClock) ? currentPulseTime : prevPulseTime;
+                int64_t t1 = (currentPulseFound || !externalClock) ? nextPredictedPulseTime : currentPulseTime;
+                step += (3360 * (currentTime - t0)) / (syncInPpqn * (t1 - t0));
+            }
             bool newStep = false; // only check beat when step has been incremented (i.e. loop will probably run several times on, say, step 327, but don't need to do stuff repeatedly for that step)
 
             // do stuff if step has been incremented
-            if(beatPlaying && currentTime < nextPredictedPulseTime && step != lastStep) {
+            if ((externalClock || beatPlaying) && currentTime < nextPredictedPulseTime && step != lastStep)
+            {
                 newStep = true;
                 if(step == 0 && numSteps != newNumSteps) {
                     numSteps = newNumSteps;
@@ -1528,7 +1538,7 @@ int main()
         int64_t audioProcessTime = time_us_64() - audioProcessStartTime; // should be well below 5.8ms (5800us)
         if(audioProcessTime > 5000) {
             if(prevProcessTimeSlow) {
-                flagError(ERROR_PERFORMANCE);
+                //flagError(ERROR_PERFORMANCE);
                 beatPlaying = false;
             } else {
                 prevProcessTimeSlow = true;
@@ -2381,7 +2391,9 @@ void addEvent(uint64_t delay, void (*callback)(int), int user_data)
             foundQueuePlace = true;
             if(i==0) {
                 // first in queue, need to cancel current alarm and reschedule it
-                cancel_alarm(eventAlarm);
+                if(eventAlarm > 0) {
+                    cancel_alarm(eventAlarm);
+                }
                 eventAlarm = add_alarm_in_us(delay, eventManager, NULL, true);
             }
         }
