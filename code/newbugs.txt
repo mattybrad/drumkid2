@@ -1,18 +1,16 @@
 TODO:
-- When to save settings in external clock mode if no start/stop?!
-- Tidy up groups feature
-- First DAC cycle after start button press is v slow (10ms+, should be 5ms max), no idea why
-- Chance maybe not totally stable, hard to lock at 4095, especially when including CV (bigger top deadzone?)
-- Replace all references to 3360 with a const or something
+- Default beat (0) should be standard rock beat
+- Pressing "back" when beat stopped (int mode) goes outside bar..?
 - Relaxed pass through the code to add comments while still fresh in head
-- Try first build process (fresh pico, USB upload, play around)
 - Write manual copy
 - Record demo video
-- Pulse light sometimes gets stuck
 - Setting for whether to interpolate hits in ext mode
-- Create 8 preset kits
 
 FUTURE STUFF:
+- Rename "other" to "tom" or "click" or something, or rename all channels CH1, CH2, etc
+- Allow swung clock output
+- Create 8 preset kits
+- implement groups feature in edit modes
 - Power down detection (voltage divider from 12V supply to GPIO pin with interrupt ideally, 470uF+ capacitor(s) on the 5V supply)
 - Tempo display should average several pulses in ext mode
 - Swing and live edit don't play nicely (the maths will be horrible)

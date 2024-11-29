@@ -170,7 +170,7 @@ void gpio_callback(uint gpio, uint32_t events)
 {
     if(externalClock) {
         handleSyncPulse();
-        pulseLed(1, 0);
+        pulseLed(1, 100); // delay was 0, seemed to cause issues, added 100us delay, can't pretend i know why this works
     }
 }
 
@@ -195,6 +195,8 @@ void ledPulseHighCallback(int user_data)
         setLed(ledNum, true);
         bitWrite(ledPulseStatuses, ledNum, true);
         addEvent(20000, ledPulseLowCallback, ledNum);
+    } else {
+        setLed(ledNum, false);
     }
 }
 
@@ -450,9 +452,13 @@ void handleButtonChange(int buttonNum, bool buttonState)
             displayEditBeat();
             break;
         case BUTTON_SAVE:
-            saveBeatLocation = beatNum;
-            activeButton = BUTTON_SAVE;
-            updateLedDisplayInt(saveBeatLocation);
+            if(activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT) {
+                saveBeatLocation = beatNum;
+                activeButton = BUTTON_SAVE;
+                updateLedDisplayInt(saveBeatLocation);
+            } else {
+                saveSettingsToFlash();
+            }
             break;
         default:
             printf("(button %d not assigned)\n", buttonNum);
@@ -468,6 +474,8 @@ void handleSubSettingIncDec(bool isInc)
     {
     case SETTING_CLOCK_MODE:
         externalClock = !externalClock;
+        // suspect there may be more things to adjust when switching between modes, but here's what i can think of:
+        tempo = 600000000 / deltaT;
         displayClockMode();
         break;
 
@@ -765,7 +773,7 @@ void scheduleSaveSettings()
     {
         cancel_alarm(saveSettingsAlarm);
     }
-    saveSettingsAlarm = add_alarm_in_ms(3000, onSaveSettingsTimeout, NULL, true);
+    saveSettingsAlarm = add_alarm_in_ms(1000, onSaveSettingsTimeout, NULL, true);
 }
 
 uint64_t lastTapTempoTime;
@@ -1214,8 +1222,8 @@ int map(int x, int in_min, int in_max, int out_min, int out_max)
 void applyDeadZones(int &param, bool centreDeadZone)
 {
     param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
-    int deadZoneStart = 2048-200;
-    int deadZoneEnd = 2048+200;
+    int deadZoneStart = 2048-250;
+    int deadZoneEnd = 2048+250;
     if(centreDeadZone) {
         if(param < deadZoneStart) {
             param = map(param, 0, deadZoneStart, 0, 2048);
@@ -1578,7 +1586,7 @@ int main()
         if (bufferSamples[0] == 0 && bufferSamples[1] == 0)
         {
             isSilent = true;
-            if (isSilent && (currentTime - nextPredictedPulseTime > 132300) && saveSettingsAlarm == 0)
+            if (isSilent && (currentTime - nextPredictedPulseTime > 44100) && saveSettingsAlarm == 0)
             {
                 saveSettingsToFlash();
             }
@@ -1590,7 +1598,7 @@ int main()
         if(audioProcessTime > 5000) {
             if(prevProcessTimeSlow) {
                 //flagError(ERROR_PERFORMANCE);
-                beatPlaying = false;
+                //beatPlaying = false;
             } else {
                 prevProcessTimeSlow = true;
             }
@@ -2444,8 +2452,10 @@ void addEvent(uint64_t delay, void (*callback)(int), int user_data)
                 // first in queue, need to cancel current alarm and reschedule it
                 if(eventAlarm > 0) {
                     cancel_alarm(eventAlarm);
+                    eventAlarm = 0; // probably a good thing to do?
                 }
                 eventAlarm = add_alarm_in_us(delay, eventManager, NULL, true);
+                //assert(eventAlarm > 0);
             }
         }
     }
