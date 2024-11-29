@@ -13,6 +13,9 @@ TODO:
 - Create 8 preset kits
 
 FUTURE STUFF:
+- Power down detection (voltage divider from 12V supply to GPIO pin with interrupt ideally, 470uF+ capacitor(s) on the 5V supply)
+- Tempo display should average several pulses in ext mode
+- Swing and live edit don't play nicely (the maths will be horrible)
 - Tapping should be allowed to start on beat other than first beat
 - Somehow avoid double hits when doing tap tempo (similar to live edit..?)
 - Pressing "X" after selecting beat/tempo/tuplet etc should revert to previous setting for that param (niche but logical)

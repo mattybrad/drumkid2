@@ -50,7 +50,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 // globals, organise later
 int64_t currentTime = 0; // samples
 uint16_t pulseStep = 0;
-int numSteps = 4 * 3360;
+int numSteps = 4 * SYSTEM_PPQN;
 int newNumSteps = numSteps; // newNumSteps store numSteps value to be set at start of next bar
 bool validDeltaT = false;
 int64_t currentPulseTime = INT64_MAX;
@@ -74,6 +74,7 @@ int magnetZoomValue = 0;
 uint32_t gpioPulseStatuses = 0;
 uint8_t ledPulseStatuses = 0;
 uint32_t errorStatuses = 0;
+int isSilent = false;
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[11] = {
@@ -122,9 +123,9 @@ int syncInPpqnIndex = 0;
 int syncOutPpqnIndex = 2;
 int syncInPpqn = ppqnValues[syncInPpqnIndex];
 int syncOutPpqn = ppqnValues[syncOutPpqnIndex];
-uint64_t prevPulseTime = 0; // samples
-uint64_t nextPulseTime = 0; // samples
-uint64_t nextPredictedPulseTime = 0; // samples
+int64_t prevPulseTime = 0; // samples
+int64_t nextPulseTime = 0; // samples
+int64_t nextPredictedPulseTime = 0; // samples
 uint quarterNote = 0;
 int64_t deltaT;                 // microseconds
 int64_t lastDacUpdateSamples;   // samples
@@ -260,7 +261,7 @@ void doLiveHit(int sampleNum)
     int quantizeSteps = tupletEditLiveMultipliers[tuplet];
     int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - currentPulseTime - SAMPLES_PER_BUFFER;
     int samplesPerPulse = nextPredictedPulseTime - currentPulseTime;
-    int thisStep = (pulseStep + (samplesSincePulse * 3360) / samplesPerPulse) % numSteps;
+    int thisStep = (pulseStep + (samplesSincePulse * SYSTEM_PPQN) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
     beats[beatNum].addHit(sampleNum, thisStep, velocity>>4, 255, 0);
@@ -292,7 +293,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_START_STOP:
             if(externalClock) {
                 // reset to start of bar on next hit
-                pulseStep = numSteps - (3360/syncInPpqn);
+                pulseStep = numSteps - (SYSTEM_PPQN/syncInPpqn);
                 for(int i=0; i<NUM_SAMPLES; i++) {
                     nextBeatCheckStep[i] = 0;
                 }
@@ -331,8 +332,6 @@ void handleButtonChange(int buttonNum, bool buttonState)
                         activeButton = NO_ACTIVE_BUTTON;
                         displayPulse(0, 0);
                     }
-
-                    scheduleSaveSettings();
                 }
             }
             break;
@@ -348,7 +347,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         case BUTTON_LIVE_EDIT:
             activeButton = BUTTON_LIVE_EDIT;
-            displayPulse(pulseStep / 3360, 0);
+            displayPulse(pulseStep / SYSTEM_PPQN, 0);
             break;
         case BUTTON_INC:
             if (activeButton == BUTTON_LIVE_EDIT)
@@ -407,7 +406,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 clearError(ERROR_SD_CLOSE);
                 clearError(ERROR_SD_MOUNT);
                 activeButton = NO_ACTIVE_BUTTON;
-                displayPulse(lastStep/3360,0);
+                displayPulse(lastStep/SYSTEM_PPQN,0);
             }
             break;
         case BUTTON_KIT:
@@ -504,7 +503,7 @@ void handleSubSettingIncDec(bool isInc)
         syncInPpqnIndex += thisInc;
         syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
         syncInPpqn = ppqnValues[syncInPpqnIndex];
-        if(externalClock) pulseStep = (pulseStep / (3360 / syncInPpqn)) * (3360 / syncInPpqn); // quantize pulse step to new PPQN value to prevent annoying phase offset thing
+        if(externalClock) pulseStep = (pulseStep / (SYSTEM_PPQN / syncInPpqn)) * (SYSTEM_PPQN / syncInPpqn); // quantize pulse step to new PPQN value to prevent annoying phase offset thing
         break;
 
     case SETTING_PITCH_CURVE:
@@ -756,10 +755,6 @@ alarm_id_t saveSettingsAlarm = 0;
 
 int64_t onSaveSettingsTimeout(alarm_id_t id, void *user_data)
 {
-    if (!beatPlaying)
-    {
-        saveSettingsToFlash();
-    }
     saveSettingsAlarm = 0;
     return 0;
 }
@@ -813,7 +808,7 @@ void updateTapTempo()
             tempo = 600000000 / deltaT;
             displayTempo();
         }
-        pulseStep = ((numTaps - 1) * 3360) % numSteps;
+        pulseStep = ((numTaps - 1) * SYSTEM_PPQN) % numSteps;
         int64_t currentTimeSamples = lastDacUpdateSamples + (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000;
         currentPulseFound = false;
         prevPulseTime = currentPulseTime;
@@ -1115,6 +1110,7 @@ bool updateMultiplexers(repeating_timer_t *rt)
     return true;
 }
 
+// could express in terms of SYSTEM_PPQN (3360) but would look ugly... Just change this if SYSTEM_PPQN ever changes
 int zoomValues[NUM_TUPLET_MODES][9] = {
     {-1, 13440, 6720, 3360, 1680, 840, 420, 210, 105},
     {-1, 13440, 13440, 3360, 1120, 560, 280, 140, 70},
@@ -1379,7 +1375,7 @@ int main()
             if(externalClock) {
                 if(currentTime >= currentPulseTime && !currentPulseFound) {
                     currentPulseFound = true;
-                    pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
+                    pulseStep = (pulseStep + (SYSTEM_PPQN / syncInPpqn)) % numSteps;
                 }
             } else {
                 if (beatPlaying && currentTime >= nextPredictedPulseTime)
@@ -1387,7 +1383,7 @@ int main()
                     prevPulseTime = currentPulseTime;
                     currentPulseTime = currentTime;
                     nextPredictedPulseTime = currentTime + (44100*deltaT)/(1000000);
-                    pulseStep = (pulseStep + 3360) % numSteps;
+                    pulseStep = (pulseStep + SYSTEM_PPQN) % numSteps;
                 }
             }
 
@@ -1397,7 +1393,7 @@ int main()
             //     if(!externalClock) {
             //         nextPredictedPulseTime = nextPulseTime;
             //     }
-            //     pulseStep = (pulseStep + (3360 / syncInPpqn)) % numSteps;
+            //     pulseStep = (pulseStep + (SYSTEM_PPQN / syncInPpqn)) % numSteps;
             // }
 
             // update step
@@ -1410,13 +1406,13 @@ int main()
                 {
                     int64_t t0 = currentPulseFound ? currentPulseTime : prevPulseTime;
                     int64_t t1 = currentPulseFound ? nextPredictedPulseTime : currentPulseTime;
-                    step += (3360 * (currentTime - t0)) / (syncInPpqn * (t1 - t0));
+                    step += (SYSTEM_PPQN * (currentTime - t0)) / (syncInPpqn * (t1 - t0));
                 }
                 else
                 {
                     int64_t t0 = currentPulseTime;
                     int64_t t1 = nextPredictedPulseTime;
-                    step += (3360 * (currentTime - t0)) / (t1 - t0);
+                    step += (SYSTEM_PPQN * (currentTime - t0)) / (t1 - t0);
                 }
             }
             bool newStep = false; // only check beat when step has been incremented (i.e. loop will probably run several times on, say, step 327, but don't need to do stuff repeatedly for that step)
@@ -1443,15 +1439,15 @@ int main()
                         groupStatus[j] = GROUP_PENDING;
                     }
                 }
-                if((step % (3360/syncOutPpqn)) == 0) {
+                if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                     pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
                     pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
                 }
-                if((step % 3360) == 0) {
+                if((step % SYSTEM_PPQN) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                     if(activeButton == NO_ACTIVE_BUTTON || activeButton == BUTTON_LIVE_EDIT) {
-                        displayPulse(step / 3360, pulseDelay);
+                        displayPulse(step / SYSTEM_PPQN, pulseDelay);
                     }
                     pulseLed(2, pulseDelay);
 
@@ -1466,12 +1462,12 @@ int main()
                     else if (swing < 2048)
                     {
                         swingMode = SWING_EIGHTH;
-                        swing = map(swing, 2047, 0, 1680, 3359);
+                        swing = map(swing, 2047, 0, SYSTEM_PPQN>>1, (SYSTEM_PPQN-1));
                     }
                     else
                     {
                         swingMode = SWING_SIXTEENTH;
-                        swing = map(swing, 2049, 4095, 840, 1679);
+                        swing = map(swing, 2049, 4095, (SYSTEM_PPQN>>2), (SYSTEM_PPQN>>1)-1);
                     }
                 }
                 if (forceBeatUpdate)
@@ -1484,9 +1480,11 @@ int main()
                 }
                 magnetZoomValue = getMagnetZoomValue(step);
             }
-            if(activeButton == BUTTON_LIVE_EDIT && beatPlaying && (step % 3360) < 840) {
-                out1 += metronomeIndex < 50 ? 5000 : -5000;
-                metronomeIndex = (metronomeIndex + (step < 3360 ? 2 : 1)) % 100;
+            if(activeButton == BUTTON_LIVE_EDIT && beatPlaying && (step % SYSTEM_PPQN) < (SYSTEM_PPQN>>2)) {
+                int metronomeSound = metronomeIndex < 50 ? 5000 : -5000;
+                metronomeIndex = (metronomeIndex + (step < SYSTEM_PPQN ? 2 : 1)) % 100;
+                out1 += metronomeSound;
+                out2 += metronomeSound;
             }
             lastStep = step; // this maybe needs to be reset to -1 or INT_MAX or something when beat stops?
 
@@ -1500,21 +1498,21 @@ int main()
                     int swingStep = step;
                     bool skipStep = false;
                     if(swingMode == SWING_EIGHTH) {
-                        if(step % 3360 == 1680) {
+                        if(step % SYSTEM_PPQN == (SYSTEM_PPQN>>1)) {
                             // eighth note, skip it
                             skipStep = true;
-                        } else if(step % 3360 == swing) {
-                            swingStep = 1680 + (step / 3360) * 3360;
+                        } else if(step % SYSTEM_PPQN == swing) {
+                            swingStep = (SYSTEM_PPQN>>1) + (step / SYSTEM_PPQN) * SYSTEM_PPQN;
                         }
                     } else if(swingMode == SWING_SIXTEENTH) {
-                        if (step % 1680 == 840)
+                        if (step % (SYSTEM_PPQN>>1) == (SYSTEM_PPQN>>2))
                         {
                             // eighth note, skip it
                             skipStep = true;
                         }
-                        else if (step % 1680 == swing)
+                        else if (step % (SYSTEM_PPQN>>1) == swing)
                         {
-                            swingStep = 840 + (step / 1680) * 1680;
+                            swingStep = (SYSTEM_PPQN>>2) + (step / (SYSTEM_PPQN>>1)) * (SYSTEM_PPQN>>1);
                         }
                     }
 
@@ -1575,6 +1573,17 @@ int main()
                 bufferSamples[i + 1] = out2 >> 2;
 
             currentTime++;
+        }
+
+        if (bufferSamples[0] == 0 && bufferSamples[1] == 0)
+        {
+            isSilent = true;
+            if (isSilent && (currentTime - nextPredictedPulseTime > 132300) && saveSettingsAlarm == 0)
+            {
+                saveSettingsToFlash();
+            }
+        } else {
+            isSilent = false;
         }
 
         int64_t audioProcessTime = time_us_64() - audioProcessStartTime; // should be well below 5.8ms (5800us)

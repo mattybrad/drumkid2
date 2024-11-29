@@ -159,7 +159,7 @@ int currentSettingsSector = -1; // -1 means invalid, set when reading flash for 
 // Beat variables
 #define MAX_TAPS 8
 #define NUM_BEATS 24
-#define MASTER_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
+#define SYSTEM_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
 int tempo = 1200;                                       // 10xBPM
 uint32_t SAMPLE_RATE = 44100;
 bool beatPlaying = false;
