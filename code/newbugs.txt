@@ -1,17 +1,16 @@
 TODO:
+- When to save settings in external clock mode if no start/stop?!
 - Tidy up groups feature
 - First DAC cycle after start button press is v slow (10ms+, should be 5ms max), no idea why
 - Chance maybe not totally stable, hard to lock at 4095, especially when including CV (bigger top deadzone?)
+- Replace all references to 3360 with a const or something
 - Relaxed pass through the code to add comments while still fresh in head
-- Create 8 preset kits
+- Try first build process (fresh pico, USB upload, play around)
 - Write manual copy
 - Record demo video
-- When to save settings in external clock mode if no start/stop?!
 - Pulse light sometimes gets stuck
 - Setting for whether to interpolate hits in ext mode
-- Check zoom at 50% is steady sensible value (quarter note?)
-- PPQN must be 1 for internal clock mode
-- Live edit is probably broken since changing timing stuff
+- Create 8 preset kits
 
 FUTURE STUFF:
 - Tapping should be allowed to start on beat other than first beat

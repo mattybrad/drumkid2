@@ -258,8 +258,8 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
 void doLiveHit(int sampleNum)
 {
     int quantizeSteps = tupletEditLiveMultipliers[tuplet];
-    int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - prevPulseTime - SAMPLES_PER_BUFFER;
-    int samplesPerPulse = nextPulseTime - prevPulseTime;
+    int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - currentPulseTime - SAMPLES_PER_BUFFER;
+    int samplesPerPulse = nextPredictedPulseTime - currentPulseTime;
     int thisStep = (pulseStep + (samplesSincePulse * 3360) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
