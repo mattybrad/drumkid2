@@ -49,13 +49,16 @@ This determines the velocity (volume) of the randomly generated hits. It is used
 The range of velocities for randomly generated hits (see above).
 
 ### Magnet
-
+This control affects whether hits are generated at completely random points within the bar, or whether they are more likely to occur on larger-value subdivisions, e.g. quarter notes. At 0%, no adjustment is made to the way random notes are generated, but as you increase the magnet control, the likelihood of a note being generated becomes proportional to the note's subdivision, so a quarter-note hit is more likely than an eighth-note hit, which in turn is more likely than a 16th-note hit, etc. In practice, this control creates order out of chaos, turning a messy set of random hits into something more rhythmic. Note that as "chance" approaches 100%, the efficacy of the "magnet" control is gradually reduced to zero - the control was designed this way so that the behaviours of "chance" and "magnet" were not fighting each other at high probabilities. This is perhaps the most subtle control on Drumkid - I would recommend keeping it at 0% in normal use, and increasing it when you want to create a groove from something that is otherwise too messy.
 
 ### Swing
-
-### Drop rand
+Allows you to swing certain hits. At 50% (12 o'clock), hits are generated as normal, with a dead zone to make it easier to keep this setting locked. As you turn the knob to the left (towards 0%), any off-beat 8th-notes are increasingly swung, while turning the knob to the right (towards 100%) swings any off-beat 16th-notes. When either of these swing modes is in use, random hits of a lower subdivision than the swung hits (e.g. 32nd notes when in 16th-note mode) are muted. The swing control is not available when tuplet modes (e.g. triplet) are activated in the settings. If you are not getting the desired behaviour while adjusting the various control which generate random hits, check that swing is set to 50% (off).
 
 ### Drop all
+This control drops (or mutes) certain channels. At 50% (12 o'clock), all hits are audible. As you turn the knob to the left, you first mute the snare, then also the hi-hat, then the tom, and finally the kick. Turning the knob to the right first mutes the kick, then the tom, then the snare, then finally the hi-hat. At 0% and 100%, all random hits are muted. This control essentially allows you to create "breakdown" sections in a performance by progressively (or suddenly) eliminating certain channels.
+
+### Drop rand
+Similar to the "drop all" control (see above), but only applies to randomly generated hits, not hits from the programmed beat.
 
 ## Inputs and outputs
 
@@ -65,14 +68,14 @@ Receives a clock input (a series of short pulses) to allow the module to be sync
 ### Clock out
 Outputs an adjustable clock signal. More details in the "synchronisation" section.
 
-### Kick/snare/hat/other out
+### Kick/snare/hat/tom out
 Each of the four samples has its own trigger output. This outputs a short pulse every time a given sample is played by the module. Note that if you only want to use the trigger output and not generate any audio for a given sample channel, you can disable individual sample audio outputs in the settings menu.
 
 ### Chance in
 CV input for the "chance" parameter. The CV signal is added to the potentiometer value.
 
 ### Pitch in
-CV input for the 
+CV input for the "pitch" parameter.
 
 ### Velocity in
 
