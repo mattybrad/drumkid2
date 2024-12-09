@@ -100,19 +100,24 @@ This blinks every time a clock pulse is received.
 ### Clock out
 This blinks every time a clock pulse is sent.
 
-## Settings (buttons)
+## Buttons
 
 ### Play
+This button seems self explanatory but has different behaviours depending on whether you are using internal or external clock. When using internal clock, pressing "play" once starts the rhythm playing from the start of the bar, and pressing it again stops the beat. When using external clock, the beat will always continue to play whenever a clock signal is received, but pressing "play" will reset the rhythm to the start of the bar.
 
 ### Tap
+Tapping this button repeatedly will set a new tempo (each tap is a quarter note). The first tap will reset the rhythm to the start of the bar, and subsequent taps will fine-tune the tempo by averaging the past few taps. This button only works in internal clock mode.
 
 ### Live (edit)
+This button puts the module into "live edit" mode, where you can play a beat using the four buttons below the main display (+/-/yes/no). In this mode, all random hits are muted, and a metronome sound is played. When you trigger a sample using one of the four buttons, it is added to the current rhythm. If you make a mistake, you can clear the 
 
 ### Step (edit)
 
 ### A/B
+These buttons currently not operational. They are reserved for future firmware updates or user modification (see "hacking" section).
 
 ### Save
+Pressing this button during normal operation manually saves your current settings (tempo, tuplet mode, clock mode, etc). This may cause a brief glitch in the audio output - this is normal. Note that your settings are also saved automatically whenever the module detects an appropriate period of silence, but you can press this button to save manually for peace of mind. The module loads the most recent set of saved settings when it is powered on. This button functions differently when in live edit or beat edit modes, where it is used to save an edited beat - see the live/step edit sections of the manual for details.
 
 ### Beat
 

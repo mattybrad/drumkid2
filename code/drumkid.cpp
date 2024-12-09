@@ -75,6 +75,7 @@ uint32_t gpioPulseStatuses = 0;
 uint8_t ledPulseStatuses = 0;
 uint32_t errorStatuses = 0;
 int isSilent = false;
+bool specificClearDone = false;
 
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[11] = {
@@ -258,6 +259,18 @@ bool updateInputShiftRegisters(repeating_timer_t *rt)
     return true;
 }
 
+void clearHits(int sampleNum) {
+    specificClearDone = true;
+    for (int i = 0; i < beats[beatNum].numHits; i++)
+    {
+        if ((beats[beatNum].hits[i].sample < NUM_SAMPLES && beats[beatNum].hits[i].sample == sampleNum) || sampleNum == -1)
+        {
+            beats[beatNum].removeHitAtIndex(i);
+            i--;
+        }
+    }
+}
+
 void doLiveHit(int sampleNum)
 {
     int quantizeSteps = tupletEditLiveMultipliers[tuplet];
@@ -354,7 +367,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_INC:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                doLiveHit(0);
+                if(bitRead(buttonStableStates, BUTTON_CLEAR)) {
+                    clearHits(0);
+                } else {
+                    doLiveHit(0);
+                }
             }
             else
             {
@@ -366,7 +383,14 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_DEC:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                doLiveHit(1);
+                if (bitRead(buttonStableStates, BUTTON_CLEAR))
+                {
+                    clearHits(1);
+                }
+                else
+                {
+                    doLiveHit(1);
+                }
             }
             else
             {
@@ -378,7 +402,14 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CONFIRM:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                doLiveHit(2);
+                if (bitRead(buttonStableStates, BUTTON_CLEAR))
+                {
+                    clearHits(2);
+                }
+                else
+                {
+                    doLiveHit(2);
+                }
             }
             else
             {
@@ -388,7 +419,14 @@ void handleButtonChange(int buttonNum, bool buttonState)
         case BUTTON_CANCEL:
             if (activeButton == BUTTON_LIVE_EDIT)
             {
-                doLiveHit(3);
+                if (bitRead(buttonStableStates, BUTTON_CLEAR))
+                {
+                    clearHits(3);
+                }
+                else
+                {
+                    doLiveHit(3);
+                }
             }
             else
             {
@@ -432,17 +470,8 @@ void handleButtonChange(int buttonNum, bool buttonState)
             displayBeat();
             break;
         case BUTTON_CLEAR:
-            if (activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT)
-            {
-                for(i=0; i<MAX_BEAT_HITS; i++) {
-                    beats[beatNum].hits[i].sample = 0;
-                    beats[beatNum].hits[i].step = 0;
-                    beats[beatNum].hits[i].velocity = 0;
-                    beats[beatNum].hits[i].probability = 0;
-                    beats[beatNum].hits[i].group = 0;
-                }
-                beats[beatNum].numHits = 0;
-            }
+            // do nothing until button release
+            specificClearDone = false;
             break;
         case BUTTON_STEP_EDIT:
             if(activeButton == BUTTON_STEP_EDIT) {
@@ -462,6 +491,16 @@ void handleButtonChange(int buttonNum, bool buttonState)
             break;
         default:
             printf("(button %d not assigned)\n", buttonNum);
+        }
+    } else {
+        switch(buttonNum) {
+            case BUTTON_CLEAR:
+                // when clear button released, if no specific clears have already happened, clear whole beat
+                if ((activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT) && !specificClearDone)
+                {
+                    clearHits(-1);
+                }
+                break;
         }
     }
 }
@@ -1963,7 +2002,7 @@ void loadSettingsFromFlash()
 
 bool checkSettingsChange()
 {
-    printf("checking settings changes...\n");
+    //printf("checking settings changes...\n");
     bool anyChanged = false;
     int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 12;
 
