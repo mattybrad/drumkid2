@@ -5,6 +5,10 @@ TODO:
 - Write manual copy
 - Record demo video
 - Setting for whether to interpolate hits in ext mode
+- Chance < 50% should be deactivated in edit modes
+- All chance should be deactivated in step edit mode
+- What happens if you add a hit where there's already a hit?
+- I bet 1/4 time sig does some bad stuff
 
 FUTURE STUFF:
 - Rename "other" to "tom" or "click" or something, or rename all channels CH1, CH2, etc

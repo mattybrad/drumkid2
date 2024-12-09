@@ -273,13 +273,15 @@ void clearHits(int sampleNum) {
 
 void doLiveHit(int sampleNum)
 {
+    int velocityNoCv = analogReadings[POT_VELOCITY];
+    applyDeadZones(velocityNoCv, false);
     int quantizeSteps = tupletEditLiveMultipliers[tuplet];
     int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - currentPulseTime - SAMPLES_PER_BUFFER;
     int samplesPerPulse = nextPredictedPulseTime - currentPulseTime;
     int thisStep = (pulseStep + (samplesSincePulse * SYSTEM_PPQN) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
-    beats[beatNum].addHit(sampleNum, thisStep, velocity>>4, 255, 0);
+    beats[beatNum].addHit(sampleNum, thisStep, velocityNoCv >> 4, 255, 0);
 
     // if scheduled hit is in the past, directly trigger sample now
     int compareLastStep = lastStep;
@@ -292,7 +294,7 @@ void doLiveHit(int sampleNum)
     }
     if (compareThisStep <= compareLastStep)
     {
-        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, velocity >> 4);
+        samples[sampleNum].queueHit(lastDacUpdateSamples, 0, velocityNoCv >> 4);
     }
 
     forceBeatUpdate = true;
@@ -317,10 +319,8 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 }
             } else {
                 numSteps = newNumSteps;
-                if (activeButton == BUTTON_TIME_SIGNATURE)
+                if (activeButton == BUTTON_TIME_SIGNATURE) {
                     displayTimeSignature();
-                else {
-                    activeButton = NO_ACTIVE_BUTTON;
                 }
                 beatPlaying = !beatPlaying;
                 if (beatPlaying)
@@ -341,10 +341,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 {
                     // handle beat stop
                     pulseStep = 0;
-                    if (activeButton == BUTTON_TIME_SIGNATURE)
+                    if (activeButton == BUTTON_TIME_SIGNATURE) {
                         displayTimeSignature();
-                    else {
-                        activeButton = NO_ACTIVE_BUTTON;
+                    } else if(activeButton == NO_ACTIVE_BUTTON) {
                         displayPulse(0, 0);
                     }
                 }
@@ -606,13 +605,13 @@ void handleIncDec(bool isInc, bool isHold)
         {
             if (isHold)
             {
-                tempo += isInc ? 10 : -10;
-                tempo = 10 * ((tempo + 5) / 10);
+                tempo += isInc ? 20 : -20;
             }
             else
             {
-                tempo += isInc ? 1 : -1;
+                tempo += isInc ? 10 : -10;
             }
+            tempo = 10 * ((tempo + 5) / 10); // rounding
             if (tempo > 99999)
                 tempo = 99999;
             else if (tempo < 100)
@@ -650,16 +649,15 @@ void handleIncDec(bool isInc, bool isHold)
         break;
 
     case BUTTON_STEP_EDIT:
-        // editSample += isInc ? 1 : -1;
-        // if (editSample < 0)
-        //     editSample = 0;
-        // if (editSample >= NUM_SAMPLES)
-        //     editSample = NUM_SAMPLES - 1;
-        editStep += isInc ? 1: -1;
-        if(editStep < 0) editStep = numSteps / tupletEditStepMultipliers[tuplet] - 1;
-        if (editStep >= numSteps / tupletEditStepMultipliers[tuplet])
-            editStep = 0;
-        displayEditBeat();
+        if(bitRead(buttonStableStates,BUTTON_CLEAR)) {
+            clearHits(isInc ? 0 : 1);
+        } else {
+            editStep += isInc ? 1: -1;
+            if(editStep < 0) editStep = numSteps / tupletEditStepMultipliers[tuplet] - 1;
+            if (editStep >= numSteps / tupletEditStepMultipliers[tuplet])
+                editStep = 0;
+            displayEditBeat();
+        }
         break;
 
     case BUTTON_MENU:
@@ -716,10 +714,24 @@ void handleYesNo(bool isYes)
 {
     // have to declare stuff up here because of switch statement
     int hitNum;
+    int velocityNoCv;
 
     bool useDefaultNoBehaviour = true;
     switch (activeButton)
     {
+    case BUTTON_MANUAL_TEMPO:
+        useDefaultNoBehaviour = false;
+        if (!externalClock)
+        {
+            tempo += isYes ? 1 : -1;
+            if (tempo > 99999)
+                tempo = 99999;
+            else if (tempo < 100)
+                tempo = 100;
+            deltaT = 600000000 / tempo;
+            displayTempo();
+        }
+        break;
     case BUTTON_KIT:
         if (isYes)
             sdSafeLoadTemp = true;
@@ -728,25 +740,26 @@ void handleYesNo(bool isYes)
     case BUTTON_STEP_EDIT:
         useDefaultNoBehaviour = false;
 
-        // tupletEditStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE) * QUARTER_NOTE_STEPS_SEQUENCEABLE + Beat::tupletMap[tuplet][editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE];
-        // bitWrite(beats[beatNum].beatData[editSample], tupletEditStep, isYes);
-        // editStep++;
-        // if (editStep % QUARTER_NOTE_STEPS_SEQUENCEABLE >= quarterNoteDivision >> 2)
-        // {
-        //     editStep = (editStep / QUARTER_NOTE_STEPS_SEQUENCEABLE + 1) * QUARTER_NOTE_STEPS_SEQUENCEABLE;
-        // }
-        // if (editStep >= (newNumSteps / QUARTER_NOTE_STEPS) * QUARTER_NOTE_STEPS_SEQUENCEABLE)
-        //     editStep = 0;
-        hitNum = beats[beatNum].getHit(editSample, editStep*tupletEditStepMultipliers[tuplet]);
-        if (hitNum >= 0)
+        if (bitRead(buttonStableStates, BUTTON_CLEAR))
         {
-            // remove existing hit, whether or not we want to add a new one
-            beats[beatNum].removeHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
+            clearHits(isYes ? 2 : 3);
         }
-        if(isYes) {
-            beats[beatNum].addHit(editSample, editStep * tupletEditStepMultipliers[tuplet], 255, 255, 0);
+        else
+        {
+            hitNum = beats[beatNum].getHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
+            if (hitNum >= 0)
+            {
+                // remove existing hit, whether or not we want to add a new one
+                beats[beatNum].removeHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
+            }
+            if (isYes)
+            {
+                velocityNoCv = analogReadings[POT_VELOCITY];
+                applyDeadZones(velocityNoCv, false);
+                beats[beatNum].addHit(editSample, editStep * tupletEditStepMultipliers[tuplet], velocityNoCv >> 4, 255, 0);
+            }
+            displayEditBeat();
         }
-        displayEditBeat();
         break;
 
     case BUTTON_MENU:
@@ -1410,6 +1423,11 @@ int main()
         applyDeadZones(velRange, false);
         drop = analogReadings[POT_DROP] / 373; // gives range of 0 to 10
         dropRandom = analogReadings[POT_DROP_RANDOM] / 373; // gives range of 0 to 10
+        if (activeButton == BUTTON_LIVE_EDIT || activeButton == BUTTON_STEP_EDIT)
+        {
+            chance = 2048;
+            velocity = 4095;
+        }
 
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)

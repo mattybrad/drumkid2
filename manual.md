@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Drumkid is a drum machine module which uses random numbers to create unpredictable rhythms. Essentially, you start with a standard drum beat and then use Drumkid’s controls to adjust how much randomness to add.
+Drumkid is a drum machine module which uses random numbers to create unpredictable rhythms. Essentially, you start with a standard drum beat and then use Drumkid"s controls to adjust how much randomness to add.
 
 You start with a pre-programmed rhythm using four samples, then manipulate this rhythm using the knobs and control voltage (CV) inputs to add hits to (or remove hits from) the original rhythm.
 
@@ -12,15 +12,15 @@ This manual consists of a tutorial to guide you through the basic workflow of th
 
 The easiest way to start with Drumkid is to play a simple beat without any random additions, then gradually add random elements to get a feel for how the module's algorithm works.
 
-1. Connect a patch lead to “out 1” so you can hear the output
+1. Connect a patch lead to "out 1" so you can hear the output
 2. Set the controls as follows: (image of chance 50, zoom 50, range 0, vel 100, plus other defaults)
-3. Press “Play”
-4. Select a preset beat by pressing “beat”, then using the +/- buttons
+3. Press "Play"
+4. Select a preset beat by pressing "beat", then using the +/- buttons
 5. Slowly decrease the "chance" control to zero and notice how the beat is gradually silenced as the probability of each hit happening is reduced
-6. Slowly increase the “chance” control back to 50% and beyond. As you increase past 50%, notice how more and more random hits are added to the beat, until at 100% you hear every sample being triggered over and over (100% probability). 
-7. Set the “chance” back to around 3 o'clock, so you can hear that the full original beat plus some random hits, and now try adjusting the “zoom” control. As you increase the zoom, the beat will become busier as hits are triggered at smaller note values (8th-notes, 16th-notes, 32nd-notes, etc). These first two controls, chance and zoom, are the heart of the machine, and I would recommend playing around with them for a while to get a feel of how they affect the beat.
-7. Slowly reduce the “velocity” control from +100% to 0% (in the middle) - the extra random hits will become quieter. If you set velocity to be negative, it will quieten or mute hits from the original beat.
-8. Set “velocity” to +50%, and “range” to 100% (in the middle). The hits should now have a full range of volumes, from quiet to loud. Try playing with these controls to adjust the relative volume of the random hits.
+6. Slowly increase the "chance" control back to 50% and beyond. As you increase past 50%, notice how more and more random hits are added to the beat, until at 100% you hear every sample being triggered over and over (100% probability). 
+7. Set the "chance" back to around 3 o'clock, so you can hear that the full original beat plus some random hits, and now try adjusting the "zoom" control. As you increase the zoom, the beat will become busier as hits are triggered at smaller note values (8th-notes, 16th-notes, 32nd-notes, etc). These first two controls, chance and zoom, are the heart of the machine, and I would recommend playing around with them for a while to get a feel of how they affect the beat.
+7. Slowly reduce the "velocity" control from +100% to 0% (in the middle) - the extra random hits will become quieter. If you set velocity to be negative, it will quieten or mute hits from the original beat.
+8. Set "velocity" to +50%, and "range" to 100% (in the middle). The hits should now have a full range of volumes, from quiet to loud. Try playing with these controls to adjust the relative volume of the random hits.
 
 ## Parameters (knobs)
 
@@ -109,9 +109,10 @@ This button seems self explanatory but has different behaviours depending on whe
 Tapping this button repeatedly will set a new tempo (each tap is a quarter note). The first tap will reset the rhythm to the start of the bar, and subsequent taps will fine-tune the tempo by averaging the past few taps. This button only works in internal clock mode.
 
 ### Live (edit)
-This button puts the module into "live edit" mode, where you can play a beat using the four buttons below the main display (+/-/yes/no). In this mode, all random hits are muted, and a metronome sound is played. When you trigger a sample using one of the four buttons, it is added to the current rhythm. If you make a mistake, you can clear the 
+This button puts the module into "live edit" mode, where you can play a beat using the four buttons below the main display (+/-/âœ“/x), corresponding to kick/snare/hi-hat/tom by default. In this mode, all random hits are muted, and a metronome sound is played. When you trigger a sample using one of the four buttons, it is added to the current rhythm. When you add a hit, the velocity of that hit is determined by the current value of the "vel" knob. If you make a mistake, you can clear the whole current beat by pressing "clear", or clear a specific sample channel by holding "clear" and pressing one of the four buttons below the main display. When you are ready to save your beat, press "save", use the +/- buttons to choose a slot (the existing beat in that slot will be overwritten), then confirm by pressing "âœ“". Beats are not saved automatically. To revert to how the beat was before you started editing, press the "beat" button, go to a different beat and then return to the beat you were editing (i.e. just press "+" then "-").
 
 ### Step (edit)
+This button puts the module into "step edit" mode. Press the button repeatedly to cycle through the four sample channels. Once you have selected the desired channel (e.g. snare), use the +/- buttons to select a step within the rhythm, then press "âœ“" to add a hit or "x" to remove one. The velocity of the hit is determined by the current value of the "vel" knob. The number of steps available is dependent on both the time signature and the tuplet mode - for example, in "straight" mode with a 4/4 time signature, there will be 32 steps, but in "triplet" mode with a 3/4 time signature there will only be 18 steps. If you make a mistake, you can clear the whole current beat by pressing "clear", or clear a specific sample channel by holding "clear" and pressing one of the four buttons below the main display. When you are ready to save your beat, press "save", use the +/- buttons to choose a slot (the existing beat in that slot will be overwritten), then confirm by pressing "âœ“". Beats are not saved automatically. To revert to how the beat was before you started editing, press the "beat" button, go to a different beat and then return to the beat you were editing (i.e. just press "+" then "-").
 
 ### A/B
 These buttons currently not operational. They are reserved for future firmware updates or user modification (see "hacking" section).
@@ -120,27 +121,47 @@ These buttons currently not operational. They are reserved for future firmware u
 Pressing this button during normal operation manually saves your current settings (tempo, tuplet mode, clock mode, etc). This may cause a brief glitch in the audio output - this is normal. Note that your settings are also saved automatically whenever the module detects an appropriate period of silence, but you can press this button to save manually for peace of mind. The module loads the most recent set of saved settings when it is powered on. This button functions differently when in live edit or beat edit modes, where it is used to save an edited beat - see the live/step edit sections of the manual for details.
 
 ### Beat
+When you press this button, the current beat number will be shown on the display. Use the +/- buttons to select a new beat.
 
 ### Tempo
+To manually adjust the tempo (in internal clock mode), press the tempo button then use the +/- buttons to change the tempo by whole BPM values, or the âœ“/x buttons to make fine changes (0.1BPM). In external clock mode, you can press the tempo button to view the current calculated tempo.
 
 ### Tuplet
+This button allows you to select one of four different tuplet modes using the +/- buttons: straight, triplet, quintuplet, or septuplet. The tuplet mode determines which steps of the pattern are eligible for random hits, as well as which steps of the pattern are available in live edit or step edit mode.
 
 ### Menu
 
 ### Kit
 
 ### T.sig (time signature)
+This button allows you to select a time signature using the +/- buttons.
 
 ### Clear
+In live edit or step edit mode, this button clears/deletes hits from the pattern. See the live edit or step edit sections of the manual for details.
 
 ### Back
-
+This button exits you from whatever state the display is currently in and returns you to the main display.
 
 ## Synchronisation (clock)
 
 
 ## Error codes
+The error codes below correspond to those that will be shown on the display if something goes wrong, and are included to help identify any potential problems:
+- er 1: the SD card is missing
+- er 2: can't open a file on the SD card
+- er 3: can't close a file on the SD card
+- er 4: can't mount the SD card
+- er 5: the total sample size is too large
 
+## Troubleshooting
+- I can't hear anything, or certain samples are missing
+    - Make sure that "drop all" (and possibly "drop rand") are in the desired positions (50% or 12 o'clock will mean nothing is muted)
+    - Make sure that all desired channels are enabled in the "out 1" or "out 2" section of the settings menu
+- I'm trying to add hits in either live or step edit mode, but I can't hear them
+    - Check that the "vel" knob is not set to zero (this determines the velocity of the hit)
+    - Make sure you haven't accidentally exited live edit mode (you will hear a metronome if you are in live edit mode)
+- The timing sounds weird when I'm trying to edit a beat
+    - Make sure you're in the correct tuplet mode for what you're trying to do, otherwise the quantisation will be wrong
 
 ## Updating firmware
 
