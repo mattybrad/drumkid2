@@ -68,38 +68,37 @@ Receives a clock input (a series of short pulses) to allow the module to be sync
 ### Clock out
 Outputs an adjustable clock signal. More details in the "synchronisation" section.
 
-### Kick/snare/hat/tom out
+### Trigger outputs (kick/snare/hat/tom out)
 Each of the four samples has its own trigger output. This outputs a short pulse every time a given sample is played by the module. Note that if you only want to use the trigger output and not generate any audio for a given sample channel, you can disable individual sample audio outputs in the settings menu.
 
-### Chance in
-CV input for the "chance" parameter. The CV signal is added to the potentiometer value.
-
-### Pitch in
-CV input for the "pitch" parameter.
-
-### Velocity in
-
-### Zoom in
+### CV inputs (chance/vel/pitch/zoom in)
+The four CV inputs all work in the same way: the CV signal is added to the relevant potentiometer value. A positive CV signal will increase the value of a given parameter, while a negative signal will reduce it. For instance, if you have the velocity knob set at 50% and a sine wave LFO signal (with a range of -5V to 5V) connected to the "vel in" CV input, the velocity parameter will swing from 0% to 100%. If the CV signal would cause the parameter to go beyond the 0% to 100% range, it is clamped, except for "pitch in" because it's fun to have some extra range and there's no real reason not to. CV signals beyond the range -5V to 5V are clamped.
 
 ### Out 1
+Audio output at 44.1kHz. You can use the menu to adjust which channels are muted for each output, and whether the crush effect is active for each output.
 
 ### Out 2
-
+Second audio output, see above.
 
 ## SD card slot
-
+The micro SD card slot can be used to load samples. There should be a folder called "samples" on the root of the SD card, containing a number of subfolders. Each subfolder is a "kit" (set of four samples), and should contain four WAV files with the filenames "1.wav", "2.wav", "3.wav", and "4.wav". The files must be in WAV format. The files can be stereo, but will be converted to mono when loaded. The sample rate can be 44100Hz, 22050Hz, or 11025Hz (you can use other sample rates, but they will be played back at 44100Hz). The maximum combined audio data size for each kit is 200kB (after any conversion to mono). If you want to use longer samples (for cymbals etc), you can try reducing the sample rate of these files.
 
 ## Display and indicators lights
 
 ### Main display
+The four-digit display is normally used to show which quarter-note of the rhythm is currently being played. Pressing buttons will cause the display to show other relevant information. You can always return to the main display by pressing "back".
 
 ### Error
+The "error" light is lit when there has been some sort of issue, usually related to loading samples from the SD card. The main display will give an error code when something goes wrong (see error code section). The error light will remain lit until the error is no longer actively causing an issue.
 
 ### Pulse
+This light blinks once per quarter note when a rhythm is playing.
 
 ### Clock in
+This blinks every time a clock pulse is received.
 
 ### Clock out
+This blinks every time a clock pulse is sent.
 
 ## Settings (buttons)
 
@@ -133,6 +132,9 @@ CV input for the "pitch" parameter.
 
 
 ## Synchronisation (clock)
+
+
+## Error codes
 
 
 ## Updating firmware
