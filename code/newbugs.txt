@@ -9,6 +9,7 @@ TODO:
 - All chance should be deactivated in step edit mode
 - What happens if you add a hit where there's already a hit?
 - I bet 1/4 time sig does some bad stuff
+- Check all settings work
 
 FUTURE STUFF:
 - Rename "other" to "tom" or "click" or something, or rename all channels CH1, CH2, etc
