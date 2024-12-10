@@ -69,7 +69,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // NB Should probably separate SETTING_ variables from maybe DATA_ or something because they're trying to do two different things
 // menu settings
-#define NUM_MENU_SETTINGS 10
+#define NUM_MENU_SETTINGS 8
 #define SETTING_CLOCK_MODE 0
 #define SETTING_OUTPUT_1 1
 #define SETTING_OUTPUT_2 2
@@ -77,9 +77,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_OUTPUT_PULSE_LENGTH 4
 #define SETTING_OUTPUT_PPQN 5
 #define SETTING_INPUT_PPQN 6
-#define SETTING_PITCH_CURVE 7
-#define SETTING_INPUT_QUANTIZE 8
-#define SETTING_FACTORY_RESET 9
+#define SETTING_FACTORY_RESET 7
 
 // non-menu settings (starting at 32 so as not to accidentally conflict with menu settings)
 #define SETTING_BEAT 32

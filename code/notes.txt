@@ -498,3 +498,6 @@ prevPulseTime - time in samples of the pulse before currentPulseTime, possibly n
 
 6/12/24
 Quick note on the LED display. Two options: keep current solution of female headers, with display standing about 2mm proud of the faceplate, or add a shim underneath, perhaps 3mm, max 5mm, making contact with the plastic corners rather than the pins.
+
+10/12/24
+Have bodged a voltage divider onto one of the prototypes (330k and 100k resistors, giving ~2.8V) to detect when Euro power goes off. With no additional capacitors, I'm getting 13ms before the serial connection dies. Save time looks to be about 30ms.

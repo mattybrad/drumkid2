@@ -1,20 +1,11 @@
 TODO:
-- Default beat (0) should be standard rock beat
-- Pressing "back" when beat stopped (int mode) goes outside bar..?
 - Relaxed pass through the code to add comments while still fresh in head
 - Write manual copy
-- Record demo video
-- Setting for whether to interpolate hits in ext mode
-- Chance < 50% should be deactivated in edit modes
-- All chance should be deactivated in step edit mode
-- What happens if you add a hit where there's already a hit?
-- I bet 1/4 time sig does some bad stuff
-- Check all settings work
+- Create 8 preset kits
 
 FUTURE STUFF:
 - Rename "other" to "tom" or "click" or something, or rename all channels CH1, CH2, etc
 - Allow swung clock output
-- Create 8 preset kits
 - implement groups feature in edit modes
 - Power down detection (voltage divider from 12V supply to GPIO pin with interrupt ideally, 470uF+ capacitor(s) on the 5V supply)
 - Tempo display should average several pulses in ext mode

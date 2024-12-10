@@ -48,6 +48,8 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "sn74165.pio.h"
 
 // globals, organise later
+bool powerOn = true;
+int64_t powerOffTime = 0;
 int64_t currentTime = 0; // samples
 uint16_t pulseStep = 0;
 int numSteps = 4 * SYSTEM_PPQN;
@@ -281,6 +283,7 @@ void doLiveHit(int sampleNum)
     int thisStep = (pulseStep + (samplesSincePulse * SYSTEM_PPQN) / samplesPerPulse) % numSteps;
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
+    beats[beatNum].removeHit(sampleNum, thisStep); // remove existing hit just in case
     beats[beatNum].addHit(sampleNum, thisStep, velocityNoCv >> 4, 255, 0);
 
     // if scheduled hit is in the past, directly trigger sample now
@@ -445,7 +448,7 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 clearError(ERROR_SD_CLOSE);
                 clearError(ERROR_SD_MOUNT);
                 activeButton = NO_ACTIVE_BUTTON;
-                displayPulse(lastStep/SYSTEM_PPQN,0);
+                displayPulse((externalClock||beatPlaying) ? lastStep/SYSTEM_PPQN : 0,0);
             }
             break;
         case BUTTON_KIT:
@@ -500,6 +503,11 @@ void handleButtonChange(int buttonNum, bool buttonState)
                     clearHits(-1);
                 }
                 break;
+            case 20:
+                powerOn = false;
+                powerOffTime = time_us_64();
+                printf("12V power off\n");
+                break;
         }
     }
 }
@@ -550,17 +558,6 @@ void handleSubSettingIncDec(bool isInc)
         syncInPpqnIndex = std::max(0, std::min(NUM_PPQN_VALUES - 1, syncInPpqnIndex));
         syncInPpqn = ppqnValues[syncInPpqnIndex];
         if(externalClock) pulseStep = (pulseStep / (SYSTEM_PPQN / syncInPpqn)) * (SYSTEM_PPQN / syncInPpqn); // quantize pulse step to new PPQN value to prevent annoying phase offset thing
-        break;
-
-    case SETTING_PITCH_CURVE:
-        pitchCurve += thisInc;
-        pitchCurve = std::max(0, std::min(PITCH_CURVE_FORWARDS, pitchCurve));
-        break;
-
-    case SETTING_INPUT_QUANTIZE:
-        inputQuantizeIndex += thisInc;
-        inputQuantizeIndex = std::max(0, std::min(NUM_QUANTIZE_VALUES - 1, inputQuantizeIndex));
-        inputQuantize = quantizeValues[inputQuantizeIndex];
         break;
     }
 }
@@ -782,7 +779,7 @@ void handleYesNo(bool isYes)
                 }
                 displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
             }
-            else if(activeSetting == SETTING_FACTORY_RESET)
+            else if(activeSetting == SETTING_FACTORY_RESET && isYes)
             {
                 activeButton = NO_ACTIVE_BUTTON;
                 settingsMenuLevel = 0;
@@ -1009,7 +1006,7 @@ void displaySettings()
             break;
 
         case SETTING_OUTPUT_PULSE_LENGTH:
-            updateLedDisplayAlpha("plso");
+            updateLedDisplayAlpha("puls");
             break;
 
         case SETTING_OUTPUT_PPQN:
@@ -1018,14 +1015,6 @@ void displaySettings()
 
         case SETTING_INPUT_PPQN:
             updateLedDisplayAlpha("pqni");
-            break;
-
-        case SETTING_PITCH_CURVE:
-            updateLedDisplayAlpha("ptch");
-            break;
-
-        case SETTING_INPUT_QUANTIZE:
-            updateLedDisplayAlpha("qntz");
             break;
 
         case SETTING_FACTORY_RESET:
@@ -1070,19 +1059,6 @@ void displaySettings()
 
         case SETTING_INPUT_PPQN:
             updateLedDisplayInt(ppqnValues[syncInPpqnIndex]);
-            break;
-
-        case SETTING_PITCH_CURVE:
-            if (pitchCurve == PITCH_CURVE_DEFAULT)
-                updateLedDisplayAlpha("dflt");
-            else if (pitchCurve == PITCH_CURVE_LINEAR)
-                updateLedDisplayAlpha("linr");
-            else if (pitchCurve == PITCH_CURVE_FORWARDS)
-                updateLedDisplayAlpha("fwds");
-            break;
-
-        case SETTING_INPUT_QUANTIZE:
-            updateLedDisplayInt(inputQuantize);
             break;
 
         case SETTING_FACTORY_RESET:
@@ -1346,11 +1322,16 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
 
     beatPlaying = false;
+    deltaT = 600000000 / tempo;
 
     // audio buffer loop, runs forever
     int groupStatus[8] = {GROUP_PENDING};
     while (true)
     {
+        if(!powerOn) {
+            int64_t timeSinceOff = time_us_64() - powerOffTime;
+            printf("%llu\n", timeSinceOff);
+        }
         if (!externalClock)
         {
             syncInPpqn = 1;
@@ -2000,8 +1981,6 @@ void loadSettingsFromFlash()
     syncOutPpqn = ppqnValues[syncOutPpqnIndex];
     syncInPpqnIndex = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN);
     syncInPpqn = ppqnValues[syncInPpqnIndex];
-    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
-    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
     beatNum = getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT);
     tempo = getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO);
     deltaT = 600000000 / tempo;
@@ -2034,8 +2013,6 @@ bool checkSettingsChange()
         anyChanged = true;
     if (syncInPpqnIndex != getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_PPQN))
         anyChanged = true;
-    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_PITCH_CURVE);
-    // = getIntFromBuffer(flashData, startPoint + 4 * SETTING_INPUT_QUANTIZE);
     if (beatNum != getIntFromBuffer(flashData, startPoint + 4 * SETTING_BEAT))
         anyChanged = true;
     if (tempo != getIntFromBuffer(flashData, startPoint + 4 * SETTING_TEMPO))
@@ -2062,6 +2039,7 @@ bool checkSettingsChange()
 
 void saveSettingsToFlash()
 {
+    int64_t startTime = time_us_64();
     if (checkSettingsChange())
     {
         uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
@@ -2088,14 +2066,16 @@ void saveSettingsToFlash()
         std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
         std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
         std::memcpy(buffer + 12 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_PITCH_CURVE, &refCheckNum, 4);    // temp
-        std::memcpy(buffer + 12 + 4 * SETTING_INPUT_QUANTIZE, &refCheckNum, 4); // temp
         std::memcpy(buffer + 12 + 4 * SETTING_BEAT, &beatNum, 4);
         std::memcpy(buffer + 12 + 4 * SETTING_TEMPO, &tempo, 4);
         std::memcpy(buffer + 12 + 4 * SETTING_TUPLET, &tuplet, 4);
         std::memcpy(buffer + 12 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
 
         writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+    }
+    int64_t saveTime = time_us_64() - startTime;
+    if(saveTime > 100) {
+        printf("save time = %llu\n", saveTime);
     }
 }
 
