@@ -1,6 +1,7 @@
 TODO:
-- Create 8 preset kits (mainly with toms, especially default kit)
 - Relaxed pass through the code to add comments while still fresh in head
+- Leave room around screw heads on back of top PCB, prevent shorts
+- Choose knobs / rotate pots 90 degs in PCB 2.04
 
 FUTURE STUFF:
 - Some weirdness still when switching from ext to int, perhaps because of using >1 PPQN (uses beats 2,3,4,5 rather than 1,2,3,4!)
