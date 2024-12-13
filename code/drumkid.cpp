@@ -504,9 +504,10 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 }
                 break;
             case 20:
-                powerOn = false;
-                powerOffTime = time_us_64();
-                printf("12V power off\n");
+                // commenting out next few lines because this feature won't be available until PCB 2.04
+                // powerOn = false;
+                // powerOffTime = time_us_64();
+                // printf("12V power off\n");
                 break;
         }
     }
@@ -2041,7 +2042,7 @@ bool checkSettingsChange()
 
 void saveSettingsToFlash()
 {
-    int64_t startTime = time_us_64();
+    // int64_t startTime = time_us_64();
     if (checkSettingsChange())
     {
         uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
@@ -2075,10 +2076,10 @@ void saveSettingsToFlash()
 
         writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
     }
-    int64_t saveTime = time_us_64() - startTime;
-    if(saveTime > 100) {
-        printf("save time = %llu\n", saveTime);
-    }
+    // int64_t saveTime = time_us_64() - startTime;
+    // if(saveTime > 100) {
+    //     printf("save time = %llu\n", saveTime);
+    // }
 }
 
 // Writes a page of data (256 bytes) to a flash address. If the page number is at the start of a sector, that sector is erased first. Function designed to be called several times for consecutive pages, starting at the start of a sector, otherwise data won't be written properly.

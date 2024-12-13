@@ -1,12 +1,10 @@
 TODO:
-- PPQN in needs to be manually reset after switching to ext mode?
-- Write sync section of manual
 - Create 8 preset kits (mainly with toms, especially default kit)
 - Relaxed pass through the code to add comments while still fresh in head
-- Manual needs images
-- Hardwire voltage detector pin to whatever value makes sense (high?) to ensure backward compatibility between prototypes and production versions
 
 FUTURE STUFF:
+- Some weirdness still when switching from ext to int, perhaps because of using >1 PPQN (uses beats 2,3,4,5 rather than 1,2,3,4!)
+- Manual needs images
 - Rename "other" to "tom" or "click" or something, or rename all channels CH1, CH2, etc
 - Allow swung clock output
 - implement groups feature in edit modes

@@ -81,10 +81,10 @@ Similar to the "drop all" knob (see above), but only applies to randomly generat
 Receives a clock input (a series of short pulses) to allow the module to be synchronised to an external signal. More details in the "synchronisation" section.
 
 ### Clock out
-Outputs an adjustable clock signal. More details in the "synchronisation" section.
+Outputs a clock signal (a series of pulses). The number of pulses sent per quarter note (PPQN) can be set in the menu, as can the length of the pulses.
 
 ### Trigger outputs (kick/snare/hat/tom out)
-Each of the four samples has its own trigger output. This outputs a short pulse every time a given sample is played by the module. Note that if you only want to use the trigger output and not generate any audio for a given sample channel, you can disable individual sample audio outputs in the settings menu.
+Each of the four samples has its own trigger output. This outputs a short pulse every time a given sample is played by the module. The pulse length can be adjusted in the settings menu. Note that if you only want to use the trigger output and not generate any audio for a given sample channel, you can disable individual sample audio outputs in the settings menu.
 
 ### CV inputs (chance/vel/pitch/zoom in)
 The four CV inputs all work in the same way: the CV signal is added to the relevant potentiometer value. A positive CV signal will increase the value of a given parameter, while a negative signal will reduce it. For instance, if you have the velocity knob set at 50% and a sine wave LFO signal (with a range of -5V to 5V) connected to the "vel in" CV input, the velocity parameter will swing from 0% to 100%. If the CV signal would cause the parameter to go beyond the 0% to 100% range, it is clamped, except for "pitch in" because it's fun to have some extra range and there's no real reason not to. CV signals beyond the range -5V to 5V are clamped.
@@ -171,10 +171,10 @@ Pressing the "menu" button will enter a mode where you can adjust various settin
 The module can either use its own internal clock or it can be synchronised to an external clock signal. Here's an overview of each mode:
 
 ### Internal clock
-In this mode, you just press "play" to start the beat, which will then play at the current specified tempo until you stop the beat by pressing "play" again. You can set the tempo manually with the "tempo" button or by pressing the "tap" button repeatedly.
+In this mode, you just press "play" to start the beat, which will then play at the current specified tempo until you stop the beat by pressing "play" again. You can set the tempo manually with the "tempo" button or by pressing the "tap" button repeatedly. Since the module can work with very small subdivisions (128th-notes), the ideal situation is to use the internal clock, which will be more precise, although this will depend on your preferred workflow.
 
 ### External clock
-In this mode, 
+In this mode, the next step of the beat will play every time a pulse is received. If you use an input value of 1 PPQN (pulses per quarter note, set in the settings menu), then every pulse received will play the next quarter note in the rhythm. If the rhythm contains hits that need to be triggered in between these pulses (e.g. 8th-notes), the module will attempt to calculate when to do this automatically. In external clock mode, you can reset the rhythm to the beginning of the bar by pressing "play".
 
 ## Error codes
 The error codes below correspond to those that will be shown on the display if something goes wrong, and are included to help identify any potential problems:
