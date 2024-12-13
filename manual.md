@@ -158,19 +158,23 @@ This button exits you from whatever state the display is currently in and return
 
 ### Menu
 Pressing the "menu" button will enter a mode where you can adjust various settings. You can scroll through the different settings using the +/- buttons, then choose a setting to adjust using the "✓" button. Once you have selected a particular setting, you can then adjust/confirm it using the +/-/✓/x buttons, or go back using the "back" button. The following settings can be adjusted from the menu:
-- Clock
-- Out 1
-- Out 2
-- Crush
-- Pulse length
-- PPQN (out)
-- PPQN (in)
-- Pitch
-- Quantise
-- Factory reset
+- Clock (internal or external)
+- Out 1 (activate or deactivate individual channels on output 1)
+- Out 2 (activate or deactivate individual channels on output 1)
+- Crush (choose which outputs use the crush effect)
+- Pulse length (length of sync/trigger output pulses in milliseconds)
+- PPQN out (how many pulses per quarter note are transmitted by the clock output)
+- PPQN in (how many pulses per quarter note are expected by the clock input)
+- Factory reset (resets everything to factory settings - all data will be lost!!)
 
 ## Synchronisation (clock)
-The module can either use its own internal clock or it can be synchronised to an external clock signal. This 
+The module can either use its own internal clock or it can be synchronised to an external clock signal. Here's an overview of each mode:
+
+### Internal clock
+In this mode, you just press "play" to start the beat, which will then play at the current specified tempo until you stop the beat by pressing "play" again. You can set the tempo manually with the "tempo" button or by pressing the "tap" button repeatedly.
+
+### External clock
+In this mode, 
 
 ## Error codes
 The error codes below correspond to those that will be shown on the display if something goes wrong, and are included to help identify any potential problems:

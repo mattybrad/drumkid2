@@ -1,4 +1,5 @@
 TODO:
+- PPQN in needs to be manually reset after switching to ext mode?
 - Write sync section of manual
 - Create 8 preset kits (mainly with toms, especially default kit)
 - Relaxed pass through the code to add comments while still fresh in head

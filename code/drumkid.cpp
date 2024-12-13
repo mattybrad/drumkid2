@@ -1332,8 +1332,10 @@ int main()
             int64_t timeSinceOff = time_us_64() - powerOffTime;
             printf("%llu\n", timeSinceOff);
         }
-        if (!externalClock)
+        if (externalClock)
         {
+            syncInPpqn = ppqnValues[syncInPpqnIndex];
+        } else {
             syncInPpqn = 1;
         }
 
