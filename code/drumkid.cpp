@@ -19,10 +19,10 @@ Aleatoric drum machine
 #include <algorithm>
 
 // Include some stuff for reading/writing SD cards
+#include "hw_config.h"
 #include "f_util.h"
 #include "ff.h"
-#include "rtc.h"
-#include "hw_config.h"
+//#include "rtc.h"
 
 // Include Pico-specific stuff and set up audio
 #include "hardware/clocks.h"
@@ -1267,7 +1267,7 @@ void applyDeadZones(int &param, bool centreDeadZone)
 int main()
 {
     stdio_init_all();
-    time_init();
+    //time_init();
 
     printf("Drumkid V2\n");
 
@@ -1346,6 +1346,7 @@ int main()
         int64_t audioProcessStartTime = time_us_64();
 
         int crush = analogReadings[POT_CRUSH];
+        //printf("%d %d %d %d\n", analogReadings[CV_CHANCE], analogReadings[CV_VELOCITY], analogReadings[CV_PITCH], analogReadings[CV_ZOOM]);
         applyDeadZones(crush, false);
         crush = 4095 - (((4095 - crush) * (4095 - crush)) >> 12);
         crush = crush >> 8;
@@ -1381,17 +1382,18 @@ int main()
             // speed exactly 100%, in deadzone
             pitchInt = 1024;
         }
-        pitchInt += analogReadings[CV_PITCH] - 2048;
+        pitchInt += analogReadings[CV_PITCH] - CV_DEFAULT;
         if (pitchInt == 0)
             pitchInt = 1; // seems sensible, prevents sample getting stuck
 
         Sample::pitch = pitchInt; // temp...
 
-        chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - 2048;
+        chance = analogReadings[POT_CHANCE] + analogReadings[CV_CHANCE] - CV_DEFAULT;
         applyDeadZones(chance, true);
         chance = std::min(4095, chance);
         chance = std::max(0, chance);
-        zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - 2048;
+        printf("chance: %d\n", chance);
+        zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - CV_DEFAULT;
         applyDeadZones(zoom, false);
         zoom = std::min(4095, zoom);
         zoom = std::max(0, zoom);
@@ -1399,7 +1401,7 @@ int main()
         applyDeadZones(cluster, false);
         magnet = analogReadings[POT_MAGNET];
         applyDeadZones(magnet, true);
-        velocity = analogReadings[POT_VELOCITY] + analogReadings[CV_VELOCITY] - 2048;
+        velocity = analogReadings[POT_VELOCITY] + analogReadings[CV_VELOCITY] - CV_DEFAULT;
         applyDeadZones(velocity, false);
         velocity = std::min(4095, velocity);
         velocity = std::max(0, velocity);
@@ -1491,7 +1493,7 @@ int main()
                 if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                     pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
-                    pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
+                    //pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
                 }
                 if((step % SYSTEM_PPQN) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
@@ -1730,7 +1732,8 @@ void loadSamplesFromSD()
             return;
         }
         clearError(ERROR_SD_MISSING);
-        FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+        FATFS fs;
+        FRESULT fr = f_mount(&fs, "", 1);
         if (FR_OK != fr)
         {
             printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
@@ -1862,7 +1865,7 @@ void loadSamplesFromSD()
         {
             printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
         }
-        f_unmount(pSD->pcName);
+        f_unmount("");
     }
     printf("TOTAL SAMPLE SIZE: %d bytes\n", totalSize);
 
@@ -1934,7 +1937,8 @@ void scanSampleFolders()
         return;
     }
     clearError(ERROR_SD_MISSING);
-    FRESULT fr = f_mount(&pSD->fatfs, pSD->pcName, 1);
+    FATFS fs;
+    FRESULT fr = f_mount(&fs, "", 1);
     if (FR_OK != fr)
     {
         printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);

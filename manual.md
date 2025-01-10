@@ -193,6 +193,8 @@ The error codes below correspond to those that will be shown on the display if s
     - Make sure you haven't accidentally exited live edit mode (you will hear a metronome if you are in live edit mode)
 - The timing sounds weird when I'm trying to edit a beat
     - Make sure you're in the correct tuplet mode for what you're trying to do, otherwise the quantisation will be wrong
+- There is a weird click at the end of a sample, or it cuts off too soon
+    - Check the "crop" is set all the way to zero
 
 ## Updating firmware
 If there is a future firmware update (to introduce new features or fix bugs), this can be loaded onto the module by following these steps:

@@ -12,6 +12,7 @@
 #define SAMPLES_PER_BUFFER 256 // was 32 but anything under 256 appears to cause timing issues
 #define MAX_EVENTS 32
 #define DEBOUNCING_CYCLES 30
+#define CV_DEFAULT 2085 // CV reading when disconnected - should probably be calibrated for each CV input on each unit during setup
 
 // pins (updated for PCB 2.02)
 #define MUX_ADDR_A 19

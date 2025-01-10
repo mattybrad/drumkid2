@@ -14,7 +14,6 @@
 ; if no change of the input status occured and otherwise
 ; ("NUM_DEVICES" * 8 * 2) + 6 "SHIFT_CLK" cycles
 ; ------------------------------------------------------------------------
-
 .program sn74165
 
 .define public NUM_DEVICES 3	; count of devices in daisy-chain: 1 ... 4
@@ -33,7 +32,7 @@
 mov y, null						; initialyze y to 0
 in y, 32						; push y into the RX-Fifo
 
-next:
+next_cycle:
 set x, loopctr      			; Preload bit counter
 
 ; Latch pulse. Transfer data from shift register to output buffer
@@ -48,12 +47,12 @@ in null, discardsbits			; Fill unused bits with 0
 ; Has the state of the inputs changed?
 mov x, isr						; Copy isr to x
 jmp x!=y inp_changed			; If state of the inputs has changed, jump to "inp_changed"
-jmp next						; Else, start the next cycle
+jmp next_cycle					; Else, start the next cycle
 
 inp_changed:					; State of the inputs has changed
 mov y, x						; Save current state to y
 push							; Push state into the RX-Fifo
-jmp next						; Start the next cycle
+jmp next_cycle					; Start the next cycle
 
 
 % c-sdk {
