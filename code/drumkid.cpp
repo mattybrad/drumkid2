@@ -504,10 +504,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
                 }
                 break;
             case 20:
-                // commenting out next few lines because this feature won't be available until PCB 2.04
-                // powerOn = false;
-                // powerOffTime = time_us_64();
-                // printf("12V power off\n");
+                powerOn = false;
+                powerOffTime = time_us_64();
+                printf("12V power off\n");
                 break;
         }
     }
@@ -1169,7 +1168,8 @@ int getMagnetZoomValue(int step) {
 int getRandomHitVelocity(int step, int sample) {
     // first draft...
 
-    int thisZoom = zoom  / 456; // gives range from 0 to 8 inclusive
+    //int thisZoom = zoom  / 456; // gives range from 0 to 8 inclusive
+    int thisZoom = zoom / 683 + 3; // gives range from 3 (quarter note) to 8 (128th-note) inclusive
     if(swingMode == SWING_EIGHTH) {
         thisZoom = std::min(thisZoom, 4);
     }
@@ -1269,7 +1269,7 @@ int main()
     stdio_init_all();
     //time_init();
 
-    printf("Drumkid V2\n");
+    printf("Drumkid V2, testing...\n");
 
     // temp, populating magnet curve
     printf("magnet curve:\n");
@@ -1327,12 +1327,8 @@ int main()
 
     // audio buffer loop, runs forever
     int groupStatus[8] = {GROUP_PENDING};
-    while (true)
+    while (powerOn)
     {
-        if(!powerOn) {
-            int64_t timeSinceOff = time_us_64() - powerOffTime;
-            printf("%llu\n", timeSinceOff);
-        }
         if (externalClock)
         {
             syncInPpqn = ppqnValues[syncInPpqnIndex];
@@ -1392,7 +1388,7 @@ int main()
         applyDeadZones(chance, true);
         chance = std::min(4095, chance);
         chance = std::max(0, chance);
-        printf("chance: %d\n", chance);
+        //printf("chance: %d\n", chance);
         zoom = analogReadings[POT_ZOOM] + analogReadings[CV_ZOOM] - CV_DEFAULT;
         applyDeadZones(zoom, false);
         zoom = std::min(4095, zoom);
@@ -1493,7 +1489,7 @@ int main()
                 if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                     pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
-                    //pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
+                    pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
                 }
                 if((step % SYSTEM_PPQN) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
@@ -1683,6 +1679,11 @@ int main()
             }
         }
     }
+    printf("power off, save settings...\n");
+    saveSettingsToFlash();
+    printf("settings saved after power off\n");
+    int64_t timeSinceOff = time_us_64() - powerOffTime;
+    printf("%llu\n", timeSinceOff);
     return 0;
 }
 
