@@ -70,7 +70,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 
 // NB Should probably separate SETTING_ variables from maybe DATA_ or something because they're trying to do two different things
 // menu settings
-#define NUM_MENU_SETTINGS 8
+#define NUM_MENU_SETTINGS 9
 #define SETTING_CLOCK_MODE 0
 #define SETTING_OUTPUT_1 1
 #define SETTING_OUTPUT_2 2
@@ -79,6 +79,17 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_OUTPUT_PPQN 5
 #define SETTING_INPUT_PPQN 6
 #define SETTING_FACTORY_RESET 7
+#define SETTING_QC 8
+
+#define NUM_QC_TESTS 4
+#define QC_LEDS 0
+#define QC_DISPLAY 1
+#define QC_BUTTONS 2
+#define QC_POTS 3
+#define QC_OUTPUTS 4
+#define QC_INPUTS 5
+#define QC_SD 6
+#define QC_AUDIO 7
 
 // non-menu settings (starting at 32 so as not to accidentally conflict with menu settings)
 #define SETTING_BEAT 32
@@ -267,5 +278,7 @@ int64_t eventManager(alarm_id_t id, void *user_data);
 int getMagnetZoomValue(int step);
 void flagError(uint8_t errorNum);
 void clearError(uint8_t errorNum);
+void setupQCPhase();
+void confirmQCPhase();
 
 #endif

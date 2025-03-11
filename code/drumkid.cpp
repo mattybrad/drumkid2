@@ -148,6 +148,10 @@ bool sdSafeLoadTemp = false;
 bool sdShowFolderTemp = false;
 int sampleFolderNum = 0;
 
+bool qcMode = false;
+int qcTestNum = 0;
+int qcTestPhase = 0; // e.g. 0 to 3 for LEDs, 0 to 18 for buttons, etc
+
 repeating_timer_t outputShiftRegistersTimer;
 repeating_timer_t inputShiftRegistersTimer;
 repeating_timer_t multiplexersTimer;
@@ -306,208 +310,216 @@ void doLiveHit(int sampleNum)
 void handleButtonChange(int buttonNum, bool buttonState)
 {
     int i;
-    if (buttonState)
-    {
-        switch (buttonNum)
+    if(qcMode && qcTestNum == QC_BUTTONS) {
+        if(buttonState) {
+            if(buttonNum == qcTestPhase+1) {
+                confirmQCPhase();
+            }
+        }
+    } else {
+        if (buttonState)
         {
-        case BUTTON_START_STOP:
-            if(externalClock) {
-                // reset to start of bar on next hit
-                pulseStep = numSteps - (SYSTEM_PPQN/syncInPpqn);
-                for(int i=0; i<NUM_SAMPLES; i++) {
-                    nextBeatCheckStep[i] = 0;
-                }
-                if(activeButton == NO_ACTIVE_BUTTON) {
-                    displayPulse(0, 0);
-                }
-            } else {
-                numSteps = newNumSteps;
-                if (activeButton == BUTTON_TIME_SIGNATURE) {
-                    displayTimeSignature();
-                }
-                beatPlaying = !beatPlaying;
-                if (beatPlaying)
-                {
-                    // handle beat start
-                    clearError(ERROR_PERFORMANCE);
-                    if (!externalClock)
+            switch (buttonNum)
+            {
+            case BUTTON_START_STOP:
+                if(externalClock) {
+                    // reset to start of bar on next hit
+                    pulseStep = numSteps - (SYSTEM_PPQN/syncInPpqn);
+                    for(int i=0; i<NUM_SAMPLES; i++) {
+                        nextBeatCheckStep[i] = 0;
+                    }
+                    if(activeButton == NO_ACTIVE_BUTTON) {
+                        displayPulse(0, 0);
+                    }
+                } else {
+                    numSteps = newNumSteps;
+                    if (activeButton == BUTTON_TIME_SIGNATURE) {
+                        displayTimeSignature();
+                    }
+                    beatPlaying = !beatPlaying;
+                    if (beatPlaying)
                     {
+                        // handle beat start
+                        clearError(ERROR_PERFORMANCE);
+                        if (!externalClock)
+                        {
+                            pulseStep = 0;
+                            currentPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER;
+                            nextPredictedPulseTime = currentPulseTime + (44100 * deltaT) / (1000000);
+                            for(i=0; i<NUM_SAMPLES; i++) {
+                                nextBeatCheckStep[i] = 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // handle beat stop
                         pulseStep = 0;
-                        currentPulseTime = lastDacUpdateSamples + SAMPLES_PER_BUFFER;
-                        nextPredictedPulseTime = currentPulseTime + (44100 * deltaT) / (1000000);
-                        for(i=0; i<NUM_SAMPLES; i++) {
-                            nextBeatCheckStep[i] = 0;
+                        if (activeButton == BUTTON_TIME_SIGNATURE) {
+                            displayTimeSignature();
+                        } else if(activeButton == NO_ACTIVE_BUTTON) {
+                            displayPulse(0, 0);
                         }
                     }
                 }
-                else
-                {
-                    // handle beat stop
-                    pulseStep = 0;
-                    if (activeButton == BUTTON_TIME_SIGNATURE) {
-                        displayTimeSignature();
-                    } else if(activeButton == NO_ACTIVE_BUTTON) {
-                        displayPulse(0, 0);
-                    }
-                }
-            }
-            break;
-        case BUTTON_MENU:
-            activeButton = BUTTON_MENU;
-            settingsMenuLevel = 0;
-            displaySettings();
-            break;
-        case BUTTON_TAP_TEMPO:
-            activeButton = BUTTON_MANUAL_TEMPO;
-            updateTapTempo();
-            scheduleSaveSettings();
-            break;
-        case BUTTON_LIVE_EDIT:
-            activeButton = BUTTON_LIVE_EDIT;
-            displayPulse(pulseStep / SYSTEM_PPQN, 0);
-            break;
-        case BUTTON_INC:
-            if (activeButton == BUTTON_LIVE_EDIT)
-            {
-                if(bitRead(buttonStableStates, BUTTON_CLEAR)) {
-                    clearHits(0);
-                } else {
-                    doLiveHit(0);
-                }
-            }
-            else
-            {
-                //nextHoldUpdateInc = currentTime + SAMPLE_RATE;
-                holdDelayInc = 8;
-                handleIncDec(true, false);
-            }
-            break;
-        case BUTTON_DEC:
-            if (activeButton == BUTTON_LIVE_EDIT)
-            {
-                if (bitRead(buttonStableStates, BUTTON_CLEAR))
-                {
-                    clearHits(1);
-                }
-                else
-                {
-                    doLiveHit(1);
-                }
-            }
-            else
-            {
-                //nextHoldUpdateDec = currentTime + SAMPLE_RATE;
-                holdDelayDec = 8;
-                handleIncDec(false, false);
-            }
-            break;
-        case BUTTON_CONFIRM:
-            if (activeButton == BUTTON_LIVE_EDIT)
-            {
-                if (bitRead(buttonStableStates, BUTTON_CLEAR))
-                {
-                    clearHits(2);
-                }
-                else
-                {
-                    doLiveHit(2);
-                }
-            }
-            else
-            {
-                handleYesNo(true);
-            }
-            break;
-        case BUTTON_CANCEL:
-            if (activeButton == BUTTON_LIVE_EDIT)
-            {
-                if (bitRead(buttonStableStates, BUTTON_CLEAR))
-                {
-                    clearHits(3);
-                }
-                else
-                {
-                    doLiveHit(3);
-                }
-            }
-            else
-            {
-                handleYesNo(false);
-            }
-            break;
-        case BUTTON_BACK:
-            if (activeButton == BUTTON_MENU && (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2 || activeSetting == SETTING_CRUSH_CHANNEL))
-            {
+                break;
+            case BUTTON_MENU:
+                activeButton = BUTTON_MENU;
                 settingsMenuLevel = 0;
                 displaySettings();
-            } else {
-                // clear almost all errors on pressing back button (but don't clear sample size error because ideally that should be fixed by loading different samples)
-                clearError(ERROR_PERFORMANCE);
-                clearError(ERROR_SD_MISSING);
-                clearError(ERROR_SD_OPEN);
-                clearError(ERROR_SD_CLOSE);
-                clearError(ERROR_SD_MOUNT);
-                activeButton = NO_ACTIVE_BUTTON;
-                displayPulse((externalClock||beatPlaying) ? lastStep/SYSTEM_PPQN : 0,0);
-            }
-            break;
-        case BUTTON_KIT:
-            activeButton = BUTTON_KIT;
-            sdShowFolderTemp = true;
-            break;
-        case BUTTON_MANUAL_TEMPO:
-            activeButton = BUTTON_MANUAL_TEMPO;
-            displayTempo();
-            break;
-        case BUTTON_TIME_SIGNATURE:
-            activeButton = BUTTON_TIME_SIGNATURE;
-            displayTimeSignature();
-            break;
-        case BUTTON_TUPLET:
-            activeButton = BUTTON_TUPLET;
-            displayTuplet();
-            break;
-        case BUTTON_BEAT:
-            activeButton = BUTTON_BEAT;
-            displayBeat();
-            break;
-        case BUTTON_CLEAR:
-            // do nothing until button release
-            specificClearDone = false;
-            break;
-        case BUTTON_STEP_EDIT:
-            if(activeButton == BUTTON_STEP_EDIT) {
-                editSample = (editSample + 1) % 4;
-            }
-            activeButton = BUTTON_STEP_EDIT;
-            displayEditBeat();
-            break;
-        case BUTTON_SAVE:
-            if(activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT) {
-                saveBeatLocation = beatNum;
-                activeButton = BUTTON_SAVE;
-                updateLedDisplayInt(saveBeatLocation);
-            } else {
-                saveSettingsToFlash();
-            }
-            break;
-        default:
-            printf("(button %d not assigned)\n", buttonNum);
-        }
-    } else {
-        switch(buttonNum) {
-            case BUTTON_CLEAR:
-                // when clear button released, if no specific clears have already happened, clear whole beat
-                if ((activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT) && !specificClearDone)
+                break;
+            case BUTTON_TAP_TEMPO:
+                activeButton = BUTTON_MANUAL_TEMPO;
+                updateTapTempo();
+                scheduleSaveSettings();
+                break;
+            case BUTTON_LIVE_EDIT:
+                activeButton = BUTTON_LIVE_EDIT;
+                displayPulse(pulseStep / SYSTEM_PPQN, 0);
+                break;
+            case BUTTON_INC:
+                if (activeButton == BUTTON_LIVE_EDIT)
                 {
-                    clearHits(-1);
+                    if(bitRead(buttonStableStates, BUTTON_CLEAR)) {
+                        clearHits(0);
+                    } else {
+                        doLiveHit(0);
+                    }
+                }
+                else
+                {
+                    //nextHoldUpdateInc = currentTime + SAMPLE_RATE;
+                    holdDelayInc = 8;
+                    handleIncDec(true, false);
                 }
                 break;
-            case 20:
-                powerOn = false;
-                powerOffTime = time_us_64();
-                printf("12V power off\n");
+            case BUTTON_DEC:
+                if (activeButton == BUTTON_LIVE_EDIT)
+                {
+                    if (bitRead(buttonStableStates, BUTTON_CLEAR))
+                    {
+                        clearHits(1);
+                    }
+                    else
+                    {
+                        doLiveHit(1);
+                    }
+                }
+                else
+                {
+                    //nextHoldUpdateDec = currentTime + SAMPLE_RATE;
+                    holdDelayDec = 8;
+                    handleIncDec(false, false);
+                }
                 break;
+            case BUTTON_CONFIRM:
+                if (activeButton == BUTTON_LIVE_EDIT)
+                {
+                    if (bitRead(buttonStableStates, BUTTON_CLEAR))
+                    {
+                        clearHits(2);
+                    }
+                    else
+                    {
+                        doLiveHit(2);
+                    }
+                }
+                else
+                {
+                    handleYesNo(true);
+                }
+                break;
+            case BUTTON_CANCEL:
+                if (activeButton == BUTTON_LIVE_EDIT)
+                {
+                    if (bitRead(buttonStableStates, BUTTON_CLEAR))
+                    {
+                        clearHits(3);
+                    }
+                    else
+                    {
+                        doLiveHit(3);
+                    }
+                }
+                else
+                {
+                    handleYesNo(false);
+                }
+                break;
+            case BUTTON_BACK:
+                if (activeButton == BUTTON_MENU && (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2 || activeSetting == SETTING_CRUSH_CHANNEL))
+                {
+                    settingsMenuLevel = 0;
+                    displaySettings();
+                } else {
+                    // clear almost all errors on pressing back button (but don't clear sample size error because ideally that should be fixed by loading different samples)
+                    clearError(ERROR_PERFORMANCE);
+                    clearError(ERROR_SD_MISSING);
+                    clearError(ERROR_SD_OPEN);
+                    clearError(ERROR_SD_CLOSE);
+                    clearError(ERROR_SD_MOUNT);
+                    activeButton = NO_ACTIVE_BUTTON;
+                    displayPulse((externalClock||beatPlaying) ? lastStep/SYSTEM_PPQN : 0,0);
+                }
+                break;
+            case BUTTON_KIT:
+                activeButton = BUTTON_KIT;
+                sdShowFolderTemp = true;
+                break;
+            case BUTTON_MANUAL_TEMPO:
+                activeButton = BUTTON_MANUAL_TEMPO;
+                displayTempo();
+                break;
+            case BUTTON_TIME_SIGNATURE:
+                activeButton = BUTTON_TIME_SIGNATURE;
+                displayTimeSignature();
+                break;
+            case BUTTON_TUPLET:
+                activeButton = BUTTON_TUPLET;
+                displayTuplet();
+                break;
+            case BUTTON_BEAT:
+                activeButton = BUTTON_BEAT;
+                displayBeat();
+                break;
+            case BUTTON_CLEAR:
+                // do nothing until button release
+                specificClearDone = false;
+                break;
+            case BUTTON_STEP_EDIT:
+                if(activeButton == BUTTON_STEP_EDIT) {
+                    editSample = (editSample + 1) % 4;
+                }
+                activeButton = BUTTON_STEP_EDIT;
+                displayEditBeat();
+                break;
+            case BUTTON_SAVE:
+                if(activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT) {
+                    saveBeatLocation = beatNum;
+                    activeButton = BUTTON_SAVE;
+                    updateLedDisplayInt(saveBeatLocation);
+                } else {
+                    saveSettingsToFlash();
+                }
+                break;
+            default:
+                printf("(button %d not assigned)\n", buttonNum);
+            }
+        } else {
+            switch(buttonNum) {
+                case BUTTON_CLEAR:
+                    // when clear button released, if no specific clears have already happened, clear whole beat
+                    if ((activeButton == BUTTON_STEP_EDIT || activeButton == BUTTON_LIVE_EDIT) && !specificClearDone)
+                    {
+                        clearHits(-1);
+                    }
+                    break;
+                case 20:
+                    powerOn = false;
+                    powerOffTime = time_us_64();
+                    printf("12V power off\n");
+                    break;
+            }
         }
     }
 }
@@ -707,105 +719,196 @@ void handleIncDec(bool isInc, bool isHold)
     scheduleSaveSettings();
 }
 
+void setupQCPhase() {
+    int i;
+    switch(qcTestNum) {
+        case QC_LEDS:
+            for(i=0;i<4;i++) {
+                setLed(i, i==qcTestPhase);
+            }
+            break;
+
+        case QC_DISPLAY:
+            for (i = 0; i < 4; i++)
+            {
+                sevenSegData[i] = 0;
+                if(qcTestPhase < 8) {
+                    bitWrite(sevenSegData[i], qcTestPhase, true);
+                } else if(i == qcTestPhase%8) {
+                    sevenSegData[i] = 255;
+                }
+            }
+            break;
+
+        case QC_BUTTONS:
+            updateLedDisplayInt(qcTestPhase+1);
+            sevenSegData[0] = sevenSegAsciiCharacters[98];
+            break;
+
+        case QC_POTS:
+            if(qcTestPhase == 0) updateLedDisplayAlpha("low");
+            else if(qcTestPhase == 1) updateLedDisplayAlpha("mid");
+            else if(qcTestPhase == 2) updateLedDisplayAlpha("high");
+            break;
+
+    }
+}
+
+int qcPhasesPerTest[NUM_QC_TESTS] = {4,12,19,3};
+void confirmQCPhase() {
+    bool passTest = true;
+    if(qcTestNum == QC_POTS) {
+        for(int i=0; i<12; i++) {
+            if(qcTestPhase == 0) {
+                if(analogReadings[i] >= 20) {
+                    passTest = false;
+                }
+            } else if(qcTestPhase == 1) {
+                if (analogReadings[i] >= 2048+250 || analogReadings[i] <= 2048-250)
+                {
+                    passTest = false;
+                }
+            } else if(qcTestPhase == 2) {
+                if(analogReadings[i] <= 4095-20) {
+                    passTest = false;
+                }
+            }
+        }
+    }
+
+    if(passTest) {
+        qcTestPhase ++;
+        if(qcTestPhase >= qcPhasesPerTest[qcTestNum]) {
+            qcTestPhase = 0;
+            qcTestNum ++;
+            if(qcTestNum == NUM_QC_TESTS) {
+                // QC passed!
+                qcMode = false;
+                updateLedDisplayAlpha("pass");
+            } else {
+                setupQCPhase();
+            }
+        } else {
+            setupQCPhase();
+        }
+    } else {
+        updateLedDisplayAlpha("fail");
+    }
+}
+
 void handleYesNo(bool isYes)
 {
-    // have to declare stuff up here because of switch statement
-    int hitNum;
-    int velocityNoCv;
-
-    bool useDefaultNoBehaviour = true;
-    switch (activeButton)
-    {
-    case BUTTON_MANUAL_TEMPO:
-        useDefaultNoBehaviour = false;
-        if (!externalClock)
-        {
-            tempo += isYes ? 1 : -1;
-            if (tempo > 99999)
-                tempo = 99999;
-            else if (tempo < 100)
-                tempo = 100;
-            deltaT = 600000000 / tempo;
-            displayTempo();
+    if(qcMode) {
+        if(qcMode != QC_BUTTONS) {
+            confirmQCPhase();
         }
-        break;
-    case BUTTON_KIT:
-        if (isYes)
-            sdSafeLoadTemp = true;
-        break;
-
-    case BUTTON_STEP_EDIT:
-        useDefaultNoBehaviour = false;
-
-        if (bitRead(buttonStableStates, BUTTON_CLEAR))
+    } else {
+        // have to declare stuff up here because of switch statement
+        int hitNum;
+        int velocityNoCv;
+    
+        bool useDefaultNoBehaviour = true;
+        switch (activeButton)
         {
-            clearHits(isYes ? 2 : 3);
-        }
-        else
-        {
-            hitNum = beats[beatNum].getHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
-            if (hitNum >= 0)
+        case BUTTON_MANUAL_TEMPO:
+            useDefaultNoBehaviour = false;
+            if (!externalClock)
             {
-                // remove existing hit, whether or not we want to add a new one
-                beats[beatNum].removeHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
+                tempo += isYes ? 1 : -1;
+                if (tempo > 99999)
+                    tempo = 99999;
+                else if (tempo < 100)
+                    tempo = 100;
+                deltaT = 600000000 / tempo;
+                displayTempo();
             }
+            break;
+        case BUTTON_KIT:
             if (isYes)
+                sdSafeLoadTemp = true;
+            break;
+    
+        case BUTTON_STEP_EDIT:
+            useDefaultNoBehaviour = false;
+    
+            if (bitRead(buttonStableStates, BUTTON_CLEAR))
             {
-                velocityNoCv = analogReadings[POT_VELOCITY];
-                applyDeadZones(velocityNoCv, false);
-                beats[beatNum].addHit(editSample, editStep * tupletEditStepMultipliers[tuplet], velocityNoCv >> 4, 255, 0);
-            }
-            displayEditBeat();
-        }
-        break;
-
-    case BUTTON_MENU:
-        if (settingsMenuLevel == 0 && isYes)
-            settingsMenuLevel = 1;
-        else if (settingsMenuLevel == 1)
-        {
-            // handle new chosen option
-
-            if (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2)
-            {
-                useDefaultNoBehaviour = false;
-                if (activeSetting == SETTING_OUTPUT_1)
-                {
-                    samples[outputSample].output1 = isYes;
-                }
-                else
-                {
-                    samples[outputSample].output2 = isYes;
-                }
-                displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
-            }
-            else if(activeSetting == SETTING_FACTORY_RESET && isYes)
-            {
-                activeButton = NO_ACTIVE_BUTTON;
-                settingsMenuLevel = 0;
-                doFactoryResetSafe = true;
+                clearHits(isYes ? 2 : 3);
             }
             else
             {
-                settingsMenuLevel = 0;
+                hitNum = beats[beatNum].getHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
+                if (hitNum >= 0)
+                {
+                    // remove existing hit, whether or not we want to add a new one
+                    beats[beatNum].removeHit(editSample, editStep * tupletEditStepMultipliers[tuplet]);
+                }
+                if (isYes)
+                {
+                    velocityNoCv = analogReadings[POT_VELOCITY];
+                    applyDeadZones(velocityNoCv, false);
+                    beats[beatNum].addHit(editSample, editStep * tupletEditStepMultipliers[tuplet], velocityNoCv >> 4, 255, 0);
+                }
+                displayEditBeat();
             }
+            break;
+    
+        case BUTTON_MENU:
+            if (activeSetting == SETTING_QC && isYes)
+            {
+                qcMode = true;
+                if(qcTestNum == 0 && qcTestPhase == 0) {
+                    setupQCPhase();
+                }
+            }
+            else if (settingsMenuLevel == 0 && isYes)
+                settingsMenuLevel = 1;
+            else if (settingsMenuLevel == 1)
+            {
+                // handle new chosen option
+    
+                if (activeSetting == SETTING_OUTPUT_1 || activeSetting == SETTING_OUTPUT_2)
+                {
+                    useDefaultNoBehaviour = false;
+                    if (activeSetting == SETTING_OUTPUT_1)
+                    {
+                        samples[outputSample].output1 = isYes;
+                    }
+                    else
+                    {
+                        samples[outputSample].output2 = isYes;
+                    }
+                    displayOutput(activeSetting == SETTING_OUTPUT_1 ? 1 : 2);
+                }
+                else if(activeSetting == SETTING_FACTORY_RESET && isYes)
+                {
+                    activeButton = NO_ACTIVE_BUTTON;
+                    settingsMenuLevel = 0;
+                    doFactoryResetSafe = true;
+                }
+                else
+                {
+                    settingsMenuLevel = 0;
+                }
+            }
+            displaySettings();
+            break;
+    
+        case BUTTON_SAVE:
+            if (isYes)
+                saveAllBeats();
+            activeButton = NO_ACTIVE_BUTTON;
+            break;
         }
-        displaySettings();
-        break;
+        if (!isYes && useDefaultNoBehaviour)
+        {
+            activeButton = NO_ACTIVE_BUTTON;
+            //bitWrite(singleLedData, 3, false); // clear error LED
+            setLed(3, false);
+        }
+        scheduleSaveSettings();
+    }
 
-    case BUTTON_SAVE:
-        if (isYes)
-            saveAllBeats();
-        activeButton = NO_ACTIVE_BUTTON;
-        break;
-    }
-    if (!isYes && useDefaultNoBehaviour)
-    {
-        activeButton = NO_ACTIVE_BUTTON;
-        //bitWrite(singleLedData, 3, false); // clear error LED
-        setLed(3, false);
-    }
-    scheduleSaveSettings();
 }
 
 alarm_id_t saveSettingsAlarm = 0;
@@ -1020,6 +1123,10 @@ void displaySettings()
         case SETTING_FACTORY_RESET:
             updateLedDisplayAlpha("rset");
             break;
+
+        case SETTING_QC:
+            updateLedDisplayAlpha("qc");
+            break;
         }
     }
     else if (settingsMenuLevel == 1)
@@ -1228,16 +1335,17 @@ bool updateLedDisplay(repeating_timer_t *rt)
 }
 
 bool updateHold(repeating_timer_t *rt) {
-    //printf("inc button: %d\n", bitRead(buttonStableStates, BUTTON_INC) ? 1 : 0);
-    if(holdDelayInc > 0) {
-        holdDelayInc --;
-    } else if(bitRead(buttonStableStates, BUTTON_INC)) {
-        handleIncDec(true, true);
-    }
-    if(holdDelayDec > 0) {
-        holdDelayDec --;
-    } else if(bitRead(buttonStableStates, BUTTON_DEC)) {
-        handleIncDec(false, true);
+    if(!qcMode) {
+        if(holdDelayInc > 0) {
+            holdDelayInc --;
+        } else if(bitRead(buttonStableStates, BUTTON_INC)) {
+            handleIncDec(true, true);
+        }
+        if(holdDelayDec > 0) {
+            holdDelayDec --;
+        } else if(bitRead(buttonStableStates, BUTTON_DEC)) {
+            handleIncDec(false, true);
+        }
     }
     return true;
 }
@@ -1329,6 +1437,7 @@ int main()
     int groupStatus[8] = {GROUP_PENDING};
     while (powerOn)
     {
+
         if (externalClock)
         {
             syncInPpqn = ppqnValues[syncInPpqnIndex];
@@ -1679,7 +1788,7 @@ int main()
             }
         }
     }
-    printf("power off, save settings...\n");
+    //printf("power off, save settings...\n");
     saveSettingsToFlash();
     printf("settings saved after power off\n");
     int64_t timeSinceOff = time_us_64() - powerOffTime;
