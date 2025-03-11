@@ -81,15 +81,14 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_FACTORY_RESET 7
 #define SETTING_QC 8
 
-#define NUM_QC_TESTS 4
+#define NUM_QC_TESTS 5
 #define QC_LEDS 0
 #define QC_DISPLAY 1
 #define QC_BUTTONS 2
 #define QC_POTS 3
 #define QC_OUTPUTS 4
-#define QC_INPUTS 5
-#define QC_SD 6
-#define QC_AUDIO 7
+#define QC_SD 5
+#define QC_AUDIO 6
 
 // non-menu settings (starting at 32 so as not to accidentally conflict with menu settings)
 #define SETTING_BEAT 32
@@ -279,6 +278,6 @@ int getMagnetZoomValue(int step);
 void flagError(uint8_t errorNum);
 void clearError(uint8_t errorNum);
 void setupQCPhase();
-void confirmQCPhase();
+void confirmQCPhase(bool skipTest);
 
 #endif

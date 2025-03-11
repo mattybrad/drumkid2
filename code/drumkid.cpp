@@ -313,7 +313,9 @@ void handleButtonChange(int buttonNum, bool buttonState)
     if(qcMode && qcTestNum == QC_BUTTONS) {
         if(buttonState) {
             if(buttonNum == qcTestPhase+1) {
-                confirmQCPhase();
+                confirmQCPhase(false);
+            } else if(buttonNum == BUTTON_CANCEL) {
+                confirmQCPhase(true);
             }
         }
     } else {
@@ -751,12 +753,28 @@ void setupQCPhase() {
             else if(qcTestPhase == 2) updateLedDisplayAlpha("high");
             break;
 
+        case QC_OUTPUTS:
+            gpio_put(SYNC_OUT, false);
+            for(i=0; i<4; i++) {
+                gpio_put(TRIGGER_OUT_PINS[i], false);
+            }
+            if(qcTestPhase < 4) {
+                gpio_put(TRIGGER_OUT_PINS[qcTestPhase], true);
+            } else {
+                gpio_put(SYNC_OUT, true);
+            }
+            break;
+
+        case QC_SD:
+            break;
+
     }
 }
 
-int qcPhasesPerTest[NUM_QC_TESTS] = {4,12,19,3};
-void confirmQCPhase() {
-    bool passTest = true;
+int qcPhasesPerTest[NUM_QC_TESTS] = {4,12,19,3,5};
+void confirmQCPhase(bool skipTest) {
+    bool passTest = true; // for automated checks/readings
+
     if(qcTestNum == QC_POTS) {
         for(int i=0; i<12; i++) {
             if(qcTestPhase == 0) {
@@ -776,7 +794,19 @@ void confirmQCPhase() {
         }
     }
 
-    if(passTest) {
+    if(qcTestNum == QC_OUTPUTS) {
+        for(int i=0; i<4; i++) {
+            int targetValue = (qcTestPhase == i) ? 4095 : 2048;
+            if (analogReadings[12+i] >= targetValue + 250 || analogReadings[12+i] <= targetValue - 250)
+            {
+                passTest = false;
+            }
+        }
+        bool targetClockIn = (qcTestPhase == 4) ? false : true;
+        if(gpio_get(SYNC_IN) != targetClockIn) passTest = false;
+    }
+
+    if(passTest || skipTest) {
         qcTestPhase ++;
         if(qcTestPhase >= qcPhasesPerTest[qcTestNum]) {
             qcTestPhase = 0;
@@ -800,7 +830,7 @@ void handleYesNo(bool isYes)
 {
     if(qcMode) {
         if(qcMode != QC_BUTTONS) {
-            confirmQCPhase();
+            confirmQCPhase(!isYes);
         }
     } else {
         // have to declare stuff up here because of switch statement
