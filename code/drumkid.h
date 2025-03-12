@@ -81,20 +81,22 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_FACTORY_RESET 7
 #define SETTING_QC 8
 
-#define NUM_QC_TESTS 5
-#define QC_LEDS 0
-#define QC_DISPLAY 1
-#define QC_BUTTONS 2
-#define QC_POTS 3
-#define QC_OUTPUTS 4
-#define QC_SD 5
-#define QC_AUDIO 6
-
 // non-menu settings (starting at 32 so as not to accidentally conflict with menu settings)
 #define SETTING_BEAT 32
 #define SETTING_TEMPO 33
 #define SETTING_TUPLET 34
 #define SETTING_TIME_SIG 35
+// max value for a setting is 47
+
+#define NUM_QC_TESTS 6
+#define QC_POWEROFF 0
+#define QC_LEDS 1
+#define QC_DISPLAY 2
+#define QC_BUTTONS 3
+#define QC_POTS 4
+#define QC_OUTPUTS 5
+#define QC_SD 6
+#define QC_AUDIO 7
 
 #define CRUSH_CHANNEL_BOTH 0
 #define CRUSH_CHANNEL_1 1
@@ -159,11 +161,13 @@ const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
 const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
 #define CHECK_NUM 1234267
 #define RESET_NUM 153956
+#define POWEROFF_NUM 314159
 #define DATA_CHECK 0
 #define SAMPLE_START_POINTS 4
 #define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
 #define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
 int currentSettingsSector = -1; // -1 means invalid, set when reading flash for first time after boot
+#define SETTINGS_BEGIN_HERE 64
 
 // Beat variables
 #define MAX_TAPS 8

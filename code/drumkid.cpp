@@ -49,6 +49,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 
 // globals, organise later
 bool powerOn = true;
+int32_t prevPowerOffCheck = 0;
 int64_t powerOffTime = 0;
 int64_t currentTime = 0; // samples
 uint16_t pulseStep = 0;
@@ -149,8 +150,10 @@ bool sdShowFolderTemp = false;
 int sampleFolderNum = 0;
 
 bool qcMode = false;
+bool qcRunSinceBoot = false;
 int qcTestNum = 0;
 int qcTestPhase = 0; // e.g. 0 to 3 for LEDs, 0 to 18 for buttons, etc
+int qcPhasesPerTest[NUM_QC_TESTS];
 
 repeating_timer_t outputShiftRegistersTimer;
 repeating_timer_t inputShiftRegistersTimer;
@@ -723,8 +726,20 @@ void handleIncDec(bool isInc, bool isHold)
 
 void setupQCPhase() {
     int i;
+    if(qcTestNum == QC_LEDS+1 && qcTestPhase == 0) {
+        for (i = 0; i < 4; i++)
+        {
+            setLed(i, false);
+        }
+    }
     switch(qcTestNum) {
+        case QC_POWEROFF:
+            updateLedDisplayAlpha("pwr?");
+            break;
+
         case QC_LEDS:
+            updateLedDisplayInt(qcTestPhase);
+            sevenSegData[0] = sevenSegAsciiCharacters[108];
             for(i=0;i<4;i++) {
                 setLed(i, i==qcTestPhase);
             }
@@ -754,6 +769,7 @@ void setupQCPhase() {
             break;
 
         case QC_OUTPUTS:
+            updateLedDisplayInt(qcTestPhase);
             gpio_put(SYNC_OUT, false);
             for(i=0; i<4; i++) {
                 gpio_put(TRIGGER_OUT_PINS[i], false);
@@ -771,9 +787,14 @@ void setupQCPhase() {
     }
 }
 
-int qcPhasesPerTest[NUM_QC_TESTS] = {4,12,19,3,5};
 void confirmQCPhase(bool skipTest) {
     bool passTest = true; // for automated checks/readings
+
+    if(qcTestNum == QC_POWEROFF) {
+        if(prevPowerOffCheck != POWEROFF_NUM) {
+            passTest = false;
+        }
+    }
 
     if(qcTestNum == QC_POTS) {
         for(int i=0; i<12; i++) {
@@ -887,6 +908,7 @@ void handleYesNo(bool isYes)
             if (activeSetting == SETTING_QC && isYes)
             {
                 qcMode = true;
+                qcRunSinceBoot = true;
                 if(qcTestNum == 0 && qcTestPhase == 0) {
                     setupQCPhase();
                 }
@@ -921,7 +943,7 @@ void handleYesNo(bool isYes)
                     settingsMenuLevel = 0;
                 }
             }
-            displaySettings();
+            if(!qcMode) displaySettings();
             break;
     
         case BUTTON_SAVE:
@@ -1407,7 +1429,15 @@ int main()
     stdio_init_all();
     //time_init();
 
-    printf("Drumkid V2, testing...\n");
+    printf("Drumkid Eurorack by Bradshaw Instruments\n");
+
+    qcPhasesPerTest[QC_POWEROFF] = 1;
+    qcPhasesPerTest[QC_LEDS] = 4;
+    qcPhasesPerTest[QC_DISPLAY] = 12;
+    qcPhasesPerTest[QC_BUTTONS] = 19;
+    qcPhasesPerTest[QC_POTS] = 3;
+    qcPhasesPerTest[QC_OUTPUTS] = 5;
+    //qcPhasesPerTest[QC_SD] = 1;
 
     // temp, populating magnet curve
     printf("magnet curve:\n");
@@ -1820,9 +1850,9 @@ int main()
     }
     //printf("power off, save settings...\n");
     saveSettingsToFlash();
-    printf("settings saved after power off\n");
-    int64_t timeSinceOff = time_us_64() - powerOffTime;
-    printf("%llu\n", timeSinceOff);
+    //printf("settings saved after power off\n");
+    //int64_t timeSinceOff = time_us_64() - powerOffTime;
+    //printf("%llu\n", timeSinceOff);
     return 0;
 }
 
@@ -2118,7 +2148,7 @@ void scanSampleFolders()
 void loadSettingsFromFlash()
 {
     printf("load settings from sector %d\n", currentSettingsSector);
-    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 12;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + SETTINGS_BEGIN_HERE;
     externalClock = getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE);
     crushChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_CRUSH_CHANNEL);
     crush1 = !bitRead(crushChannel, 1);
@@ -2142,13 +2172,14 @@ void loadSettingsFromFlash()
         samples[i].output1 = bitRead(output1Loaded, i);
         samples[i].output2 = bitRead(output2Loaded, i);
     }
+    prevPowerOffCheck = getIntFromBuffer(flashData, FLASH_SECTOR_SIZE * currentSettingsSector + 12);
 }
 
 bool checkSettingsChange()
 {
     //printf("checking settings changes...\n");
     bool anyChanged = false;
-    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + 12;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + SETTINGS_BEGIN_HERE;
 
     if (externalClock != getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE))
         anyChanged = true;
@@ -2187,7 +2218,7 @@ bool checkSettingsChange()
 void saveSettingsToFlash()
 {
     // int64_t startTime = time_us_64();
-    if (checkSettingsChange())
+    if (!powerOn || checkSettingsChange())
     {
         uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
         uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
@@ -2206,17 +2237,26 @@ void saveSettingsToFlash()
         }
         std::memcpy(buffer, &refCheckNum, 4);
         std::memcpy(buffer + 4, &saveNum, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_BEAT, &beatNum, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_TEMPO, &tempo, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_TUPLET, &tuplet, 4);
-        std::memcpy(buffer + 12 + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+        
+        // add autosave stuff here
+        if(powerOn) {
+            std::memcpy(buffer + 12, &prevPowerOffCheck, 4);
+        } else {
+            int32_t refPowerOffCode = POWEROFF_NUM;
+            std::memcpy(buffer + 12, &refPowerOffCode, 4);
+        }
+
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_BEAT, &beatNum, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_TEMPO, &tempo, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_TUPLET, &tuplet, 4);
+        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
 
         writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
     }
@@ -2301,6 +2341,7 @@ void wipeFlash(bool flagReset) {
     std::memcpy(dataBuffer, &refCheckNum, 4); // copy check number
     std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
     std::memcpy(dataBuffer + 8, &refFactoryReset, 4); // copy factory reset flag
+    std::memcpy(dataBuffer + 12, &refZero, 4); // power-off code for QC
     writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
     currentSettingsSector = 0;
 }

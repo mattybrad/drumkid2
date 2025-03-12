@@ -506,3 +506,18 @@ NO apparently that isn't that case - all of this is coming from ChatGPT so who k
 
 10/1/25
 Finalised firmware and create an "official" V1.0 release on Github. Sent prototype units to testers. Found a problem with one unit, which I've kept for myself - the clock out pulse seems to somehow destabilise the DAC and cause 4ms silences. Could be to do with the way I've only used one half of the TL072, or could be something even weirder. Have just finished fighting with my computer to get Drumkid running on the Pico 2, seems to work fine for now, though some issues with the ADC reading a bit high for the CV inputs (which should be 2048 at rest but actually more like 2090). Leaving the project for a bit now while I wait for feedback from testers.
+
+11/3/25
+PCB V2.04 works well. Big capacitor works as expected, provides ~120ms of power, comfortably enough to save the data on power off. Just tweaking the firmware before sending out the first production units. Adding QC, which works well. Tweaking the memory layout, now as follows:
+
+0 to 63: Settings sectors, all settings fit on first page of a sector, moving to a new sector each time for wear levelling.
+64: User beats
+127: Audio metadata (sample lengths, positions, rates, etc)
+128 to 255: Audio data
+
+And here's the breakdown of a settings page, in terms of byte addresses:
+0: Check number (32-bit int)
+4: Incremental write number, total number of writes since factory reset
+8: Factory reset code (32-bit int), only exists when a factory reset is done
+12: Power-off code (32-bit int), only set when power turns off, checked during QC
+64, 68, 72, 76, etc: one 4-byte (32-bit) slot per setting, max 48 settings ((256-64)/4)
