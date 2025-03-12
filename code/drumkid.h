@@ -88,7 +88,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define SETTING_TIME_SIG 35
 // max value for a setting is 47
 
-#define NUM_QC_TESTS 6
+#define NUM_QC_TESTS 8
 #define QC_POWEROFF 0
 #define QC_LEDS 1
 #define QC_DISPLAY 2
@@ -151,7 +151,7 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 // flash data storage
 #define FLASH_SETTINGS_START 0
 #define FLASH_SETTINGS_END 63
-#define FLASH_DATA_ADDRESS (1024 * 1024)
+#define FLASH_DATA_ADDRESS (1024 * 1024) // start data after 1MB (max program size) leaving 3MB of flash for settings etc
 #define FLASH_USER_BEATS_ADDRESS (FLASH_DATA_ADDRESS + 64 * FLASH_SECTOR_SIZE)
 #define FLASH_AUDIO_METADATA_ADDRESS (FLASH_DATA_ADDRESS + 127 * FLASH_SECTOR_SIZE)
 #define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 128 * FLASH_SECTOR_SIZE)
@@ -171,7 +171,8 @@ int currentSettingsSector = -1; // -1 means invalid, set when reading flash for 
 
 // Beat variables
 #define MAX_TAPS 8
-#define NUM_BEATS 24
+#define NUM_PRESET_BEATS 24
+#define NUM_USER_BEATS 128
 #define SYSTEM_PPQN 3360                                    // lowest common multiple of 32, 24, 15, and 28 (the highest PPQN values used for the various tuplet modes) - currently unused, really just an aspiration to use a less stupid timing system than the current horrible one
 int tempo = 1200;                                       // 10xBPM
 uint32_t SAMPLE_RATE = 44100;

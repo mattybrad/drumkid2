@@ -521,3 +521,6 @@ And here's the breakdown of a settings page, in terms of byte addresses:
 8: Factory reset code (32-bit int), only exists when a factory reset is done
 12: Power-off code (32-bit int), only set when power turns off, checked during QC
 64, 68, 72, 76, etc: one 4-byte (32-bit) slot per setting, max 48 settings ((256-64)/4)
+
+12/3/25
+Okay final final push. Last "feature" that I think should definitely be on there. There is now double the RAM, so have upped the max sample storage to 460kB, but that's still only a fraction of the flash (3MB available now after leaving space for the program), so can store the default samples in flash as a backup (as well as the current kit). Want to be able to do factory reset without an SD card and go back to the default kit.

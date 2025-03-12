@@ -2,7 +2,7 @@
 #define CONSTANTS_H
 
 #define NUM_SAMPLES 4
-#define MAX_SAMPLE_STORAGE 100000 // limited by RAM, unlikely to get more than 100,000 samples
+#define MAX_SAMPLE_STORAGE 230000 // limited by RAM, 520kB total, ~60kB used by program, 460kB available for samples => 230,000 samples (16-bit)
 #define QUARTER_NOTE_STEPS 3360
 #define QUARTER_NOTE_STEPS_SEQUENCEABLE 8
 #define MAX_TIME_SIGNATURE 8

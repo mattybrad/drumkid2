@@ -770,6 +770,7 @@ void setupQCPhase() {
 
         case QC_OUTPUTS:
             updateLedDisplayInt(qcTestPhase);
+            sevenSegData[0] = sevenSegAsciiCharacters[99];
             gpio_put(SYNC_OUT, false);
             for(i=0; i<4; i++) {
                 gpio_put(TRIGGER_OUT_PINS[i], false);
@@ -782,6 +783,14 @@ void setupQCPhase() {
             break;
 
         case QC_SD:
+            updateLedDisplayAlpha("sd?");
+            break;
+
+        case QC_AUDIO:
+            if (qcTestPhase == 0)
+                updateLedDisplayAlpha("au1?");
+            else
+                updateLedDisplayAlpha("au2?");
             break;
 
     }
@@ -827,6 +836,13 @@ void confirmQCPhase(bool skipTest) {
         if(gpio_get(SYNC_IN) != targetClockIn) passTest = false;
     }
 
+    if(qcTestNum == QC_SD) {
+        if(samples[0].length != 20405) passTest = false;
+        if(samples[1].length != 7644) passTest = false;
+        if(samples[2].length != 4109) passTest = false;
+        if(samples[3].length != 17133) passTest = false;
+    }
+
     if(passTest || skipTest) {
         qcTestPhase ++;
         if(qcTestPhase >= qcPhasesPerTest[qcTestNum]) {
@@ -844,6 +860,7 @@ void confirmQCPhase(bool skipTest) {
         }
     } else {
         updateLedDisplayAlpha("fail");
+        qcMode = false;
     }
 }
 
@@ -1437,7 +1454,8 @@ int main()
     qcPhasesPerTest[QC_BUTTONS] = 19;
     qcPhasesPerTest[QC_POTS] = 3;
     qcPhasesPerTest[QC_OUTPUTS] = 5;
-    //qcPhasesPerTest[QC_SD] = 1;
+    qcPhasesPerTest[QC_SD] = 1;
+    qcPhasesPerTest[QC_AUDIO] = 2;
 
     // temp, populating magnet curve
     printf("magnet curve:\n");
@@ -1788,6 +1806,12 @@ int main()
             else
                 bufferSamples[i + 1] = out2 >> 2;
 
+            if(qcMode) {
+                if(qcTestNum == QC_AUDIO) {
+                    bufferSamples[i] = (qcTestPhase == 0) ? (rand() % 65536) - 32768 : 0;
+                    bufferSamples[i + 1] = (qcTestPhase == 1) ? (rand() % 65536) - 32768 : 0;
+                }
+            }
             currentTime++;
         }
 
@@ -2374,62 +2398,6 @@ void checkFlashStatus()
             factoryResetCodeFound = true;
         }
     }
-    // if (!foundValidSector || doFactoryReset)
-    // {
-    //     // no valid sectors, which means the flash needs to be initialised:
-    //     uint8_t dataBuffer[FLASH_PAGE_SIZE] = {0};
-
-    //     // overwrite previous data with zeros
-    //     for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
-    //         for(int j=0; j<FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE; j++) {
-    //             writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE + i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
-    //         }
-    //     }
-
-    //     int32_t refCheckNum = CHECK_NUM;
-    //     std::memcpy(dataBuffer, &refCheckNum, 4); // copy check number
-    //     int32_t refZero = 0;
-    //     std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
-    //     writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
-    //     currentSettingsSector = 0;
-
-    //     // create dummy noise samples (as emergency fallback in case SD card not present on reset)
-    //     uint8_t audioBuffer[FLASH_PAGE_SIZE];
-    //     uint32_t dummySampleLength = 1024;
-    //     uint32_t dummySampleRate = 44100;
-    //     for (int i = 0; i < NUM_SAMPLES; i++)
-    //     {
-    //         uint32_t dummySampleStart = i * dummySampleLength * 2; // *2 for 16-bit
-    //         std::memcpy(audioBuffer + SAMPLE_START_POINTS + 4 * i, &dummySampleStart, 4);
-    //         std::memcpy(audioBuffer + SAMPLE_LENGTHS + 4 * i, &dummySampleLength, 4);
-    //         std::memcpy(audioBuffer + SAMPLE_RATES + 4 * i, &dummySampleRate, 4);
-    //     }
-    //     writePageToFlash(audioBuffer, FLASH_AUDIO_METADATA_ADDRESS);
-
-    //     // fill audio buffer with random noise (for emergency fallback samples)
-    //     for (int i = 0; i < dummySampleLength * 2 * NUM_SAMPLES; i += FLASH_PAGE_SIZE)
-    //     {
-    //         for (int j = 0; j < FLASH_PAGE_SIZE; j++)
-    //         {
-    //             audioBuffer[j] = rand() % 256; // random byte
-    //         }
-    //         writePageToFlash(audioBuffer, FLASH_AUDIO_ADDRESS + i);
-    //     }
-
-    //     // load first sample folder if available
-    //     scanSampleFolders();
-    //     loadSamplesFromSD();
-
-    //     // TO DO: reset all (RAM) settings to default before saving to flash, otherwise factory reset is meaningless
-    //     saveSettingsToFlash(); // save current (default) settings to flash
-    //     loadDefaultBeats(); // load default beats into RAM
-    //     saveBeatLocation = beatNum; // prevents weird behaviour
-    //     saveAllBeats(); // save current (default) beats to flash
-    // }
-    // else
-    // {
-    //     currentSettingsSector = mostRecentValidSector;
-    // }
 }
 
 void loadSamplesFromFlash()
