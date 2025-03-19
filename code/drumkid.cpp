@@ -42,6 +42,7 @@ bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, "I2S DIN", PICO_AUDIO_I2S_C
 #include "Sample.h"
 #include "Beat.h"
 #include "defaultbeats.h"
+#include "defaultsamples.h"
 #include "sevensegcharacters.h"
 #include "drumkid.h"
 #include "sn74595.pio.h"
@@ -649,8 +650,8 @@ void handleIncDec(bool isInc, bool isHold)
     case BUTTON_BEAT:
         prevBeatNum = beatNum;
         beatNum += isInc ? 1 : -1;
-        if (beatNum >= NUM_BEATS)
-            beatNum = NUM_BEATS - 1;
+        if (beatNum >= NUM_USER_BEATS)
+            beatNum = NUM_USER_BEATS - 1;
         if (beatNum < 0)
             beatNum = 0;
         if (beatNum != prevBeatNum)
@@ -694,8 +695,8 @@ void handleIncDec(bool isInc, bool isHold)
         saveBeatLocation += isInc ? 1 : -1;
         if (saveBeatLocation < 0)
             saveBeatLocation = 0;
-        if (saveBeatLocation >= NUM_BEATS)
-            saveBeatLocation = NUM_BEATS - 1;
+        if (saveBeatLocation >= NUM_USER_BEATS)
+            saveBeatLocation = NUM_USER_BEATS - 1;
         updateLedDisplayInt(saveBeatLocation);
         break;
 
@@ -1478,14 +1479,16 @@ int main()
         loadDefaultBeats();
         saveAllBeats();
         saveSettingsToFlash();
-        scanSampleFolders();
-        loadSamplesFromSD();
+        //scanSampleFolders();
+        //loadSamplesFromSD();
+        loadDefaultSamples();
     } else if(factoryResetCodeFound) {
         loadDefaultBeats();
         saveAllBeats();
         saveSettingsToFlash();
-        scanSampleFolders();
-        loadSamplesFromSD();
+        //scanSampleFolders();
+        //loadSamplesFromSD();
+        loadDefaultSamples();
     } else {
         loadSettingsFromFlash();
         loadSamplesFromFlash();
@@ -1903,6 +1906,19 @@ void clearError(uint8_t errorNum) {
     bitWrite(errorStatuses, errorNum, false);
     if(errorStatuses == 0) {
         setLed(3, false);
+    }
+}
+
+void loadDefaultSamples() {
+    int sampleDataPos = 0;
+    for (int n = 0; n < NUM_SAMPLES; n++)
+    {
+        samples[n].length = 4109;
+        samples[n].startPosition = n * 4109;
+        for(int i=0; i<4109; i++) {
+            Sample::sampleData[sampleDataPos] = defaultKick[i];
+            sampleDataPos ++;
+        }
     }
 }
 
@@ -2333,7 +2349,7 @@ void saveAllBeats() {
     int pageNum = 0;
     int structSize = sizeof(Beat::Hit);
     assert(structSize <= 8); // otherwise data won't fit
-    for(int i=0; i<NUM_BEATS; i++) {
+    for(int i=0; i<NUM_USER_BEATS; i++) {
         for(int j=0; j<MAX_BEAT_HITS; j++) {
             std::memcpy(buffer + bufferIndex, &(beats[i].hits[j]), structSize);
             bufferIndex += 8;
@@ -2452,7 +2468,7 @@ void loadBeatsFromFlash()
     int structSize = sizeof(Beat::Hit);
     assert(structSize <= 8);
     uint8_t tempBuffer[8] = {0};
-    for (int i = 0; i < NUM_BEATS; i++)
+    for (int i = 0; i < NUM_USER_BEATS; i++)
     {
         for(int j=0; j<MAX_BEAT_HITS; j++) {
             std::memcpy(&beats[i].hits[j], &flashUserBeats[(i*MAX_BEAT_HITS + j) * 8], structSize);

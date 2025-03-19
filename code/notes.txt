@@ -510,6 +510,7 @@ Finalised firmware and create an "official" V1.0 release on Github. Sent prototy
 11/3/25
 PCB V2.04 works well. Big capacitor works as expected, provides ~120ms of power, comfortably enough to save the data on power off. Just tweaking the firmware before sending out the first production units. Adding QC, which works well. Tweaking the memory layout, now as follows:
 
+Total available sectors: 768 (1024 total, starting at 256 to leave room for code)
 0 to 63: Settings sectors, all settings fit on first page of a sector, moving to a new sector each time for wear levelling.
 64: User beats
 127: Audio metadata (sample lengths, positions, rates, etc)
@@ -523,4 +524,12 @@ And here's the breakdown of a settings page, in terms of byte addresses:
 64, 68, 72, 76, etc: one 4-byte (32-bit) slot per setting, max 48 settings ((256-64)/4)
 
 12/3/25
-Okay final final push. Last "feature" that I think should definitely be on there. There is now double the RAM, so have upped the max sample storage to 460kB, but that's still only a fraction of the flash (3MB available now after leaving space for the program), so can store the default samples in flash as a backup (as well as the current kit). Want to be able to do factory reset without an SD card and go back to the default kit.
+Okay final final push. Here's the list of final features to add, in order of how important they are:
+- More beat slots, probably blank
+- Keep factory reset and QC hidden in normal menu
+- Emergency sample backup in flash
+- Crop control is clicky, add fade if possible
+- Metronome off option
+- Setting for which channels are affected by pitch control
+- Drop rand should probably also affect negative hits
+- Play/stop symbols on panel

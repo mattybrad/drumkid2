@@ -1,0 +1,6 @@
+This document contains the canonical layout of data in the Pico's flash memory for Drumkid Eurorack. The code must follow this layout.
+
+The Pico 2 (RP2350) contains 4MB of flash, broken into 1024 sectors of 4096 bytes each. Each sector contains 16 pages of 256 bytes. The flash memory is used to store the program itself, all user settings (spread over many sectors to reduce wear), user beats, and the current set of audio samples.
+
+From    To      Description
+0       255     Program (1MB max)
