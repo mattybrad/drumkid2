@@ -2,5 +2,21 @@ This document contains the canonical layout of data in the Pico's flash memory f
 
 The Pico 2 (RP2350) contains 4MB of flash, broken into 1024 sectors of 4096 bytes each. Each sector contains 16 pages of 256 bytes. The flash memory is used to store the program itself, all user settings (spread over many sectors to reduce wear), user beats, and the current set of audio samples.
 
+Sector usage:
+
 From    To      Description
-0       255     Program (1MB max)
+0       255     Program (1MB max, probably overkill, drumkid.bin is 286kB today)
+256     319     Settings, updated on a 64-sector cycle to reduce wear
+320     383     User beats (1024 bytes per beat, theoretical max 256 beats)
+384     384     Audio metadata
+385     1023    Audio sample data
+
+The settings sector is incremented on each save (loops back after 64 sectors). Currently only the first page of a sector is required/used. A settings sector/page contains a series of up to 64 32-bit (4-byte) values and is laid out like this:
+
+Index   Byte    Description
+0       0       Check number, to check that flash sector is valid
+1       4       Incremental write number, total writes since factory reset
+2       8       Factory reset code, only exists when a factory reset is done
+3       12      Power-off code, only set when power turns off, checked during QC
+4-15    16-63   Unused/reserved
+16-63   64-255  Settings

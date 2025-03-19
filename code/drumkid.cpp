@@ -1913,10 +1913,11 @@ void loadDefaultSamples() {
     int sampleDataPos = 0;
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
-        samples[n].length = 4109;
-        samples[n].startPosition = n * 4109;
-        for(int i=0; i<4109; i++) {
-            Sample::sampleData[sampleDataPos] = defaultKick[i];
+        samples[n].length = defaultSampleSizes[n];
+        samples[n].startPosition = sampleDataPos;
+        for (int i = 0; i < defaultSampleSizes[n]; i++)
+        {
+            Sample::sampleData[sampleDataPos] = defaultSamples[n][i];
             sampleDataPos ++;
         }
     }
