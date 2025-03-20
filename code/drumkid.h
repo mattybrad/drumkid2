@@ -149,25 +149,36 @@ const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
 #define ANALOG_EFFECTIVE_RANGE (ANALOG_DEAD_ZONE_UPPER - ANALOG_DEAD_ZONE_LOWER)
 
 // flash data storage
-#define FLASH_SETTINGS_START 0
+#define FLASH_SECTOR_SETTINGS_START 256
+#define FLASH_SECTOR_SETTINGS_END 319
+#define FLASH_SECTOR_BEATS_START 320
+#define FLASH_SECTOR_BEATS_END 383
+#define FLASH_SECTOR_AUDIO_METADATA 384
+#define FLASH_SECTOR_AUDIO_DATA_START 385
+#define FLASH_SECTOR_AUDIO_DATA_END 1023
+
+/*#define FLASH_SETTINGS_START 0
 #define FLASH_SETTINGS_END 63
 #define FLASH_DATA_ADDRESS (1024 * 1024) // start data after 1MB (max program size) leaving 3MB of flash for settings etc
 #define FLASH_USER_BEATS_ADDRESS (FLASH_DATA_ADDRESS + 64 * FLASH_SECTOR_SIZE)
 #define FLASH_AUDIO_METADATA_ADDRESS (FLASH_DATA_ADDRESS + 127 * FLASH_SECTOR_SIZE)
-#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 128 * FLASH_SECTOR_SIZE)
-const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_DATA_ADDRESS);
-const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_USER_BEATS_ADDRESS);
-const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_ADDRESS);
-const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_AUDIO_METADATA_ADDRESS);
+#define FLASH_AUDIO_ADDRESS (FLASH_DATA_ADDRESS + 128 * FLASH_SECTOR_SIZE)*/
+const uint8_t *flashData = (const uint8_t *)(XIP_BASE + FLASH_SECTOR_SETTINGS_START * FLASH_SECTOR_SIZE);
+const uint8_t *flashUserBeats = (const uint8_t *)(XIP_BASE + FLASH_SECTOR_BEATS_START * FLASH_SECTOR_SIZE);
+const uint8_t *flashAudio = (const uint8_t *)(XIP_BASE + FLASH_SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE);
+const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE);
 #define CHECK_NUM 1234267
 #define RESET_NUM 153956
 #define POWEROFF_NUM 314159
-#define DATA_CHECK 0
-#define SAMPLE_START_POINTS 4
-#define SAMPLE_LENGTHS (SAMPLE_START_POINTS + 8 * 4)
-#define SAMPLE_RATES (SAMPLE_LENGTHS + 8 * 4)
+#define ADDRESS_SAMPLE_START_POINTS 4
+#define ADDRESS_SAMPLE_LENGTHS (ADDRESS_SAMPLE_START_POINTS + 8 * 4)
+#define ADDRESS_SAMPLE_RATES (ADDRESS_SAMPLE_LENGTHS + 8 * 4)
 int currentSettingsSector = -1; // -1 means invalid, set when reading flash for first time after boot
-#define SETTINGS_BEGIN_HERE 64
+#define ADDRESS_DATA_CHECK 0
+#define ADDRESS_INCREMENTAL_NUM 4
+#define ADDRESS_RESET_CODE 8
+#define ADDRESS_POWER_OFF_CODE 12
+#define ADDRESS_SETTINGS_BEGIN_HERE 64
 
 // Beat variables
 #define MAX_TAPS 8

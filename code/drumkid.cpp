@@ -1447,6 +1447,10 @@ int main()
     stdio_init_all();
     //time_init();
 
+    //wipeFlash(true);
+    //bool tempCheck = checkSettingsChange();
+    //printf("maybe now?%d\n", tempCheck);
+
     printf("Drumkid Eurorack by Bradshaw Instruments\n");
 
     qcPhasesPerTest[QC_POWEROFF] = 1;
@@ -1915,12 +1919,34 @@ void loadDefaultSamples() {
     {
         samples[n].length = defaultSampleSizes[n];
         samples[n].startPosition = sampleDataPos;
+        samples[n].sampleRate = 44100;
         for (int i = 0; i < defaultSampleSizes[n]; i++)
         {
             Sample::sampleData[sampleDataPos] = defaultSamples[n][i];
             sampleDataPos ++;
         }
     }
+    // copy sample data from RAM to flash
+    uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
+    for(int i=0; i<=sampleDataPos*2; i+=FLASH_PAGE_SIZE) {
+        printf("default sample copy page %d\n", i);
+        std::memcpy(sampleDataBuffer, &Sample::sampleData[i/2], FLASH_PAGE_SIZE);
+        writePageToFlash(sampleDataBuffer, FLASH_SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE + i);
+    }
+
+    // and the metadata
+    uint8_t metadataBuffer[FLASH_PAGE_SIZE] = {0};
+
+    for (int n = 0; n < NUM_SAMPLES; n++)
+    {
+        uint thisRef;
+        thisRef = samples[n].startPosition * 2; // 16-bit to 8-bit
+        std::memcpy(metadataBuffer + ADDRESS_SAMPLE_START_POINTS + n * 4, &thisRef, 4);
+        thisRef = samples[n].length * 2; // 16-bit to 8-bit
+        std::memcpy(metadataBuffer + ADDRESS_SAMPLE_LENGTHS + n * 4, &thisRef, 4);
+        std::memcpy(metadataBuffer + ADDRESS_SAMPLE_RATES + n * 4, &samples[n].sampleRate, 4);
+    }
+    writePageToFlash(metadataBuffer, FLASH_SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE);
 }
 
 void loadSamplesFromSD()
@@ -2030,7 +2056,7 @@ void loadSamplesFromSD()
                     {
                         if(!isStereo) {
                             // mono
-                            writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                            writePageToFlash(sampleDataBuffer, FLASH_SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE + pageNum * FLASH_PAGE_SIZE);
                             pageNum++;
                         } else {
                             // stereo
@@ -2052,7 +2078,7 @@ void loadSamplesFromSD()
                                     int16_t thisSampleMono = (thisSampleLeft>>1) + (thisSampleRight>>1);
                                     std::memcpy(&sampleDataBuffer[i], &thisSampleMono, 2);
                                 }
-                                writePageToFlash(sampleDataBuffer, FLASH_AUDIO_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                                writePageToFlash(sampleDataBuffer, FLASH_SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE + pageNum * FLASH_PAGE_SIZE);
                                 pageNum ++;
                             }
                             useSecondBuffer = !useSecondBuffer;
@@ -2093,11 +2119,11 @@ void loadSamplesFromSD()
 
         for (int n = 0; n < NUM_SAMPLES; n++)
         {
-            std::memcpy(metadataBuffer + SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
-            std::memcpy(metadataBuffer + SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
-            std::memcpy(metadataBuffer + SAMPLE_RATES + n * 4, &sampleRates[n], 4);
+            std::memcpy(metadataBuffer + ADDRESS_SAMPLE_START_POINTS + n * 4, &sampleStartPoints[n], 4);
+            std::memcpy(metadataBuffer + ADDRESS_SAMPLE_LENGTHS + n * 4, &sampleLengths[n], 4);
+            std::memcpy(metadataBuffer + ADDRESS_SAMPLE_RATES + n * 4, &sampleRates[n], 4);
         }
-        writePageToFlash(metadataBuffer, FLASH_AUDIO_METADATA_ADDRESS);
+        writePageToFlash(metadataBuffer, FLASH_SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE);
 
         loadSamplesFromFlash();
     }
@@ -2189,7 +2215,7 @@ void scanSampleFolders()
 void loadSettingsFromFlash()
 {
     printf("load settings from sector %d\n", currentSettingsSector);
-    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + SETTINGS_BEGIN_HERE;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + ADDRESS_SETTINGS_BEGIN_HERE;
     externalClock = getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE);
     crushChannel = getIntFromBuffer(flashData, startPoint + 4 * SETTING_CRUSH_CHANNEL);
     crush1 = !bitRead(crushChannel, 1);
@@ -2220,7 +2246,7 @@ bool checkSettingsChange()
 {
     //printf("checking settings changes...\n");
     bool anyChanged = false;
-    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + SETTINGS_BEGIN_HERE;
+    int startPoint = FLASH_SECTOR_SIZE * currentSettingsSector + ADDRESS_SETTINGS_BEGIN_HERE;
 
     if (externalClock != getBoolFromBuffer(flashData, startPoint + 4 * SETTING_CLOCK_MODE))
         anyChanged = true;
@@ -2261,8 +2287,8 @@ void saveSettingsToFlash()
     // int64_t startTime = time_us_64();
     if (!powerOn || checkSettingsChange())
     {
-        uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + 4) + 1;
-        uint saveSector = (currentSettingsSector + 1) % 64; // temp, 64 should be properly defined somewhere
+        uint saveNum = getIntFromBuffer(flashData, currentSettingsSector * FLASH_SECTOR_SIZE + ADDRESS_INCREMENTAL_NUM) + 1;
+        uint saveSector = (currentSettingsSector + 1) % (FLASH_SECTOR_SETTINGS_END - FLASH_SECTOR_SETTINGS_START + 1); // loops after 64 currently, i.e. difference between start and end points, plus 1 because fenceposts
         currentSettingsSector = saveSector;
         printf("save settings to sector %d\n", currentSettingsSector);
 
@@ -2277,29 +2303,29 @@ void saveSettingsToFlash()
             bitWrite(refOutput2, i, samples[i].output2);
         }
         std::memcpy(buffer, &refCheckNum, 4);
-        std::memcpy(buffer + 4, &saveNum, 4);
+        std::memcpy(buffer + ADDRESS_INCREMENTAL_NUM, &saveNum, 4);
         
         // add autosave stuff here
         if(powerOn) {
-            std::memcpy(buffer + 12, &prevPowerOffCheck, 4);
+            std::memcpy(buffer + ADDRESS_POWER_OFF_CODE, &prevPowerOffCheck, 4);
         } else {
             int32_t refPowerOffCode = POWEROFF_NUM;
-            std::memcpy(buffer + 12, &refPowerOffCode, 4);
+            std::memcpy(buffer + ADDRESS_POWER_OFF_CODE, &refPowerOffCode, 4);
         }
 
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_BEAT, &beatNum, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_TEMPO, &tempo, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_TUPLET, &tuplet, 4);
-        std::memcpy(buffer + SETTINGS_BEGIN_HERE + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_CLOCK_MODE, &refExternalClock, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_1, &refOutput1, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_2, &refOutput2, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_CRUSH_CHANNEL, &crushChannel, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_PULSE_LENGTH, &outputPulseLength, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_OUTPUT_PPQN, &syncOutPpqnIndex, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_INPUT_PPQN, &syncInPpqnIndex, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_BEAT, &beatNum, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_TEMPO, &tempo, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_TUPLET, &tuplet, 4);
+        std::memcpy(buffer + ADDRESS_SETTINGS_BEGIN_HERE + 4 * SETTING_TIME_SIG, &newNumSteps, 4);
 
-        writePageToFlash(buffer, FLASH_DATA_ADDRESS + saveSector * FLASH_SECTOR_SIZE);
+        writePageToFlash(buffer, (FLASH_SECTOR_SETTINGS_START + saveSector) * FLASH_SECTOR_SIZE);
     }
     // int64_t saveTime = time_us_64() - startTime;
     // if(saveTime > 100) {
@@ -2355,7 +2381,7 @@ void saveAllBeats() {
             std::memcpy(buffer + bufferIndex, &(beats[i].hits[j]), structSize);
             bufferIndex += 8;
             if(bufferIndex == FLASH_PAGE_SIZE) {
-                writePageToFlash(buffer, FLASH_USER_BEATS_ADDRESS + pageNum * FLASH_PAGE_SIZE);
+                writePageToFlash(buffer, FLASH_SECTOR_BEATS_START * FLASH_SECTOR_SIZE + pageNum * FLASH_PAGE_SIZE);
                 bufferIndex = 0;
                 pageNum ++;
                 for(int k=0; k<FLASH_PAGE_SIZE; k++) {
@@ -2369,10 +2395,10 @@ void saveAllBeats() {
 void wipeFlash(bool flagReset) {
     uint8_t dataBuffer[FLASH_PAGE_SIZE] = {0};
 
-    // overwrite previous data with zeros
-    for(int i=FLASH_SETTINGS_START; i<=FLASH_SETTINGS_END; i++) {
+    // overwrite previous settings data with zeros
+    for(int i=FLASH_SECTOR_SETTINGS_START; i<=FLASH_SECTOR_SETTINGS_END; i++) {
         for(int j=0; j<FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE; j++) {
-            writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE + i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
+            writePageToFlash(dataBuffer, i * FLASH_SECTOR_SIZE + j * FLASH_PAGE_SIZE);
         }
     }
 
@@ -2383,7 +2409,7 @@ void wipeFlash(bool flagReset) {
     std::memcpy(dataBuffer + 4, &refZero, 4); // copy number zero, the incremental write number for wear levelling
     std::memcpy(dataBuffer + 8, &refFactoryReset, 4); // copy factory reset flag
     std::memcpy(dataBuffer + 12, &refZero, 4); // power-off code for QC
-    writePageToFlash(dataBuffer, FLASH_DATA_ADDRESS + FLASH_SETTINGS_START * FLASH_SECTOR_SIZE);
+    writePageToFlash(dataBuffer, FLASH_SECTOR_SETTINGS_START * FLASH_SECTOR_SIZE);
     currentSettingsSector = 0;
 }
 
@@ -2393,14 +2419,14 @@ void checkFlashStatus()
     bool foundValidSector = false;
     int mostRecentValidSector = 0;
     int highestWriteNum = 0;
-    for (int i = FLASH_SETTINGS_START; i <= FLASH_SETTINGS_END; i++)
+    for (int i = 0; i <= FLASH_SECTOR_SETTINGS_END-FLASH_SECTOR_SETTINGS_START; i++)
     {
-        int testInt = getIntFromBuffer(flashData + i * FLASH_SECTOR_SIZE, DATA_CHECK);
+        int testInt = getIntFromBuffer(flashData + i * FLASH_SECTOR_SIZE, ADDRESS_DATA_CHECK);
         //testInt = 9999; // temp, force initialisation
         if (testInt == CHECK_NUM)
         {
             foundValidSector = true;
-            int writeNum = getIntFromBuffer(flashData + i * FLASH_SECTOR_SIZE, 4);
+            int writeNum = getIntFromBuffer(flashData + i * FLASH_SECTOR_SIZE, ADDRESS_INCREMENTAL_NUM);
             if (writeNum >= highestWriteNum)
             {
                 highestWriteNum = writeNum;
@@ -2410,7 +2436,7 @@ void checkFlashStatus()
     }
     if(foundValidSector) {
         currentSettingsSector = mostRecentValidSector;
-        int thisResetCode = getIntFromBuffer(flashData + currentSettingsSector * FLASH_SECTOR_SIZE, 8);
+        int thisResetCode = getIntFromBuffer(flashData + currentSettingsSector * FLASH_SECTOR_SIZE, ADDRESS_RESET_CODE);
         if(thisResetCode == RESET_NUM) {
             factoryResetCodeFound = true;
         }
@@ -2423,9 +2449,9 @@ void loadSamplesFromFlash()
     int storageOverflow = false;
     for (int n = 0; n < NUM_SAMPLES; n++)
     {
-        uint sampleStart = getIntFromBuffer(flashAudioMetadata, SAMPLE_START_POINTS + n * 4);
-        uint sampleLength = getIntFromBuffer(flashAudioMetadata, SAMPLE_LENGTHS + n * 4);
-        uint sampleRate = getIntFromBuffer(flashAudioMetadata, SAMPLE_RATES + n * 4);
+        uint sampleStart = getIntFromBuffer(flashAudioMetadata, ADDRESS_SAMPLE_START_POINTS + n * 4);
+        uint sampleLength = getIntFromBuffer(flashAudioMetadata, ADDRESS_SAMPLE_LENGTHS + n * 4);
+        uint sampleRate = getIntFromBuffer(flashAudioMetadata, ADDRESS_SAMPLE_RATES + n * 4);
         printf("start %d, length %d\n", sampleStart, sampleLength);
 
         samples[n].length = sampleLength / 2; // divide by 2 to go from 8-bit to 16-bit
