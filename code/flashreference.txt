@@ -20,3 +20,10 @@ Index   Byte    Description
 3       12      Power-off code, only set when power turns off, checked during QC
 4-15    16-63   Unused/reserved
 16-63   64-255  Settings
+
+Audio metadata is saved in its own sector (for simplicity and historical reasons). It is laid out like so:
+
+Index   Byte    Description
+0-7     0-31    Sample start points (up to 8 samples, only 4 used right now)
+8-15    32-63   Sample lengths (up to 8 samples, only 4 used right now)
+16-23   64-95   Sample rates (up to 8 samples, only 4 used right now)

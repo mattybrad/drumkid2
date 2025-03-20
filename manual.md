@@ -15,7 +15,7 @@ The easiest way to start with Drumkid is to play a simple beat without any rando
 1. Connect a patch lead to "out 1" so you can hear the output
 2. Set the knobs as follows:
     - Chance 50%
-    - Zoom 50%
+    - Zoom 0%
     - Vel 100%
     - Vel range 0%
     - Cluster 0%
@@ -27,7 +27,7 @@ The easiest way to start with Drumkid is to play a simple beat without any rando
     - Drop rand 50%
     - Drop all 50%
 3. Press "Play"
-4. Select a preset beat by pressing "beat", then using the +/- buttons
+4. Select a preset beat by pressing "beat", then using the +/- buttons (beat #2 is a good starting point)
 5. Slowly decrease the "chance" knob to zero and notice how the beat is gradually silenced as the probability of each hit happening is reduced
 6. Slowly increase the "chance" knob back to 50% and beyond. As you increase past 50%, notice how more and more random hits are added to the beat, until at 100% you hear every sample being triggered over and over (100% probability). 
 7. Set the "chance" back to around 2 o'clock (75%), so you can hear that the full original beat plus some random hits, and now try adjusting the "zoom" knob. As you increase the zoom, the beat will become busier as hits are triggered at smaller note values (8th-notes, 16th-notes, 32nd-notes, etc). These first two knobs, chance and zoom, are the heart of the machine, and I would recommend playing around with them for a while to get a feel of how they affect the beat.
@@ -43,7 +43,7 @@ The easiest way to start with Drumkid is to play a simple beat without any rando
 Determines the chance/probability of a hit occurring on a given step. At 0%, no hits will be generated. At 50%, all hits from the programmed rhythm will be heard (but nothing else). At 100%, every possible hit will be generated.
 
 ### Zoom
-Determines which steps of the rhythm are eligible to have extra random hits. At 0%, no extra hits will be generated. As you increase the zoom knob, you introduce the possibility of hits on the first beat of the bar (whole notes), then half notes, quarter notes, eighth notes, etc, all the way until 128th notes. Note that these values will be different if the tuplet mode is anything other than "straight" (e.g. triplet).
+Determines which steps of the rhythm are eligible to have extra random hits. At 0%, hits will only be generated on quarter notes. As you increase the zoom knob, you introduce the possibility of hits on 8th notes, 16th notes, 32nd notes, etc, all the way until 128th notes. Note that these values will be different if the tuplet mode is anything other than "straight" (e.g. triplet).
 
 ### Cluster
 Similar to the "chance" parameter, but designed to create repeated hits or rolls. If a random hit was generated on the most recent eligible step, "cluster" is the probability of another hit being generated on this step (unless "chance" is higher). For instance, if chance is set quite low, only occasionally generating hits, and then cluster is set to 90%, you will get occasional but quite long series of repeated hits. If you set cluster to 100%, you will keep hearing repeated hits continually.

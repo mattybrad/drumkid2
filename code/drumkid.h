@@ -170,7 +170,7 @@ const uint8_t *flashAudioMetadata = (const uint8_t *)(XIP_BASE + FLASH_SECTOR_AU
 #define CHECK_NUM 1234267
 #define RESET_NUM 153956
 #define POWEROFF_NUM 314159
-#define ADDRESS_SAMPLE_START_POINTS 4
+#define ADDRESS_SAMPLE_START_POINTS 0
 #define ADDRESS_SAMPLE_LENGTHS (ADDRESS_SAMPLE_START_POINTS + 8 * 4)
 #define ADDRESS_SAMPLE_RATES (ADDRESS_SAMPLE_LENGTHS + 8 * 4)
 int currentSettingsSector = -1; // -1 means invalid, set when reading flash for first time after boot
