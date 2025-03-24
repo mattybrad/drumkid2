@@ -8,6 +8,8 @@ You start with a pre-programmed rhythm using four samples, then manipulate this 
 
 This manual consists of a tutorial to guide you through the basic workflow of the module, followed by a detailed description of each parameter or feature. I have also included some information on how to hack/modify the firmware code or even the hardware.
 
+For help with any aspect of Drumkid, you can join the Bradshaw Instruments discord server here: [https://bradshawinstruments.com/discord](https://bradshawinstruments.com/discord)
+
 ## Tutorial
 
 The easiest way to start with Drumkid is to play a simple beat without any random additions, then gradually add random elements to get a feel for how the module's algorithm works.
@@ -255,3 +257,5 @@ Drumkid is a hackable project - it is designed so that anyone with the right ski
 The easiest way to start modifying this module is by editing the C++ code and uploading your own custom firmware. I won't describe in detail how to write/build in C++ for the Pico, since there are many guides available on the web. For reference, I use Visual Studio Code on Windows, with an official Raspberry Pi debug probe for uploading code and debugging. If you don't require debugging capabilities, you could instead make your code edits, build a new .uf2 file and upload it via USB as described in the "updating firmware" section of this manual.
 
 If you want to try hacking/modifying the hardware, take a look at the Kicad project relating to your PCB version (printed on the PCB).
+
+If you have any questions about modifying the firmware or hardware, there is a Discord server here: [https://bradshawinstruments.com/discord](https://bradshawinstruments.com/discord)
