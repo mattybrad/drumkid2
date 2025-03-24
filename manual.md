@@ -258,4 +258,4 @@ The easiest way to start modifying this module is by editing the C++ code and up
 
 If you want to try hacking/modifying the hardware, take a look at the Kicad project relating to your PCB version (printed on the PCB).
 
-If you have any questions about modifying the firmware or hardware, there is a Discord server here: [https://bradshawinstruments.com/discord](https://bradshawinstruments.com/discord)
+If you have any questions about modifying the firmware or hardware,  there is a Discord server here: [https://bradshawinstruments.com/discord](https://bradshawinstruments.com/discord)
