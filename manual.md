@@ -2,11 +2,11 @@
 
 ## Introduction
 
-Drumkid is a drum machine module which uses random numbers to create unpredictable rhythms. Essentially, you start with a standard drum beat and then use Drumkid"s knobs to adjust how much randomness to add.
+Drumkid is a drum machine module which uses random numbers to create unpredictable rhythms. Essentially, you start with a standard drum beat and then use Drumkid's knobs to adjust how much randomness to add.
 
 You start with a pre-programmed rhythm using four samples, then manipulate this rhythm using the knobs and control voltage (CV) inputs to add hits to (or remove hits from) the original rhythm.
 
-This manual consists of a tutorial to guide you through the basic workflow of the module, followed by a detailed description of each parameter or feature. I have also included some less focused ramblings about the ideas behind the module, and how to hack/modify the code or even the hardware.
+This manual consists of a tutorial to guide you through the basic workflow of the module, followed by a detailed description of each parameter or feature. I have also included some information on how to hack/modify the firmware code or even the hardware.
 
 ## Tutorial
 
@@ -75,6 +75,9 @@ This knob drops (or mutes) certain channels. At 50% (12 o'clock), all hits are a
 ### Drop rand
 Similar to the "drop all" knob (see above), but only applies to randomly generated hits, not hits from the programmed beat.
 
+## General usage/workflow
+All current settings (e.g. tempo, time signature, tuplet mode, etc) are saved automatically.
+
 ## Inputs and outputs
 
 ### Clock in
@@ -94,9 +97,6 @@ Audio output at 44.1kHz. You can use the menu to adjust which channels are muted
 
 ### Out 2
 Second audio output, see above.
-
-## SD card slot
-The micro SD card slot can be used to load samples. There should be a folder called "samples" on the root of the SD card, containing a number of subfolders. Each subfolder is a "kit" (set of four samples), and should contain four WAV files with the filenames "1.wav", "2.wav", "3.wav", and "4.wav". The files must be in WAV format. The files can be stereo, but will be converted to mono when loaded. The sample rate can be 44100Hz, 22050Hz, or 11025Hz (you can use other sample rates, but they will be played back at 44100Hz). The maximum combined audio data size for each kit is 200kB (after any conversion to mono). If you want to use longer samples (for cymbals etc), you can try reducing the sample rate of these files.
 
 ## Display and indicators lights
 
@@ -124,16 +124,16 @@ This button seems self explanatory but has different behaviours depending on whe
 Tapping this button repeatedly will set a new tempo (each tap is a quarter note). The first tap will reset the rhythm to the start of the bar, and subsequent taps will fine-tune the tempo by averaging the past few taps. This button only works in internal clock mode.
 
 ### Live (edit)
-This button puts the module into "live edit" mode, where you can play a beat using the four buttons below the main display (+/-/✓/x), corresponding to kick/snare/hi-hat/tom by default. In this mode, all random hits are muted, and a metronome sound is played. When you trigger a sample using one of the four buttons, it is added to the current rhythm. When you add a hit, the velocity of that hit is determined by the current value of the "vel" knob. If you make a mistake, you can clear the whole current beat by pressing "clear", or clear a specific sample channel by holding "clear" and pressing one of the four buttons below the main display. When you are ready to save your beat, press "save", use the +/- buttons to choose a slot (the existing beat in that slot will be overwritten), then confirm by pressing "✓". Beats are not saved automatically. To revert to how the beat was before you started editing, press the "beat" button, go to a different beat and then return to the beat you were editing (i.e. just press "+" then "-").
+This button puts the module into "live edit" mode, where you can play a beat using the four buttons below the main display (+/-/✓/x), corresponding to kick/snare/hi-hat/tom by default. In this mode, all random hits are muted, and a metronome sound is played. When you trigger a sample using one of the four buttons, it is added to the current rhythm. When you add a hit, **the velocity of that hit is determined by the current value of the "vel" knob**. If you make a mistake, you can clear the whole current beat by pressing "clear", or clear a specific sample channel by holding "clear" and pressing one of the four buttons below the main display. When you are ready to save your beat, press "save", use the +/- buttons to choose a slot (the existing beat in that slot will be overwritten), then confirm by pressing "✓". Beats are not saved automatically. To revert to how the beat was before you started editing, press the "beat" button, go to a different beat and then return to the beat you were editing (i.e. just press "+" then "-").
 
 ### Step (edit)
-This button puts the module into "step edit" mode. Press the button repeatedly to cycle through the four sample channels. Once you have selected the desired channel (e.g. snare), use the +/- buttons to select a step within the rhythm, then press "✓" to add a hit or "x" to remove one. The velocity of the hit is determined by the current value of the "vel" knob. The number of steps available is dependent on both the time signature and the tuplet mode - for example, in "straight" mode with a 4/4 time signature, there will be 32 steps, but in "triplet" mode with a 3/4 time signature there will only be 18 steps. If you make a mistake, you can clear the whole current beat by pressing "clear", or clear a specific sample channel by holding "clear" and pressing one of the four buttons below the main display. When you are ready to save your beat, press "save", use the +/- buttons to choose a slot (the existing beat in that slot will be overwritten), then confirm by pressing "✓". Beats are not saved automatically. To revert to how the beat was before you started editing, press the "beat" button, go to a different beat and then return to the beat you were editing (i.e. just press "+" then "-").
+This button puts the module into "step edit" mode. Press the button repeatedly to cycle through the four sample channels. Once you have selected the desired channel (e.g. snare), use the +/- buttons to select a step within the rhythm, then press "✓" to add a hit or "x" to remove one. **The velocity of the hit is determined by the current value of the "vel" knob**. The number of steps available is dependent on both the time signature and the tuplet mode - for example, in "straight" mode with a 4/4 time signature, there will be 32 steps, but in "triplet" mode with a 3/4 time signature there will only be 18 steps. If you make a mistake, you can clear the whole current beat by pressing "clear", or clear a specific sample channel by holding "clear" and pressing one of the four buttons below the main display. When you are ready to save your beat, press "save", use the +/- buttons to choose a slot (the existing beat in that slot will be overwritten), then confirm by pressing "✓". Beats are not saved automatically. To revert to how the beat was before you started editing, press the "beat" button, go to a different beat and then return to the beat you were editing (i.e. just press "+" then "-").
 
 ### A/B
 These buttons currently not operational. They are reserved for future firmware updates or user modification (see "hacking" section).
 
 ### Save
-Pressing this button during normal operation manually saves your current settings (tempo, tuplet mode, clock mode, etc). This may cause a brief glitch in the audio output - this is normal. Note that your settings are also saved automatically whenever the module detects an appropriate period of silence, but you can press this button to save manually for peace of mind. The module loads the most recent set of saved settings when it is powered on. This button functions differently when in live edit or beat edit modes, where it is used to save an edited beat - see the live/step edit sections of the manual for details.
+When in live edit mode, this button is used to save an edited beat (see the live/step edit sections of the manual for details).
 
 ### Beat
 When you press this button, the current beat number will be shown on the display. Use the +/- buttons to select a new beat.
@@ -145,7 +145,32 @@ To manually adjust the tempo (in internal clock mode), press the tempo button th
 This button allows you to select one of four different tuplet modes using the +/- buttons: straight, triplet, quintuplet, or septuplet. The tuplet mode determines which steps of the pattern are eligible for random hits, as well as which steps of the pattern are available in live edit or step edit mode.
 
 ### Kit
-This button allows you to select the current set of four samples (a "kit"), using the +/- buttons. Press the "✓" button to confirm your choice and load the samples, which might take a couple of seconds. See the "SD card slot" section of the manual for info about sample formats.
+When an SD card is inserted, this button allows you to select the current set of four samples (a "kit"), using the +/- buttons. Press the "✓" button to confirm your choice and load the samples, which might take a couple of seconds, during which audio output will be interrupted. Once the kit has been loaded, it will stay in the module's memory permanently until you choose another kit, meaning you don't need to leave the SD card inserted. See below for example file/folder layout - there should be a folder called "samples" on the root of the SD card, containing a number of subfolders, each with the name of the "kit" (set of four samples). Each subfolder/kit should contain four WAV files with the filenames "1.wav", "2.wav", "3.wav", and "4.wav". The files must be in WAV format. The files can be stereo, but will be converted to mono when loaded. The sample rate can be 44100Hz, 22050Hz, or 11025Hz (you can use other sample rates, but they will be played back at 44100Hz). The maximum combined audio data size for each kit is 420kB (after any conversion to mono). An error light and message will be displayed if your total file size is too large. If you want to use longer samples (for cymbals etc), you can try reducing the sample rate of these files.
+
+Example file layout on the SD card:
+- (SD card root)
+	- samples
+		- 808
+			- 1.wav
+			- 2.wav
+			- 3.wav
+			- 4.wav
+		- 909
+			- 1.wav
+			- 2.wav
+			- 3.wav
+			- 4.wav
+		- jazz
+			- 1.wav
+			- 2.wav
+			- 3.wav
+			- 4.wav
+		- rock
+			- 1.wav
+			- 2.wav
+			- 3.wav
+			- 4.wav
+
 
 ### T.sig (time signature)
 This button allows you to select a time signature using the +/- buttons.
@@ -200,16 +225,13 @@ The error codes below correspond to those that will be shown on the display if s
 If there is a future firmware update (to introduce new features or fix bugs), this can be loaded onto the module by following these steps:
 1. Turn off the power to your Eurorack system
 2. Unscrew the module so you can access the circuit board
-3. On the rear circuit board, find a device labelled "Raspberry Pi Pico"
+3. On the rear circuit board, find a device labelled "Pico 2"
 4. Connect one end of a USB micro cable to the Pico (but don't plug it into your computer yet)
 5. While holding down the "BOOTSEL" button on the Pico, plug the other end of the USB cable into your computer, then release the BOOTSEL button
 6. The Pico should now appear as a mass storage device on your computer (if not, unplug the cable and try the previous step again)
 7. Drag and drop the new firmware (a ".uf2" file) onto the mass storage device
 8. Once the file is successfully transferred, remove the USB cable from the Pico and screw it back into your case
 9. Turn on your Eurorack system and check that the module is working as intended
-
-## Thoughts about Drumkid
-It's been quite a journey getting to this iteration of Drumkid. The original Drumkid ran on an iPad in around 2013, then I released a hardware version in 2020. This Eurorack version is being released in 2025. While I have done some other things with my life in the intervening years, there's no doubt that I've spent an awful lot of time developing different versions of Drumkid. I have gone a long way down the rabbit hole of this apparently niche idea.
 
 ## Hacking
 Drumkid is a hackable project - it is designed so that anyone with the right skills can modify it, or use the design as the basis for their own projects. The C++ code, Kicad schematic/PCB files, and other related material, are all available on Github at [github.com/mattybrad/drumkid2](https://github.com/mattybrad/drumkid2). What follows is an overview of this module's design:
@@ -231,3 +253,5 @@ Drumkid is a hackable project - it is designed so that anyone with the right ski
     - A third "PCB" is used as the module's faceplate, although it has no electrical connections - it just makes sense to get the faceplate manufactured in the same place as the PCBs (usually JLCPCB, for reference)
 
 The easiest way to start modifying this module is by editing the C++ code and uploading your own custom firmware. I won't describe in detail how to write/build in C++ for the Pico, since there are many guides available on the web. For reference, I use Visual Studio Code on Windows, with an official Raspberry Pi debug probe for uploading code and debugging. If you don't require debugging capabilities, you could instead make your code edits, build a new .uf2 file and upload it via USB as described in the "updating firmware" section of this manual.
+
+If you want to try hacking/modifying the hardware, take a look at the Kicad project relating to your PCB version (printed on the PCB).
