@@ -5,6 +5,6 @@ var mdOptions = {
   cssPath: "misc/gendocs/style.css"
 }
 
-markdownpdf(mdOptions).from("manual.md").to("manual.pdf", function () {
+markdownpdf(mdOptions).from("docs/manual.md").to("docs/manual.pdf", function () {
   console.log("Manual PDF generated");
 })

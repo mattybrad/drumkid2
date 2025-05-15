@@ -809,7 +809,7 @@ void confirmQCPhase(bool skipTest) {
     if(qcTestNum == QC_POTS) {
         for(int i=0; i<12; i++) {
             if(qcTestPhase == 0) {
-                if(analogReadings[i] >= 20) {
+                if(analogReadings[i] >= 50) {
                     passTest = false;
                 }
             } else if(qcTestPhase == 1) {
@@ -818,7 +818,7 @@ void confirmQCPhase(bool skipTest) {
                     passTest = false;
                 }
             } else if(qcTestPhase == 2) {
-                if(analogReadings[i] <= 4095-20) {
+                if(analogReadings[i] <= 4095-50) {
                     passTest = false;
                 }
             }
