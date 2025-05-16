@@ -3062,7 +3062,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "4c8908d1-4128-410c-af54-8ed8b4aebc12")
-		(property "Reference" "#PWR026"
+		(property "Reference" "#PWR021"
 			(at 111.76 131.445 0)
 			(effects
 				(font
@@ -3112,7 +3112,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/ef9ac6f0-c4a3-4cf8-9f87-0e925c926098"
-					(reference "#PWR026")
+					(reference "#PWR021")
 					(unit 1)
 				)
 			)
@@ -3306,7 +3306,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "6faf1968-7ae8-4727-aee1-7ea8520ba1d3")
-		(property "Reference" "#PWR025"
+		(property "Reference" "#PWR020"
 			(at 111.76 95.885 0)
 			(effects
 				(font
@@ -3360,7 +3360,7 @@
 					(unit 1)
 				)
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/ef9ac6f0-c4a3-4cf8-9f87-0e925c926098"
-					(reference "#PWR025")
+					(reference "#PWR020")
 					(unit 1)
 				)
 			)
@@ -3540,7 +3540,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "95a18f92-c1c4-48fb-be0b-427e95ae1db4")
-		(property "Reference" "#PWR027"
+		(property "Reference" "#PWR022"
 			(at 160.02 160.02 0)
 			(effects
 				(font
@@ -3590,7 +3590,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/ef9ac6f0-c4a3-4cf8-9f87-0e925c926098"
-					(reference "#PWR027")
+					(reference "#PWR022")
 					(unit 1)
 				)
 			)
@@ -4083,7 +4083,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "dca38a22-88e8-46ee-a775-41b34bfe188e")
-		(property "Reference" "#PWR024"
+		(property "Reference" "#PWR019"
 			(at 111.76 83.82 0)
 			(effects
 				(font
@@ -4133,7 +4133,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/ef9ac6f0-c4a3-4cf8-9f87-0e925c926098"
-					(reference "#PWR024")
+					(reference "#PWR019")
 					(unit 1)
 				)
 			)
@@ -4216,7 +4216,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e6b0869a-53ed-412e-99b0-2edcb5fa1d95")
-		(property "Reference" "#PWR023"
+		(property "Reference" "#PWR018"
 			(at 111.76 48.26 0)
 			(effects
 				(font
@@ -4270,7 +4270,7 @@
 					(unit 1)
 				)
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/ef9ac6f0-c4a3-4cf8-9f87-0e925c926098"
-					(reference "#PWR023")
+					(reference "#PWR018")
 					(unit 1)
 				)
 			)

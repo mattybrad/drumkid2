@@ -1725,7 +1725,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "635bee7e-8470-405a-a08e-6f0bbf7e6418")
-		(property "Reference" "#PWR039"
+		(property "Reference" "#PWR034"
 			(at 186.69 134.62 0)
 			(effects
 				(font
@@ -1775,7 +1775,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/b61d4abb-9ce0-48d3-9c53-5c624ca490e4"
-					(reference "#PWR039")
+					(reference "#PWR034")
 					(unit 1)
 				)
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/d45d8c3a-37c1-4724-b0b8-292f8f48c8cc"
@@ -2023,7 +2023,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a014de42-f20e-4b01-8421-69c3d5a6d328")
-		(property "Reference" "#PWR037"
+		(property "Reference" "#PWR032"
 			(at 142.24 81.28 0)
 			(effects
 				(font
@@ -2073,7 +2073,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/b61d4abb-9ce0-48d3-9c53-5c624ca490e4"
-					(reference "#PWR037")
+					(reference "#PWR032")
 					(unit 1)
 				)
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/d45d8c3a-37c1-4724-b0b8-292f8f48c8cc"
@@ -2169,7 +2169,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a8962eda-0d23-4bc3-8c77-e73285b2c80e")
-		(property "Reference" "#PWR036"
+		(property "Reference" "#PWR031"
 			(at 142.24 50.8 0)
 			(effects
 				(font
@@ -2219,7 +2219,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/b61d4abb-9ce0-48d3-9c53-5c624ca490e4"
-					(reference "#PWR036")
+					(reference "#PWR031")
 					(unit 1)
 				)
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/d45d8c3a-37c1-4724-b0b8-292f8f48c8cc"
@@ -2506,7 +2506,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f59ffd4f-f6e8-44fa-b9e6-d14e1ebe0672")
-		(property "Reference" "#PWR038"
+		(property "Reference" "#PWR033"
 			(at 184.15 49.53 0)
 			(effects
 				(font
@@ -2556,7 +2556,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/b61d4abb-9ce0-48d3-9c53-5c624ca490e4"
-					(reference "#PWR038")
+					(reference "#PWR033")
 					(unit 1)
 				)
 				(path "/87a59a99-d509-467e-85da-26d34072acb7/d45d8c3a-37c1-4724-b0b8-292f8f48c8cc"

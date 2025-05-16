@@ -3681,7 +3681,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Library:RaspberryPi_Pico_Common_THT"
+		(property "Footprint" "Library:RaspberryPi_Pico_Common_THT_dk2"
 			(at 62.865 -4.445 0)
 			(effects
 				(font
@@ -4132,7 +4132,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "54b0f875-df68-4278-8db6-71601537645b")
-		(property "Reference" "#PWR021"
+		(property "Reference" "#PWR016"
 			(at 211.455 -62.23 0)
 			(effects
 				(font
@@ -4182,7 +4182,7 @@
 		(instances
 			(project "dk2_05"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7"
-					(reference "#PWR021")
+					(reference "#PWR016")
 					(unit 1)
 				)
 			)
@@ -4198,7 +4198,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "62f2264e-8aa2-40d8-a561-bbf28bce67f6")
-		(property "Reference" "#PWR022"
+		(property "Reference" "#PWR017"
 			(at 212.09 77.47 0)
 			(effects
 				(font
@@ -4248,7 +4248,7 @@
 		(instances
 			(project "dk2_04_top"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7"
-					(reference "#PWR022")
+					(reference "#PWR017")
 					(unit 1)
 				)
 			)
@@ -4951,7 +4951,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d7f7a61b-eee6-4d1e-a922-fe2874fa5f91")
-		(property "Reference" "#PWR0103"
+		(property "Reference" "#PWR010"
 			(at 85.725 -22.225 0)
 			(effects
 				(font
@@ -5001,7 +5001,7 @@
 		(instances
 			(project "dk2_05"
 				(path "/87a59a99-d509-467e-85da-26d34072acb7"
-					(reference "#PWR0103")
+					(reference "#PWR010")
 					(unit 1)
 				)
 			)
@@ -5377,7 +5377,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "fa86ccab-226c-4729-962d-6834c22ec0a2")
-		(property "Reference" "#PWR0102"
+		(property "Reference" "#PWR08"
 			(at 62.865 -9.525 0)
 			(effects
 				(font
@@ -5427,7 +5427,7 @@
 		(instances
 			(project ""
 				(path "/87a59a99-d509-467e-85da-26d34072acb7"
-					(reference "#PWR0102")
+					(reference "#PWR08")
 					(unit 1)
 				)
 			)
