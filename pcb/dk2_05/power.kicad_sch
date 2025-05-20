@@ -2424,10 +2424,10 @@
 		)
 		(uuid "b24385c3-4db3-48a6-a252-f9cc6db29f2b")
 	)
-	(text_box "These two resistors form a divider which determines the output voltage using the following formula:\nVout = Vref x (Rtop / Rbottom + 1)\n(where Vref = 0.8V, see datasheet). Aiming for 5.6V to negate diode drop."
+	(text_box "These two resistors form a divider which determines the output voltage using the following formula:\nVout = Vref x (Rtop / Rbottom + 1)\n(where Vref = 0.8V, see datasheet). Aiming for 5.7V, should be dropped to ~5.3V with diode drop, 5.5V absolute max, within Pico specs."
 		(exclude_from_sim no)
 		(at 178.435 127 0)
-		(size 26.67 24.13)
+		(size 26.67 29.21)
 		(margins 0.9525 0.9525 0.9525 0.9525)
 		(stroke
 			(width 0)
@@ -5415,7 +5415,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "42.2k"
+		(property "Value" "43.2k"
 			(at 143.256 123.1321 0)
 			(effects
 				(font
@@ -5484,7 +5484,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "1.69k"
+		(property "Value" "1.65k"
 			(at 173.736 123.1321 0)
 			(effects
 				(font
@@ -5688,7 +5688,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10.2k"
+		(property "Value" "10k"
 			(at 173.736 115.5121 0)
 			(effects
 				(font
