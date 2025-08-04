@@ -84,7 +84,7 @@
         "hole_to_hole": "error",
         "holes_co_located": "warning",
         "invalid_outline": "error",
-        "isolated_copper": "warning",
+        "isolated_copper": "ignore",
         "item_on_disabled_layer": "error",
         "items_not_allowed": "error",
         "length_out_of_range": "error",
@@ -102,8 +102,8 @@
         "pth_inside_courtyard": "ignore",
         "shorting_items": "error",
         "silk_edge_clearance": "warning",
-        "silk_over_copper": "warning",
-        "silk_overlap": "warning",
+        "silk_over_copper": "ignore",
+        "silk_overlap": "ignore",
         "skew_out_of_range": "error",
         "solder_mask_bridge": "error",
         "starved_thermal": "error",
@@ -190,7 +190,9 @@
         }
       ],
       "track_widths": [
-        0.0
+        0.0,
+        0.25,
+        0.5
       ],
       "tuning_pattern_settings": {
         "diff_pair_defaults": {
@@ -426,7 +428,7 @@
       "different_unit_net": "error",
       "duplicate_reference": "error",
       "duplicate_sheet_names": "error",
-      "endpoint_off_grid": "warning",
+      "endpoint_off_grid": "ignore",
       "extra_units": "error",
       "footprint_filter": "ignore",
       "footprint_link_issues": "warning",
@@ -447,13 +449,13 @@
       "no_connect_dangling": "warning",
       "pin_not_connected": "error",
       "pin_not_driven": "error",
-      "pin_to_pin": "warning",
+      "pin_to_pin": "error",
       "power_pin_not_driven": "error",
       "same_local_global_label": "warning",
       "similar_label_and_power": "warning",
       "similar_labels": "warning",
       "similar_power": "warning",
-      "simulation_model_issue": "error",
+      "simulation_model_issue": "ignore",
       "single_global_label": "ignore",
       "unannotated": "error",
       "unconnected_wire_endpoint": "warning",
@@ -467,8 +469,8 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "dk2_05_panel.kicad_pro",
-    "version": 1
+    "filename": "dk2_06.kicad_pro",
+    "version": 3
   },
   "net_settings": {
     "classes": [
@@ -483,19 +485,59 @@
         "microvia_drill": 0.1,
         "name": "Default",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2147483647,
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Chunky",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.5,
         "via_diameter": 0.8,
         "via_drill": 0.4,
         "wire_width": 6
       }
     ],
     "meta": {
-      "version": 3
+      "version": 4
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "Chunky",
+        "pattern": "+3.3V"
+      },
+      {
+        "netclass": "Chunky",
+        "pattern": "+3.3VDAC"
+      },
+      {
+        "netclass": "Chunky",
+        "pattern": "+5V"
+      },
+      {
+        "netclass": "Chunky",
+        "pattern": "+12V"
+      },
+      {
+        "netclass": "Chunky",
+        "pattern": "-12V"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {
@@ -612,9 +654,19 @@
       "version": 1
     },
     "net_format_name": "",
+    "ngspice": {
+      "fix_include_paths": true,
+      "fix_passive_vals": false,
+      "meta": {
+        "version": 0
+      },
+      "model_mode": 0,
+      "workbook_filename": ""
+    },
     "page_layout_descr_file": "",
     "plot_directory": "",
     "space_save_all_events": true,
+    "spice_adjust_passive_values": false,
     "spice_current_sheet_as_root": false,
     "spice_external_command": "spice \"%I\"",
     "spice_model_current_sheet_as_root": true,
@@ -626,8 +678,44 @@
   },
   "sheets": [
     [
-      "5fcdc9f9-0279-407d-9bea-480033b579ed",
+      "87a59a99-d509-467e-85da-26d34072acb7",
       "Root"
+    ],
+    [
+      "ef9ac6f0-c4a3-4cf8-9f87-0e925c926098",
+      "Shift register out"
+    ],
+    [
+      "c399aef9-3678-4747-9295-3eabdcc57d0c",
+      "Shift register in 1"
+    ],
+    [
+      "6f97e18f-9a2c-4988-a61c-f43e42f27b8b",
+      "Shift register in 2"
+    ],
+    [
+      "b61d4abb-9ce0-48d3-9c53-5c624ca490e4",
+      "Multiplexer in 1"
+    ],
+    [
+      "d45d8c3a-37c1-4724-b0b8-292f8f48c8cc",
+      "Multiplexer in 2"
+    ],
+    [
+      "1a91e583-926b-4126-a95f-efd256f8eb1b",
+      "Shift register in 3"
+    ],
+    [
+      "7c59ca9a-df46-47a4-a660-464b7292cb97",
+      "Power"
+    ],
+    [
+      "3c44a715-90c7-40ba-b243-9985d9c5b51e",
+      "DAC"
+    ],
+    [
+      "8bab0449-b9e1-4145-92b7-2b051d2382ab",
+      "Digital in-out"
     ]
   ],
   "text_variables": {}
