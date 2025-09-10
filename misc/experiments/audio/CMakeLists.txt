@@ -24,34 +24,44 @@ if (EXISTS ${picoVscode})
 endif()
 # ====================================================================================
 set(PICO_BOARD pico2 CACHE STRING "Board type")
+set(PICO_EXTRAS_FETCH_FROM_GIT 1)
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
+include(pico_extras_import.cmake)
 
-project(basic C CXX ASM)
+project(audio C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(basic basic.cpp )
+add_executable(audio audio.cpp )
 
-pico_set_program_name(basic "basic")
-pico_set_program_version(basic "0.1")
+pico_set_program_name(audio "audio")
+pico_set_program_version(audio "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(basic 1)
-pico_enable_stdio_usb(basic 0)
+pico_enable_stdio_uart(audio 1)
+pico_enable_stdio_usb(audio 0)
 
 # Add the standard library to the build
-target_link_libraries(basic
-        pico_stdlib)
+target_link_libraries(audio
+        pico_stdlib
+        pico_audio_i2s)
 
 # Add the standard include files to the build
-target_include_directories(basic PRIVATE
+target_include_directories(audio PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
-pico_add_extra_outputs(basic)
+target_compile_definitions(audio PRIVATE
+        # compile time configuration of I2S
+        PICO_AUDIO_I2S_MONO_INPUT=0
+        PICO_AUDIO_I2S_MONO_OUTPUT=0
+        USE_AUDIO_I2S=1
+        )
+
+pico_add_extra_outputs(audio)
 
