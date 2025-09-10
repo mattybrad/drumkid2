@@ -51637,7 +51637,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Drumkid 2.05 (Eurorack)"
+	(gr_text "Drumkid 2.06 (Eurorack)"
 		(at 84 59 0)
 		(layer "F.SilkS")
 		(uuid "cbdbba00-98eb-4f05-9ba7-bc452950daba")
