@@ -1683,8 +1683,8 @@ int main()
                 if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                     pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
-                    //pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
-                    pulseGpio(SYNC_OUT, 0);
+                    pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
+                    //pulseGpio(SYNC_OUT, 0);
                 }
                 if((step % SYSTEM_PPQN) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
@@ -1797,9 +1797,9 @@ int main()
                     }
                     if(thisVel > 0 && !dropHit) {
                         samples[j].queueHit(currentTime, 0, thisVel);
-                        int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
-                        //pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
-                        pulseGpio(TRIGGER_OUT_PINS[j], 0);
+                        //int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
+                        int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
+                        pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
                     }
                 }
                 samples[j].update(currentTime);
