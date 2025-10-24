@@ -1429,8 +1429,8 @@ int map(int x, int in_min, int in_max, int out_min, int out_max)
 void applyDeadZones(int &param, bool centreDeadZone)
 {
     param = (4095 * (std::max(ANALOG_DEAD_ZONE_LOWER, std::min(ANALOG_DEAD_ZONE_UPPER, param)) - ANALOG_DEAD_ZONE_LOWER)) / ANALOG_EFFECTIVE_RANGE;
-    int deadZoneStart = 2048-250;
-    int deadZoneEnd = 2048+250;
+    int deadZoneStart = 2048-400;
+    int deadZoneEnd = 2048+400;
     if(centreDeadZone) {
         if(param < deadZoneStart) {
             param = map(param, 0, deadZoneStart, 0, 2048);
