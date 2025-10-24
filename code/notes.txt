@@ -533,3 +533,12 @@ Okay final final push. Here's the list of final features to add, in order of how
 - Setting for which channels are affected by pitch control
 - Drop rand should probably also affect negative hits
 - Play/stop symbols on panel
+
+24/10/25
+Well, DK Euro has been out for a few months and overall things have gone okay. Here is the current wishlist for the next firmware update:
+- Accept 24-bit samples
+- Less click when using crop (add fade out)
+- Reverse pitch aligned to start of hit
+- Create random starting beat (A button?)
+- Swing muting lower divisions is off by default, is a setting
+- Pot calibration, 50%
