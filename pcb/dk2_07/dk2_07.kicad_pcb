@@ -51598,6 +51598,130 @@
 		(layer "Edge.Cuts")
 		(uuid "677e15aa-c569-41ed-b9ee-82a45f736576")
 	)
+	(gr_text "-"
+		(at 154.8 128.45 180)
+		(layer "F.SilkS")
+		(uuid "04408c0a-3db0-4935-93b8-f5fd627cc7de")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "-"
+		(at 154.8 122.7 180)
+		(layer "F.SilkS")
+		(uuid "08c0670e-ff03-4982-b05d-b24a91b7de33")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Order of operations:\n1) Solder these parts:\n  a Display (front, raised)\n  b SD socket (front)\n  c Pico headers (back)\n  d Power socket (back)\n2) Place front parts:\n  a Pots with detents\n  b Pots without detents\n  c Buttons\n  d 3.5mm jacks\n  e LEDs with spacers\n3) Add display filter\n4) Add front panel\n5) Add 4x washers/nuts\n6) Solder placed parts\n7) Solder Pico pins\n8) Fit Pico into headers\n9) All washers/nuts"
+		(at 169 145 0)
+		(layer "F.SilkS")
+		(uuid "18eb22d0-1934-4b09-ab63-9be082d261f0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "-"
+		(at 154.8 133.95 180)
+		(layer "F.SilkS")
+		(uuid "21058c2e-f61f-4a2a-89eb-b41ed182421f")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "detent"
+		(at 180 56 0)
+		(layer "F.SilkS")
+		(uuid "2c96306a-a002-4acc-8e69-65c2faeae784")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify bottom)
+		)
+	)
+	(gr_text "Long leg on LED\nis positive"
+		(at 151.4 145.5 0)
+		(layer "F.SilkS")
+		(uuid "3b5d6527-f949-449d-9afc-5f07953014e7")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "detent"
+		(at 140 78 0)
+		(layer "F.SilkS")
+		(uuid "3c9f99dc-5592-48b0-ae8d-c5b5a701ff68")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify bottom)
+		)
+	)
+	(gr_text "-"
+		(at 154.8 139.45 180)
+		(layer "F.SilkS")
+		(uuid "4a3d6e3e-d6b9-41a3-a4cf-497d62f4cafb")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "detent"
+		(at 160 78 0)
+		(layer "F.SilkS")
+		(uuid "4fa3395a-77f9-4545-b85c-986c16269888")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify bottom)
+		)
+	)
+	(gr_text "detent"
+		(at 180 78 0)
+		(layer "F.SilkS")
+		(uuid "71fde434-a7f3-4d0c-96ba-6e6108361cf4")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify bottom)
+		)
+	)
 	(gr_text "+"
 		(at 159.25 129.75 0)
 		(layer "F.SilkS")
@@ -51637,14 +51761,14 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Drumkid 2.06 (Eurorack)"
-		(at 84 59 0)
+	(gr_text "Bradshaw Instruments\nDrumkid 2.07 (Eurorack)"
+		(at 86.4 61.8 0)
 		(layer "F.SilkS")
 		(uuid "cbdbba00-98eb-4f05-9ba7-bc452950daba")
 		(effects
 			(font
-				(size 3 3)
-				(thickness 0.15)
+				(size 2.5 2.5)
+				(thickness 0.3125)
 			)
 			(justify left bottom)
 		)
@@ -51662,54 +51786,110 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "+"
-		(at 158.5 132.25 180)
-		(layer "B.SilkS")
-		(uuid "568ff485-7ff6-4834-8a2f-d829590844cd")
+	(gr_text "FRONT"
+		(at 162.4 60.6 0)
+		(layer "F.SilkS")
+		(uuid "f3882c67-60e7-4372-a326-230c2702de4e")
 		(effects
 			(font
-				(size 1.5 1.5)
-				(thickness 0.3)
-				(bold yes)
+				(size 3 3)
+				(thickness 0.375)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Outer row is breakout, nothing goes here"
+		(at 165.8 106.1 0)
+		(layer "B.SilkS")
+		(uuid "3d8610e5-b93a-4416-b73f-ae75eb3a452c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
 			)
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "+"
-		(at 158.5 126.75 180)
+	(gr_text "Header goes on inner row, here"
+		(at 157.36 100.15 0)
 		(layer "B.SilkS")
-		(uuid "9ebd956d-4962-4b04-b9fa-f5cec71a9b18")
+		(uuid "59c440fb-c785-43d4-b53a-86f52c4e77ae")
 		(effects
 			(font
-				(size 1.5 1.5)
-				(thickness 0.3)
-				(bold yes)
+				(size 1 1)
+				(thickness 0.15)
 			)
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "+"
-		(at 158.5 137.75 180)
+	(gr_text "Ignore\n(extra digital\ninput pins)"
+		(at 154.5 64.3 0)
 		(layer "B.SilkS")
-		(uuid "ca2d1898-a934-4255-882a-b5f0b8ef2314")
+		(uuid "775e0231-629c-41af-a447-e64bb6975599")
 		(effects
 			(font
-				(size 1.5 1.5)
-				(thickness 0.3)
-				(bold yes)
+				(size 1 1)
+				(thickness 0.15)
 			)
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "+"
-		(at 158.5 121 180)
+	(gr_text "BACK"
+		(at 175.7 60.6 0)
 		(layer "B.SilkS")
-		(uuid "d074892a-5d6c-4b3c-a32b-f843808b4d9d")
+		(uuid "7882a66d-7ec5-4071-a2c3-24e15ed70140")
 		(effects
 			(font
-				(size 1.5 1.5)
-				(thickness 0.3)
-				(bold yes)
+				(size 3 3)
+				(thickness 0.375)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "RED\nSTRIPE\n(-12V)"
+		(at 168.8 139.5 0)
+		(layer "B.SilkS")
+		(uuid "795b5e6e-4ebb-41d9-907e-bf45a2242b23")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "Header goes on inner row, here"
+		(at 156.7 86.4 0)
+		(layer "B.SilkS")
+		(uuid "a1f0ef57-710c-4c90-927e-eb6987e77d03")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "RX\nG\nTX"
+		(at 186.4 112.6 0)
+		(layer "B.SilkS")
+		(uuid "a1fc2906-db6c-41e0-84c7-bb9e33fc6571")
+		(effects
+			(font
+				(size 1.6 1.6)
+				(thickness 0.2)
+			)
+			(justify right bottom mirror)
+		)
+	)
+	(gr_text "Outer row is breakout, nothing goes here"
+		(at 166.8 80.2 0)
+		(layer "B.SilkS")
+		(uuid "ccbcda60-5855-4d0b-ac7f-ec9a96ea91c5")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
 			)
 			(justify left bottom mirror)
 		)
