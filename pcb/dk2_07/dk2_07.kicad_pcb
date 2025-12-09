@@ -51588,6 +51588,28 @@
 		)
 	)
 	(gr_rect
+		(start 165.75 58.25)
+		(end 188.75 64.25)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(fill yes)
+		(layer "B.SilkS")
+		(uuid "1797ef2b-e87a-4516-8522-0fed5ba92953")
+	)
+	(gr_rect
+		(start 157 58.25)
+		(end 163.5 64.25)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(fill yes)
+		(layer "B.SilkS")
+		(uuid "4d9752ce-9f9a-477a-a7db-cccdfb3b2c0d")
+	)
+	(gr_rect
 		(start 70 40)
 		(end 190 148)
 		(stroke
@@ -51624,7 +51646,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Order of operations:\n1) Solder these parts:\n  a Display (front, raised)\n  b SD socket (front)\n  c Pico headers (back)\n  d Power socket (back)\n2) Place front parts:\n  a Pots with detents\n  b Pots without detents\n  c Buttons\n  d 3.5mm jacks\n  e LEDs with spacers\n3) Add display filter\n4) Add front panel\n5) Add 4x washers/nuts\n6) Solder placed parts\n7) Solder Pico pins\n8) Fit Pico into headers\n9) All washers/nuts"
+	(gr_text "Order of operations:\n1) Solder these parts:\n  a Display (front, raised)\n  b SD socket (front)\n  c Pico headers (back)\n  d Buttons (front)\n  e Power socket (back)\n2) Place front parts:\n  a Pots with detents\n  b Pots without detents\n  c 3.5mm jacks\n  d LEDs with spacers\n3) Add display filter\n4) Add front panel\n5) Add 4x washers/nuts\n6) Solder placed parts\n7) Solder Pico pins\n8) Fit Pico into headers\n9) All washers/nuts"
 		(at 169 145 0)
 		(layer "F.SilkS")
 		(uuid "18eb22d0-1934-4b09-ab63-9be082d261f0")
@@ -51810,6 +51832,19 @@
 			(justify left bottom mirror)
 		)
 	)
+	(gr_text "serial number:"
+		(at 189 57.75 0)
+		(layer "B.SilkS")
+		(uuid "3d96077c-b0a6-466a-a27c-af460a8ddfa4")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
+			)
+			(justify left bottom mirror)
+		)
+	)
 	(gr_text "Header goes on inner row, here"
 		(at 157.36 100.15 0)
 		(layer "B.SilkS")
@@ -51818,6 +51853,19 @@
 			(font
 				(size 1 1)
 				(thickness 0.15)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "QC"
+		(at 163.75 57.75 0)
+		(layer "B.SilkS")
+		(uuid "70014003-e4cc-4416-a9fe-bd7fbd03f793")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.3)
+				(bold yes)
 			)
 			(justify left bottom mirror)
 		)
@@ -51835,7 +51883,7 @@
 		)
 	)
 	(gr_text "BACK"
-		(at 175.7 60.6 0)
+		(at 135.75 60.75 0)
 		(layer "B.SilkS")
 		(uuid "7882a66d-7ec5-4071-a2c3-24e15ed70140")
 		(effects
