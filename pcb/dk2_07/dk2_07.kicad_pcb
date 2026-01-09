@@ -51671,6 +51671,18 @@
 			(justify left bottom)
 		)
 	)
+	(gr_text "Use spacers for 7-segment\ndisplay! Do not solder\ndirectly to PCB!"
+		(at 152.5 94.75 0)
+		(layer "F.SilkS")
+		(uuid "29f9f80e-7fbc-41fb-87da-900bd87f1266")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
 	(gr_text "detent"
 		(at 180 56 0)
 		(layer "F.SilkS")
@@ -51684,7 +51696,7 @@
 		)
 	)
 	(gr_text "Long leg on LED\nis positive"
-		(at 151.4 145.5 0)
+		(at 150.25 120.75 0)
 		(layer "F.SilkS")
 		(uuid "3b5d6527-f949-449d-9afc-5f07953014e7")
 		(effects
