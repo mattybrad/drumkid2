@@ -1,7 +1,8 @@
 /*
 
 Bradshaw Instruments
-Drumkid V2 (Eurorack version)
+Drumkid Eurorack module
+Firmware v1.X
 Aleatoric drum machine
 
 */

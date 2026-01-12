@@ -27,6 +27,8 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
+set(PICO_EXTRAS_FETCH_FROM_GIT ON)
+include(pico_extras_import.cmake)
 
 project(dkeuro2 C CXX ASM)
 
@@ -48,6 +50,7 @@ pico_enable_stdio_usb(dkeuro2 0)
 target_link_libraries(dkeuro2
         pico_stdlib
         pico_multicore
+        pico_audio_i2s
         )
 
 # disable usb output, enable uart output
