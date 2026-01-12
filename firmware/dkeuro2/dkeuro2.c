@@ -62,44 +62,73 @@ struct audio_buffer_pool *init_audio()
     return producer_pool;
 }
 
-int64_t pulseCount = 0; // total pulses received since start
-int64_t lastPulseTime = 0; // time of last pulse in microseconds
-int64_t derivedPositionFP = 0; // Q32.32
-int64_t rateFP = 0; // Q32.32
-int64_t lastUpdateTime = 0; // time of last transport update in microseconds
+typedef struct {
+    int64_t pulseCount;
+    int64_t positionFP; // Q32.32
+    int64_t rateFP;     // Q32.32
+    int64_t lastUpdateTime; // microseconds
+    int64_t lastPulseTime;   // microseconds
+    bool firstPulseReceived;
+    bool secondPulseReceived;
+} transport_t;
+
+transport_t transport = {
+    .pulseCount = 0,
+    .positionFP = 0,
+    .rateFP = 0,
+    .lastUpdateTime = 0,
+    .lastPulseTime = 0,
+    .firstPulseReceived = false,
+    .secondPulseReceived = false
+};
 
 void updateTransport() {
-    int64_t now = time_us_64();
-    int64_t deltaTime = now - lastUpdateTime;
-    lastUpdateTime = now;
-    derivedPositionFP += (rateFP * deltaTime); // Q32.32
+    if(!transport.secondPulseReceived) {
+        return; // can't update until we have a rate
+    }
+
+    uint64_t now = time_us_64();
+    uint64_t deltaTime = now - transport.lastUpdateTime;
+    transport.lastUpdateTime = now;
+    transport.positionFP += (transport.rateFP * deltaTime); // Q32.32
+
+    // int64_t now = time_us_64();
+    // int64_t deltaTime = now - transport.lastUpdateTime;
+    // transport.lastUpdateTime = now;
+    // transport.positionFP += (transport.rateFP * deltaTime); // Q32.32
     printf("Updated position: %lld.%09lld\n", 
-        (derivedPositionFP >> 32), 
-        ((derivedPositionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
+        (transport.positionFP >> 32), 
+        ((transport.positionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
 }
 
 void clockInCallback(uint gpio, uint32_t events)
 {
     uint64_t now = time_us_64();
+    transport.pulseCount++;
 
-    pulseCount++;
-    printf("Pulse count: %lld\n", pulseCount);
-
-    if(pulseCount == 1) {
+    if(!transport.firstPulseReceived) {
+        transport.lastPulseTime = now;
+        transport.firstPulseReceived = true;
         printf("First pulse received!\n");
-        lastPulseTime = now;
-    } else if(pulseCount >= 2) {
-        int64_t period = now - lastPulseTime;
-        lastPulseTime = now;
-        printf("Period since last pulse: %lldus\n", period);
-
-        derivedPositionFP = ((int64_t)pulseCount) << 32;
-        rateFP = ((int64_t)(1ULL << 32)) / period;  // pulses per microsecond
-        printf("Derived position: %lld.%09lld\n", 
-            (derivedPositionFP >> 32), 
-            ((derivedPositionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
-        printf("Derived rate: %lld (Q32.32)\n", rateFP);
+        return;
     }
+
+    int64_t period = now - transport.lastPulseTime;
+
+    if(!transport.secondPulseReceived) {
+        transport.rateFP = ((int64_t)1ULL << 32) / period;
+        transport.positionFP = ((int64_t)transport.pulseCount) << 32;
+        transport.secondPulseReceived = true;
+        transport.lastUpdateTime = now;
+        printf("Second pulse received! Period: %lld us, Rate: %lld (Q32.32)\n", period, transport.rateFP);
+    } else {
+        transport.rateFP = ((int64_t)1ULL << 32) / period;
+        int64_t predictedPulse = transport.positionFP >> 32;
+        int64_t pulseError = (int64_t)transport.pulseCount - predictedPulse;
+        transport.positionFP += pulseError << 32; // correct position
+    }
+        
+    transport.lastPulseTime = now;
 }
 
 int main()
