@@ -10,10 +10,12 @@ Started Jan 2026
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
+#include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
 #include "pico/audio_i2s.h"
 #include "dkeuro2.h"
+#include "sn74595.pio.h"
 #include "hardware/Pins.h"
 
 #define SAMPLES_PER_BUFFER 8
@@ -122,6 +124,20 @@ int main()
     gpio_set_dir(Pins::SYNC_OUT, GPIO_OUT);
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
+    gpio_init(Pins::SR_OUT_DATA);
+    gpio_set_dir(Pins::SR_OUT_DATA, GPIO_OUT);
+    gpio_init(Pins::SR_OUT_CLOCK);
+    gpio_set_dir(Pins::SR_OUT_CLOCK, GPIO_OUT);
+    gpio_init(Pins::SR_OUT_LATCH);
+    gpio_set_dir(Pins::SR_OUT_LATCH, GPIO_OUT);
+
+    // init PIO programs
+    sn74595::shiftreg_init();
+    //sn74165::shiftreg_init();
+
+    uint16_t b = 1024+512+256+2+4; // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
+
+    sn74595::shiftreg_send(b);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);

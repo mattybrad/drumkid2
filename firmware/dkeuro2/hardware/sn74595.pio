@@ -1,0 +1,121 @@
+/*
+ * Copyright (c) 2022 Gerhard Schiller
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ * https://www.gnu.org/licenses/lgpl+gpl-3.0.txt
+ */
+
+; ------------------------------------------------------------------------
+; SN74xx585 (and similar) Shift-Register Interface
+;
+; Modify "NUM_DEVICES" and (possibly) "SHIFT_CLK" to match your hardware!
+;
+; A complete transmision takes ("NUM_DEVICES" * 8 * 2) + 6 "SHIFT_CLK" cycle.
+; ------------------------------------------------------------------------
+
+.program sn75595
+
+.define public NUM_DEVICES 2	; count of devices in daisy-chain: 1 ... 4
+
+; DO NOT MODIFY defines below, unless you know what you are doing!
+.define LATCH_HIGH 0b100
+.define LATCH_LOW  0b000
+
+.define loopctr 	((NUM_DEVICES * 8) - 1)
+
+; we shift out rigth to left (MSB first), so we must set unused bits to 0.
+.define discardsbits (32 - (NUM_DEVICES * 8))
+
+.side_set 1 opt
+
+pull         					; Load a 32-bit word from the TX FIFO into the OSR, or stall
+set x, loopctr      			; Preload bit counter
+out null,discardsbits 			; discard unused high bits
+
+bitloop:                   		; This loop will run NUM_DEVICES*8 times
+out pins, 1 side 0        		; Shift 1 bit from OSR to the first pin: "PIN_DATA"
+	jmp x-- bitloop side 1
+set pins, 0 side 0 				; Bring data and clock low line at end of data
+
+; Latch pulse. Transfer data from shift register to output buffer
+set pins, LATCH_HIGH 			; Latch high (data and clock still low)
+set pins, LATCH_LOW 			; Latch low (data and clock remain low)
+
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+namespace sn74595 {
+
+const uint32_t SHIFT_CLK  = 100 * 1000;	// 100 kHz
+
+enum SN74595_PIN : uint	// GPIO pins to use
+{
+	PIN_DATA = 6,		// connect to SN74xx595 SER (pin 14)
+	PIN_CLK,			// connect to SN74xx595 SERCLK (pin 11)
+	PIN_LATCH			// connect to SN74xx595 RCLK (pin 12)
+};
+// IMPORTANT:
+// Unless you control it from your application
+// connect ~SERCLR (pin 10) to logic high (VCC) and
+// ~OE (pin 13) to GND on all devices!
+
+
+// Change pio and/or sm to whatever PIO and state machine you want to use
+static const PIO 	pio = pio0;
+static const uint	sm = 1;
+static uint32_t 	registerState = 0;
+
+
+void shiftreg_init() {
+	const uint pin_base = PIN_DATA;
+
+	// Tell PIO to initially drive output-low on the selected pin, then map PIO
+	// onto that pin with the IO muxes.
+	pio_sm_set_pins_with_mask(pio, sm, 0b111u, 0b0u << pin_base);
+	pio_sm_set_consecutive_pindirs(pio, sm, pin_base, 3, true/*output*/);
+	for(uint i=0;i<3;i++)
+		pio_gpio_init(pio, pin_base+i);
+
+	uint offset = pio_add_program(pio, &sn75595_program);
+	pio_sm_config c = sn75595_program_get_default_config(offset);
+
+	// OUT shifts to left, no autopull
+	sm_config_set_out_shift(&c, false, false, 32);
+
+	sm_config_set_out_pins(&c, pin_base, 1);
+	sm_config_set_sideset_pins(&c, pin_base + 1);	   // pins to use in SIDE instr
+
+	sm_config_set_set_pins(&c, pin_base + 0, 3);   // pins to use in SET instr
+
+	float div = (float)clock_get_hz(clk_sys) / (SHIFT_CLK * 2);
+	sm_config_set_clkdiv(&c, div);
+
+	pio_sm_init(pio, sm, offset, &c);
+
+	pio_sm_clear_fifos(pio, sm);
+	pio_sm_set_enabled(pio, sm, true);
+}
+
+void shiftreg_send(uint32_t data) {
+	while (pio_sm_is_tx_fifo_full(pio,sm)) {
+		;
+	}
+	pio_sm_put_blocking(pio, sm, data);
+}
+
+void setDeviceOutput(int device, int dout, bool val){
+	int gout = (device * 8) + dout;
+
+	if(val)
+		registerState |= (1 << gout);
+	else
+		registerState &= ~(1 << gout);
+	shiftreg_send(registerState);
+}
+
+void setGlobalOutput(int gout, bool val){
+	setDeviceOutput(gout / 8, gout % 8, val);
+}
+} // namespace
+
+%}
