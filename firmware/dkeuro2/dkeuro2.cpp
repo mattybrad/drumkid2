@@ -14,6 +14,7 @@ Started Jan 2026
 #include "hardware/structs/clocks.h"
 #include "pico/audio_i2s.h"
 #include "dkeuro2.h"
+#include "hardware/Pins.h"
 
 #define SAMPLES_PER_BUFFER 8
 
@@ -89,13 +90,25 @@ transport_t transport = {
 
 int64_t tempTriggerPulseOffCallback(alarm_id_t id, void *user_data)
 {
-    gpio_put(15, 0);
+    gpio_put(Pins::TRIGGER_1, 0);
+    return 0;
+}
+
+bool gateState = false;
+int64_t tempTriggerGateOffCallback(alarm_id_t id, void *user_data)
+{
+    gateState = false;
     return 0;
 }
 
 void tempTriggerPulse() {
-    gpio_put(15, 1);
+    gpio_put(Pins::TRIGGER_1, 1);
     add_alarm_in_us(500, tempTriggerPulseOffCallback, NULL, true);
+}
+
+void tempTriggerGate() {
+    gateState = true;
+    add_alarm_in_ms(50, tempTriggerGateOffCallback, NULL, true);
 }
 
 int main()
@@ -103,15 +116,15 @@ int main()
     stdio_init_all();
     multicore_launch_core1(secondCoreCode); // launch second core
 
-    gpio_init(16);
-    gpio_set_dir(16, GPIO_IN);
-    gpio_init(17);
-    gpio_set_dir(17, GPIO_OUT);
-    gpio_init(15);
-    gpio_set_dir(15, GPIO_OUT);
+    gpio_init(Pins::SYNC_IN);
+    gpio_set_dir(Pins::SYNC_IN, GPIO_IN);
+    gpio_init(Pins::SYNC_OUT);
+    gpio_set_dir(Pins::SYNC_OUT, GPIO_OUT);
+    gpio_init(Pins::TRIGGER_1);
+    gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
 
     // interrupt for clock in pulse
-    gpio_set_irq_enabled_with_callback(16, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);
+    gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);
 
     // while (true) {
     //     uint32_t received = multicore_fifo_pop_blocking();
@@ -127,13 +140,13 @@ int main()
     struct audio_buffer_pool *ap = init_audio();
     while(true) {
 
-        // struct audio_buffer *buffer = take_audio_buffer(ap, true);
-        // int16_t *samples = (int16_t *) buffer->buffer->bytes;
-        // for (uint i = 0; i < buffer->max_sample_count * 2; i++) {
-        //     samples[i] = rand() % 32768 - 16384; // random noise
-        // }
-        // buffer->sample_count = buffer->max_sample_count;
-        // give_audio_buffer(ap, buffer);
+        struct audio_buffer *buffer = take_audio_buffer(ap, true);
+        int16_t *samples = (int16_t *) buffer->buffer->bytes;
+        for (uint i = 0; i < buffer->max_sample_count * 2; i++) {
+            samples[i] = gateState ? rand() % 32768 - 16384 : 0; // random noise
+        }
+        buffer->sample_count = buffer->max_sample_count;
+        give_audio_buffer(ap, buffer);
 
         updateTransport();
     }
@@ -148,80 +161,34 @@ void updateTransport() {
     int64_t period = transport.nextPulseTimeEstimate - transport.lastPulseTime;
     transport.lastPositionFP = transport.positionFP;
     transport.positionFP = (transport.pulseInCount << 32) + ((int64_t)(now - transport.nextPulseTimeEstimate) << 32) / period;
-    if((transport.positionFP >> 32) > (transport.lastPositionFP >> 32)) {
-        // Integer part of position has incremented
-        // printf("Updated position: %lld.%09lld\n", 
-        // (transport.positionFP >> 32), 
-        // ((transport.positionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
-        if((transport.positionFP >> 32) % 24 == 0) {
+    uint64_t wholePulsePosition = transport.positionFP >> 32;
+    if(wholePulsePosition > (transport.lastPositionFP >> 32)) {
+        if(wholePulsePosition % 24 == 0) {
             tempTriggerPulse();
         }
+        if(wholePulsePosition % 24 == 0 || wholePulsePosition % 24 == 6) {
+            tempTriggerGate();
+        }
     }
-
-    // uint64_t now = time_us_64();
-    // uint64_t deltaTime = now - transport.lastUpdateTime;
-    // transport.lastUpdateTime = now;
-    // int64_t lastPosition = transport.positionFP;
-    // transport.positionFP += (transport.rateFP * deltaTime); // Q32.32
-    // if((transport.positionFP >> 32) > (lastPosition >> 32)) {
-    //     // Integer part of position has incremented
-    //     printf("Position incremented to %lld\n", transport.positionFP >> 32);
-    //     printf("Updated position: %lld.%09lld\n", 
-    //     (transport.positionFP >> 32), 
-    //     ((transport.positionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
-    //     tempTriggerPulse();
-    // }
-
-    // printf("Updated position: %lld.%09lld\n", 
-    //     (transport.positionFP >> 32), 
-    //     ((transport.positionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
 }
 
 void clockInCallback(uint gpio, uint32_t events)
 {
     uint64_t now = time_us_64();
+    int64_t period = now - transport.lastPulseTime;
     transport.pulseInCount++;
 
     if(!transport.firstPulseReceived) {
         transport.lastPulseTime = now;
         transport.firstPulseReceived = true;
-        printf("First pulse received!\n");
         return;
     }
 
-    //int64_t period = now - transport.lastPulseTime;
+    transport.nextPulseTimeEstimate = now + period;
+    transport.lastPulseTime = now;
 
     if(!transport.secondPulseReceived) {
-        int64_t period = now - transport.lastPulseTime;
-        transport.nextPulseTimeEstimate = now + period;
-        transport.lastPulseTime = now;
         transport.secondPulseReceived = true;
-        printf("Second pulse received! Period: %lld us\n", period);
         return;
-        // transport.rateFP = ((int64_t)1ULL << 32) / period;
-        // transport.positionFP = ((int64_t)transport.pulseInCount) << 32;
-        // transport.secondPulseReceived = true;
-        // transport.lastUpdateTime = now;
-        // printf("Second pulse received! Period: %lld us, Rate: %lld (Q32.32)\n", period, transport.rateFP);
-    }/* else {
-        transport.rateFP = ((int64_t)1ULL << 32) / period;
-        printf("Rate: %lld.%09lld\n", 
-        (transport.rateFP >> 32), 
-        ((transport.rateFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
-        int64_t predictedPulse = transport.positionFP >> 32;
-        int64_t phaseError = (int64_t)transport.pulseInCount - predictedPulse;
-        int64_t correction = (phaseError << 32) / 4; // simple proportional correction, gain = 1/8
-        transport.positionFP += correction;
-        //transport.positionFP += phaseError;
-    }*/
-
-    int64_t period = now - transport.lastPulseTime;
-    //transport.positionFP = (transport.pulseInCount << 32) + ((int64_t)(now - transport.nextPulseTimeEstimate) << 32) / period;
-    transport.lastPulseTime = now;
-    transport.nextPulseTimeEstimate = now + period;
-    // printf("Pulse received! Period: %lld us, Position: %lld.%09lld\n", period,
-    //     (transport.positionFP >> 32), 
-    //     ((transport.positionFP & 0xFFFFFFFF) * 1000000000LL) >> 32);
-        
-    //transport.lastPulseTime = now;
+    }
 }

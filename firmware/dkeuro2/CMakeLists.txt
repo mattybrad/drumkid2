@@ -37,7 +37,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(dkeuro2 dkeuro2.c )
+add_executable(dkeuro2 dkeuro2.cpp )
 
 pico_set_program_name(dkeuro2 "dkeuro2")
 pico_set_program_version(dkeuro2 "0.1")
