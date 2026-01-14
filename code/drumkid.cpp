@@ -1606,6 +1606,11 @@ int main()
             velocity = 4095;
         }
 
+        int calculatedOffset;
+        if(externalClock) {
+            calculatedOffset = 88000000 / (deltaT * syncInPpqn) + 2; // found this offset by trial and error but works really well so far
+        }
+
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
@@ -1618,6 +1623,7 @@ int main()
                 if(currentTime >= currentPulseTime && !currentPulseFound) {
                     currentPulseFound = true;
                     pulseStep = (pulseStep + (SYSTEM_PPQN / syncInPpqn)) % numSteps;
+
                 }
             } else {
                 if (beatPlaying && currentTime >= nextPredictedPulseTime)
@@ -1657,6 +1663,13 @@ int main()
                     step += (SYSTEM_PPQN * (currentTime - t0)) / (t1 - t0);
                 }
             }
+            
+            // this is matt trying to solve the 29ms delay
+            if(externalClock) {
+                step += calculatedOffset;
+                step = step % numSteps;
+            }
+
             bool newStep = false; // only check beat when step has been incremented (i.e. loop will probably run several times on, say, step 327, but don't need to do stuff repeatedly for that step)
 
             // do stuff if step has been incremented

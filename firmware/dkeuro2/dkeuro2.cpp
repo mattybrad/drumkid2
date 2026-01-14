@@ -130,20 +130,10 @@ int main()
     leds.init();
     leds.setLed(Leds::CLOCK_OUT, true);
     leds.setLed(Leds::PULSE, true);
-    leds.setDisplay(0, 0b00111111); // display 0
-    leds.update();
-    sleep_ms(500);
-    leds.setDisplay(1, 0b00000110); // display 1
-    leds.update();
-    sleep_ms(500);
-    leds.setDisplay(2, 0b01011011); // display 2
-    leds.update();
-    sleep_ms(500);
-    leds.setDisplay(3, 0b01001111); // display 3
-    leds.update();
     sleep_ms(500);
     leds.setLed(Leds::CLOCK_OUT, false);
-    leds.update();
+    leds.setLed(Leds::PULSE, false);
+    leds.setLed(Leds::ERROR, true);
 
     uint16_t b = 1024+512+256+2+4; // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
 
