@@ -15,8 +15,8 @@ Started Jan 2026
 #include "hardware/structs/clocks.h"
 #include "pico/audio_i2s.h"
 #include "dkeuro2.h"
-#include "sn74595.pio.h"
 #include "hardware/Pins.h"
+#include "hardware/Leds.h"
 
 #define SAMPLES_PER_BUFFER 8
 
@@ -90,6 +90,8 @@ transport_t transport = {
     .secondPulseReceived = false
 };
 
+Leds leds;
+
 int64_t tempTriggerPulseOffCallback(alarm_id_t id, void *user_data)
 {
     gpio_put(Pins::TRIGGER_1, 0);
@@ -124,20 +126,28 @@ int main()
     gpio_set_dir(Pins::SYNC_OUT, GPIO_OUT);
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
-    gpio_init(Pins::SR_OUT_DATA);
-    gpio_set_dir(Pins::SR_OUT_DATA, GPIO_OUT);
-    gpio_init(Pins::SR_OUT_CLOCK);
-    gpio_set_dir(Pins::SR_OUT_CLOCK, GPIO_OUT);
-    gpio_init(Pins::SR_OUT_LATCH);
-    gpio_set_dir(Pins::SR_OUT_LATCH, GPIO_OUT);
 
-    // init PIO programs
-    sn74595::shiftreg_init();
-    //sn74165::shiftreg_init();
+    leds.init();
+    leds.setLed(Leds::CLOCK_OUT, true);
+    leds.setLed(Leds::PULSE, true);
+    leds.setDisplay(0, 0b00111111); // display 0
+    leds.update();
+    sleep_ms(500);
+    leds.setDisplay(1, 0b00000110); // display 1
+    leds.update();
+    sleep_ms(500);
+    leds.setDisplay(2, 0b01011011); // display 2
+    leds.update();
+    sleep_ms(500);
+    leds.setDisplay(3, 0b01001111); // display 3
+    leds.update();
+    sleep_ms(500);
+    leds.setLed(Leds::CLOCK_OUT, false);
+    leds.update();
 
     uint16_t b = 1024+512+256+2+4; // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
 
-    sn74595::shiftreg_send(b);
+    //sn74595::shiftreg_send(b);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);
