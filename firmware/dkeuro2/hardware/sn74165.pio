@@ -1,0 +1,146 @@
+/*
+ * Copyright (c) 2022 Gerhard Schiller
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ * https://www.gnu.org/licenses/lgpl+gpl-3.0.txt
+ */
+
+; ------------------------------------------------------------------------
+; SN74xx165 (and similar) Shift-Register Interface
+;
+; Modify "PIN_DATA", "NUM_DEVICES" and (possibly) "SHIFT_CLK"
+; to match your hardware!
+;
+; A complete transmision takes ("NUM_DEVICES" * 8 * 2) + 4 "SHIFT_CLK" cycles
+; if no change of the input status occured and otherwise
+; ("NUM_DEVICES" * 8 * 2) + 6 "SHIFT_CLK" cycles
+; ------------------------------------------------------------------------
+.program sn74165
+
+.define public NUM_DEVICES 3	; count of devices in daisy-chain: 1 ... 4
+
+; DO NOT MODIFY defines below, unless you know what you are doing!
+.define LATCH_HIGH 0b11
+.define LATCH_LOW  0b10
+
+.define loopctr 	((NUM_DEVICES * 8) - 1)
+
+; we shift out rigth to left (MSB first), so we must discard unused bits.
+.define discardsbits (32 - (NUM_DEVICES * 8))
+
+.side_set 1 opt					; number of pins affected by "side" instruction
+
+mov y, null						; initialyze y to 0
+in y, 32						; push y into the RX-Fifo
+
+next_cycle:
+set x, loopctr      			; Preload bit counter
+
+; Latch pulse. Transfer data from shift register to output buffer
+set pins, LATCH_LOW 			; Latch low (clock remains high)
+set pins, LATCH_HIGH 			; Latch high (clock remains high)
+
+bitloop:                   		; This loop will run NUM_DEVICES*8 times
+in pins, 1 side 0        		; Shift 1 bit from the first pin: "PIN_DATA" to the ISR
+jmp x-- bitloop side 1
+in null, discardsbits			; Fill unused bits with 0
+
+; Has the state of the inputs changed?
+mov x, isr						; Copy isr to x
+jmp x!=y inp_changed			; If state of the inputs has changed, jump to "inp_changed"
+jmp next_cycle					; Else, start the next cycle
+
+inp_changed:					; State of the inputs has changed
+mov y, x						; Save current state to y
+push							; Push state into the RX-Fifo
+jmp next_cycle					; Start the next cycle
+
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+namespace sn74165 {
+
+const uint32_t SHIFT_CLK  = 100 * 1000;	// 100 kHz
+
+enum SN74595_PIN : uint	// GPIO pins to use
+{
+	PIN_LATCH = 12,		// connect to SN74xx165 SH/~LD (pin 1)
+	PIN_CLK,			// connect to SN74xx165 CLK (pin 2)
+	PIN_DATA			// connect to SN74xx165 QH (pin 9)
+};
+// IMPORTANT:
+// Connect CLK_INH (pin 15) on all devices and SER (pin 10) on the last device to GND!
+
+// Change pio and/or sm to whatever PIO and state machine you want to use
+static const PIO 	pio = pio0;
+static const uint	sm = 2;
+
+void shiftreg_init() {
+	const uint pin_base = PIN_LATCH;
+
+	// Tell PIO to initially drive output-low on the selected pin, then map PIO
+	// onto that pin with the IO muxes.
+	pio_sm_set_pins_with_mask(pio, sm, 0b111u, 0b0u << pin_base);
+	pio_sm_set_consecutive_pindirs(pio, sm, pin_base, 2, true/*output*/);
+	for(uint i=0;i<3;i++)
+		pio_gpio_init(pio, pin_base+i);
+
+	uint offset = pio_add_program(pio, &sn74165_program);
+	pio_sm_config c = sn74165_program_get_default_config(offset);
+
+	// IN shifts to left, no autopush
+	sm_config_set_in_shift(&c, false, false, 32);
+
+	sm_config_set_in_pins(&c, pin_base + 2);    	// pin to use as data input
+	sm_config_set_sideset_pins(&c, pin_base+1);	// pins to use in SIDE instr
+	sm_config_set_set_pins(&c, pin_base, 2);	// pins to use in SET instr
+
+	float div = (float)clock_get_hz(clk_sys) / (SHIFT_CLK * 2);
+	sm_config_set_clkdiv(&c, div);
+
+	pio_sm_init(pio, sm, offset, &c);
+	pio_sm_set_enabled(pio, sm, true);
+}
+
+/* Get the state of the input pins from SN74xx165
+ *
+ * If the state of the inputs has changed since the last call of shiftreg_get()
+ * the variable pointed to by the avail-parameter is set to "true" and the state
+ * is returned.
+ * Otherwise the variable pointed to by the avail-parameter is set to "false"
+ * and the return value is 0.
+ *
+ * The device connected to the RP2040 is the "device0".
+ * If there are more devices in the chain, the following devices named
+ * "device1", "device2", and "device3".
+ *
+ * The state of the input, as returned by shiftreg_get(), is a 32-bit unsigned integer
+ * with the following encoding:
+ *
+ *  Device:		device0  device1   device2    device3
+ *  Input:		A ... G  A ...  G  A  ...  G  A  ...  G
+ * 	Bit:		0 ... 7  8 ... 15  16 ... 23  24 ... 31
+ *
+ */
+
+uint32_t shiftreg_get(bool *avail) {
+	if(pio_sm_is_rx_fifo_empty(pio,sm)){
+		// Nothing changed
+		*avail = false;
+		return 0;
+	}
+
+	// RX-Fifo is not empty, get the changed state
+	uint32_t data = pio_sm_get(pio, sm);
+
+	// Reverse bit order
+	data = (data & 0x0000FFFF) << 16 | (data & 0xFFFF0000) >> 16;
+	data = (data & 0x00FF00FF) << 8 | (data & 0xFF00FF00) >> 8;
+
+	*avail = true;
+	return data;
+}
+
+} // namespace
+
+%}

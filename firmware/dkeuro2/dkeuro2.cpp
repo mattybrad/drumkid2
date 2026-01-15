@@ -17,6 +17,7 @@ Started Jan 2026
 #include "dkeuro2.h"
 #include "hardware/Pins.h"
 #include "hardware/Leds.h"
+#include "hardware/Buttons.h"
 
 #define SAMPLES_PER_BUFFER 8
 
@@ -91,6 +92,7 @@ transport_t transport = {
 };
 
 Leds leds;
+Buttons buttons;
 
 int64_t tempTriggerPulseOffCallback(alarm_id_t id, void *user_data)
 {
@@ -127,26 +129,24 @@ int main()
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
 
+    buttons.init();
+
     leds.init();
-    leds.setDisplay(0, 0b00111111); // display '0' on first digit
-    leds.setDisplay(1, 0b00000110); // display '1' on second digit
-    leds.setDisplay(2, 0b01011011); // display '2' on third digit
+    leds.setDisplay(0, Leds::asciiChars['c']);
+    leds.setDisplay(1, Leds::asciiChars['a']);
+    leds.setDisplay(2, Leds::asciiChars['t']);
     while(true) {
         leds.setLed(Leds::CLOCK_OUT, true);
         leds.setLed(Leds::PULSE, true);
         leds.setLed(Leds::ERROR, false);
-        leds.setDisplay(3, 0b01101101); // display '3' on fourth digit
+        leds.setDisplay(3, Leds::asciiChars['t']);
         sleep_ms(500);
         leds.setLed(Leds::CLOCK_OUT, false);
         leds.setLed(Leds::PULSE, false);
         leds.setLed(Leds::ERROR, true);
-        leds.setDisplay(3, 0b01100110); // display '4' on fourth digit
+        leds.setDisplay(3, Leds::asciiChars['b']);
         sleep_ms(500);
     }
-
-    uint16_t b = 1024+512+256+2+4; // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
-
-    //sn74595::shiftreg_send(b);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);
@@ -217,3 +217,135 @@ void clockInCallback(uint gpio, uint32_t events)
         return;
     }
 }
+
+uint8_t Leds::asciiChars[] = {
+    0b00000000, // 0 NULL
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000, // 32 SPACE
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b01000000, // -
+    0b10000000, // .
+    0b00000000,
+    0b00111111, // digit 0
+    0b00000110,
+    0b01011011,
+    0b01001111,
+    0b01100110,
+    0b01101101,
+    0b01111101,
+    0b00000111,
+    0b01111111,
+    0b01101111, // digit 9
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b01010011,
+    0b00000000, // 64
+    0b01110111, // A (a)
+    0b01111100,
+    0b00111001,
+    0b01011110,
+    0b01111001,
+    0b01110001,
+    0b01101111,
+    0b01110110,
+    0b00000110,
+    0b00001111,
+    0b01110110,
+    0b00111000,
+    0b00110111,
+    0b01010100,
+    0b01011100,
+    0b01110011,
+    0b01100111,
+    0b01010000,
+    0b01101101,
+    0b01111000,
+    0b00111110,
+    0b00011100,
+    0b00111110,
+    0b01110110,
+    0b01101110,
+    0b01011011, // Z (z)
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00001000, // _
+    0b00000000, // 96
+    0b01110111, // a
+    0b01111100,
+    0b00111001,
+    0b01011110,
+    0b01111001,
+    0b01110001,
+    0b01101111,
+    0b01110110,
+    0b00000110,
+    0b00001111,
+    0b01110110,
+    0b00111000,
+    0b00110111,
+    0b01010100,
+    0b01011100,
+    0b01110011,
+    0b01100111,
+    0b01010000,
+    0b01101101,
+    0b01111000,
+    0b00111110,
+    0b00011100,
+    0b00111110,
+    0b01110110,
+    0b01101110,
+    0b01011011, // z
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+    0b00000000,
+};
+

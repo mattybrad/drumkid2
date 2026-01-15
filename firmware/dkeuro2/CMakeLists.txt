@@ -37,8 +37,13 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(dkeuro2 dkeuro2.cpp hardware/Leds.cpp )
+add_executable(dkeuro2
+    dkeuro2.cpp
+    hardware/Leds.cpp
+    hardware/Buttons.cpp
+    )
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74595.pio)
+pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74165.pio)
 
 pico_set_program_name(dkeuro2 "dkeuro2")
 pico_set_program_version(dkeuro2 "0.1")
