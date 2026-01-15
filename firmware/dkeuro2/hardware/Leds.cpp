@@ -13,7 +13,16 @@ void Leds::init() {
     gpio_set_dir(Pins::SR_OUT_LATCH, GPIO_OUT);
     sn74595::shiftreg_init();
     singleLedStates = 0;
-    add_repeating_timer_ms(2, update, NULL, &updateTimer);
+    segmentData[0] = 0b11000000;
+    segmentData[1] = 0b00110000;
+    segmentData[2] = 0b00001100;
+    segmentData[3] = 0b00000011;
+    add_repeating_timer_ms(2, Leds::updateStatic, this, &updateTimer);
+}
+
+bool Leds::updateStatic(repeating_timer_t *rt) {
+    auto *self = static_cast<Leds *>(rt->user_data);
+    return self ? self->update(rt) : false;
 }
 
 void Leds::setLed(uint8_t ledNum, bool state) {
@@ -25,19 +34,21 @@ void Leds::setLed(uint8_t ledNum, bool state) {
     }
 }
 
-void Leds::setDisplay(uint8_t digitNum, uint8_t segmentData) {
+void Leds::setDisplay(uint8_t digitNum, uint8_t digitSegmentData) {
     // Set 7-segment display data
-    // uint16_t shiftRegData = 0;
-    // shiftRegData &= ~(0b11111111); // clear segment bits
-    // shiftRegData |= segmentData; // write segment bits
-    // shiftRegData |= 0b1111 << 8; // clear digit bits (set high)
-    // shiftRegData &= ~(1 << (8+digitNum)); // set selected digit low
+    if(digitNum < 4) {
+        segmentData[digitNum] = digitSegmentData;
+    }
 }
 
-void Leds::update(repeating_timer_t *rt) {
+bool Leds::update(repeating_timer_t *rt) {
     // Update LED states on hardware
     // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
-    uint16_t shiftRegData = 0;
+    uint16_t shiftRegData = 0b0000111100000000;
     shiftRegData |= (singleLedStates << 12);
+    shiftRegData |= segmentData[currentDigit];
+    shiftRegData &= ~(1 << (8+currentDigit)); // set selected digit low
     sn74595::shiftreg_send(shiftRegData);
+    currentDigit = (currentDigit + 1) % 4;
+    return true;
 }

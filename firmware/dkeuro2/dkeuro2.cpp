@@ -128,12 +128,21 @@ int main()
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
 
     leds.init();
-    leds.setLed(Leds::CLOCK_OUT, true);
-    leds.setLed(Leds::PULSE, true);
-    sleep_ms(500);
-    leds.setLed(Leds::CLOCK_OUT, false);
-    leds.setLed(Leds::PULSE, false);
-    leds.setLed(Leds::ERROR, true);
+    leds.setDisplay(0, 0b00111111); // display '0' on first digit
+    leds.setDisplay(1, 0b00000110); // display '1' on second digit
+    leds.setDisplay(2, 0b01011011); // display '2' on third digit
+    while(true) {
+        leds.setLed(Leds::CLOCK_OUT, true);
+        leds.setLed(Leds::PULSE, true);
+        leds.setLed(Leds::ERROR, false);
+        leds.setDisplay(3, 0b01101101); // display '3' on fourth digit
+        sleep_ms(500);
+        leds.setLed(Leds::CLOCK_OUT, false);
+        leds.setLed(Leds::PULSE, false);
+        leds.setLed(Leds::ERROR, true);
+        leds.setDisplay(3, 0b01100110); // display '4' on fourth digit
+        sleep_ms(500);
+    }
 
     uint16_t b = 1024+512+256+2+4; // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
 
