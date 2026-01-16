@@ -290,6 +290,9 @@ void doLiveHit(int sampleNum)
     int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - currentPulseTime - SAMPLES_PER_BUFFER;
     int samplesPerPulse = nextPredictedPulseTime - currentPulseTime;
     int thisStep = (pulseStep + (samplesSincePulse * SYSTEM_PPQN) / samplesPerPulse) % numSteps;
+
+    // this might be where i do the same adjustment i did in the main loop to fix the audio latency?
+
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
     beats[beatNum].removeHit(sampleNum, thisStep); // remove existing hit just in case
@@ -1523,7 +1526,6 @@ int main()
     int groupStatus[8] = {GROUP_PENDING};
     while (powerOn)
     {
-
         if (externalClock)
         {
             syncInPpqn = ppqnValues[syncInPpqnIndex];
@@ -1609,6 +1611,7 @@ int main()
         int calculatedOffset;
         if(externalClock) {
             calculatedOffset = 88000000 / (deltaT * syncInPpqn) + 2; // found this offset by trial and error but works really well so far
+            //calculatedOffset = 0;
         }
 
         // update audio output
@@ -1736,7 +1739,8 @@ int main()
                 }
                 magnetZoomValue = getMagnetZoomValue(step);
             }
-            if(activeButton == BUTTON_LIVE_EDIT && beatPlaying && (step % SYSTEM_PPQN) < (SYSTEM_PPQN>>2)) {
+            //printf("beat playing: %d\n", beatPlaying);
+            if(activeButton == BUTTON_LIVE_EDIT && (beatPlaying||externalClock) && (step % SYSTEM_PPQN) < (SYSTEM_PPQN>>2)) {
                 int metronomeSound = metronomeIndex < 50 ? 5000 : -5000;
                 metronomeIndex = (metronomeIndex + (step < SYSTEM_PPQN ? 2 : 1)) % 100;
                 out1 += metronomeSound;
