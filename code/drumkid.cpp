@@ -590,7 +590,10 @@ void handleSubSettingIncDec(bool isInc)
     case SETTING_CLOCK_MODE:
         externalClock = !externalClock;
         // suspect there may be more things to adjust when switching between modes, but here's what i can think of:
-        tempo = 600000000 / deltaT;
+        tempo = 600000000 / (deltaT * (externalClock ? 1 :syncInPpqn));
+        if(!externalClock) {
+            deltaT = 600000000 / tempo;
+        }
         displayClockMode();
         break;
 
