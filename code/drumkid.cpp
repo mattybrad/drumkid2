@@ -183,12 +183,16 @@ void handleSyncPulse() {
     }
 }
 
-uint64_t lastSyncInCheck = 0;
+//uint64_t lastSyncInCheck = 0;
 void gpio_callback(uint gpio, uint32_t events)
 {
-    if(externalClock && time_us_64() - lastSyncInCheck > 1000) { // simple debounce
+    // if(externalClock && time_us_64() - lastSyncInCheck > 1000) { // simple debounce
+    //     handleSyncPulse();
+    //     lastSyncInCheck = time_us_64();
+    //     //pulseLed(1, 100); // delay was 0, seemed to cause issues, added 100us delay, can't pretend i know why this works
+    // }
+    if(externalClock) {
         handleSyncPulse();
-        lastSyncInCheck = time_us_64();
         //pulseLed(1, 100); // delay was 0, seemed to cause issues, added 100us delay, can't pretend i know why this works
     }
 }
@@ -1133,19 +1137,23 @@ void displayTempo()
     if (externalClock)
     {
         int calculatedTempo = 600000000 / (deltaT * syncInPpqn);
-        updateLedDisplayInt(calculatedTempo);
         if (calculatedTempo <= 9999)
         {
             // 999.9 BPM or less
+            updateLedDisplayInt(calculatedTempo);
             bitWrite(sevenSegData[2], 7, true);
+        } else {
+            updateLedDisplayInt(calculatedTempo/10);
         }
     }
     else
     {
-        updateLedDisplayInt(tempo);
         if(tempo<=9999) {
             // 999.9 BPM or less
+            updateLedDisplayInt(tempo);
             bitWrite(sevenSegData[2], 7, true);
+        } else {
+            updateLedDisplayInt(tempo/10);
         }
     }
 }
