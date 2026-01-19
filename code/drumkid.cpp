@@ -157,12 +157,14 @@ int qcTestNum = 0;
 int qcTestPhase = 0; // e.g. 0 to 3 for LEDs, 0 to 18 for buttons, etc
 int qcPhasesPerTest[NUM_QC_TESTS];
 
-repeating_timer_t outputShiftRegistersTimer;
-repeating_timer_t inputShiftRegistersTimer;
-repeating_timer_t multiplexersTimer;
-repeating_timer_t displayTimer;
-repeating_timer_t holdTimer;
+// repeating_timer_t outputShiftRegistersTimer;
+// repeating_timer_t inputShiftRegistersTimer;
+// repeating_timer_t multiplexersTimer;
+// repeating_timer_t displayTimer;
+// repeating_timer_t holdTimer;
+repeating_timer_t mainTimer;
 
+uint64_t lastTempoDisplayTime = 0;
 void handleSyncPulse() {
     deltaT = time_us_64() - lastClockIn; // real time since last pulse
     
@@ -174,15 +176,20 @@ void handleSyncPulse() {
     lastClockIn = time_us_64();
     totalPulses ++;
     if (activeButton == BUTTON_MANUAL_TEMPO) {
-        displayTempo();
+        if(time_us_64() - lastTempoDisplayTime > 100000) {
+            lastTempoDisplayTime = time_us_64();
+            displayTempo();
+        }
     }
 }
 
+uint64_t lastSyncInCheck = 0;
 void gpio_callback(uint gpio, uint32_t events)
 {
-    if(externalClock) {
+    if(externalClock && time_us_64() - lastSyncInCheck > 1000) { // simple debounce
         handleSyncPulse();
-        pulseLed(1, 100); // delay was 0, seemed to cause issues, added 100us delay, can't pretend i know why this works
+        lastSyncInCheck = time_us_64();
+        //pulseLed(1, 100); // delay was 0, seemed to cause issues, added 100us delay, can't pretend i know why this works
     }
 }
 
@@ -200,36 +207,71 @@ void ledPulseLowCallback(int user_data)
     bitWrite(ledPulseStatuses, ledNum, false);
 }
 
-void ledPulseHighCallback(int user_data)
+// void ledPulseHighCallback(int user_data)
+// {
+//     uint ledNum = (uint)user_data;
+//     if (!bitRead(ledPulseStatuses, ledNum)) {
+//         setLed(ledNum, true);
+//         bitWrite(ledPulseStatuses, ledNum, true);
+//         addEvent(20000, ledPulseLowCallback, ledNum);
+//     } else {
+//         bitWrite(ledPulseStatuses, ledNum, false); // test...
+//         setLed(ledNum, false);
+//     }
+// }
+
+// uint64_t lastLedPulseMillis[4] = {0,0,0,0};
+// void pulseLed(uint ledNum, uint16_t delayMicros)
+// {
+//     uint64_t currentMillis = time_us_64() / 1000;
+//     if(currentMillis - lastLedPulseMillis[ledNum] < 50) {
+//         return; // prevent re-triggering if within 5ms
+//     }
+//     lastLedPulseMillis[ledNum] = currentMillis;
+//     addEvent(delayMicros, ledPulseHighCallback, ledNum);
+// }
+
+int mainTimerCounter = 0;
+bool doLedTimer = true;
+bool mainTimerCallback(repeating_timer_t *rt)
 {
-    uint ledNum = (uint)user_data;
-    if (!bitRead(ledPulseStatuses, ledNum)) {
-        setLed(ledNum, true);
-        bitWrite(ledPulseStatuses, ledNum, true);
-        addEvent(20000, ledPulseLowCallback, ledNum);
-    } else {
-        setLed(ledNum, false);
+    updateMultiplexers();
+    if((mainTimerCounter%4)==0) {
+        updateInputShiftRegisters();
     }
+    if((mainTimerCounter%8)==0) {
+        updateOutputShiftRegisters();
+    }
+    if((mainTimerCounter%240)==0 && doLedTimer) {
+        doLedTimer = updateLedDisplay();
+    }
+    if(mainTimerCounter==0) {
+        updateHold();
+    }
+    mainTimerCounter = (mainTimerCounter + 1) % 480;
+    return true;
 }
 
-void pulseLed(uint ledNum, uint16_t delayMicros)
+bool shiftRegistersShifting = false;
+bool updateOutputShiftRegisters()
 {
-    addEvent(delayMicros, ledPulseHighCallback, ledNum);
-}
-
-bool updateOutputShiftRegisters(repeating_timer_t *rt)
-{
+    if(shiftRegistersShifting) {
+        printf("skip shift reg update\n");
+        return true; // skip this update if previous one is still in progress
+    }
+    //printf("update shift reg digit %d\n", tempDigit);
+    shiftRegistersShifting = true;
     uint16_t b = shiftRegOutBase;
     bitWrite(b, 8+tempDigit, false); // set digit's common anode low to activate
     b += sevenSegData[tempDigit];
     sn74595::shiftreg_send(b);
     tempDigit = (tempDigit + 1) % 4;
-
+    shiftRegistersShifting = false;
     return true;
 }
 
 uint32_t lastValidData = 0;
-bool updateInputShiftRegisters(repeating_timer_t *rt)
+bool updateInputShiftRegisters()
 {
     uint32_t data;
     bool tempInputChanged = false;
@@ -290,8 +332,9 @@ void doLiveHit(int sampleNum)
     int64_t samplesSincePulse = (44100 * (time_us_64() - lastDacUpdateMicros)) / 1000000 + lastDacUpdateSamples - currentPulseTime - SAMPLES_PER_BUFFER;
     int samplesPerPulse = nextPredictedPulseTime - currentPulseTime;
     int thisStep = (pulseStep + (samplesSincePulse * SYSTEM_PPQN) / samplesPerPulse) % numSteps;
-
-    // this might be where i do the same adjustment i did in the main loop to fix the audio latency?
+    if(externalClock) {
+        thisStep = (pulseStep + (samplesSincePulse * (SYSTEM_PPQN / syncInPpqn)) / samplesPerPulse) % numSteps;
+    }
 
     thisStep = ((thisStep + quantizeSteps/2) % numSteps) / quantizeSteps;
     thisStep = thisStep * quantizeSteps;
@@ -1313,7 +1356,7 @@ void updateLedDisplayFloat(float num) {
 }
 
 int tempMuxAddr = 0;
-bool updateMultiplexers(repeating_timer_t *rt)
+bool updateMultiplexers()
 {
     adc_select_input(0);
     analogReadings[tempMuxAddr] = 4095 - adc_read();
@@ -1389,7 +1432,7 @@ int getRandomHitVelocity(int step, int sample) {
     return 0;
 }
 
-bool updateLedDisplay(repeating_timer_t *rt)
+bool updateLedDisplay()
 {
     sevenSegData[0] = rand() % 256;
     sevenSegData[1] = rand() % 256;
@@ -1408,7 +1451,7 @@ bool updateLedDisplay(repeating_timer_t *rt)
     }
 }
 
-bool updateHold(repeating_timer_t *rt) {
+bool updateHold() {
     if(!qcMode) {
         if(holdDelayInc > 0) {
             holdDelayInc --;
@@ -1511,11 +1554,13 @@ int main()
     sn74165::shiftreg_init();
 
     // can tweak timing for any of these
-    add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
-    add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
-    add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe, potentially faster
-    add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
-    add_repeating_timer_ms(125, updateHold, NULL, &holdTimer);
+    // add_repeating_timer_ms(2, updateOutputShiftRegisters, NULL, &outputShiftRegistersTimer);
+    // add_repeating_timer_ms(1, updateInputShiftRegisters, NULL, &inputShiftRegistersTimer); // could use an interrupt
+    // add_repeating_timer_us(250, updateMultiplexers, NULL, &multiplexersTimer); // could use PIO maybe, potentially faster - was 250us, trying to slow it down to see what happens
+    // add_repeating_timer_ms(60, updateLedDisplay, NULL, &displayTimer);
+    // add_repeating_timer_ms(125, updateHold, NULL, &holdTimer);
+
+    add_repeating_timer_us(250, mainTimerCallback, NULL, &mainTimer); // main timer at 4kHz
 
     struct audio_buffer_pool *ap = init_audio();
 
@@ -1699,8 +1744,8 @@ int main()
                 }
                 if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
-                    pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
-                    pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
+                    //pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
+                    //pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
                     //pulseGpio(SYNC_OUT, 0);
                 }
                 if((step % SYSTEM_PPQN) == 0) {
@@ -1708,7 +1753,7 @@ int main()
                     if(activeButton == NO_ACTIVE_BUTTON || activeButton == BUTTON_LIVE_EDIT) {
                         displayPulse(step / SYSTEM_PPQN, pulseDelay);
                     }
-                    pulseLed(2, pulseDelay);
+                    //pulseLed(2, pulseDelay);
 
                     // swing gets set here because it prevents issue where fluctuating pot reading causes skipped hits
                     swing = analogReadings[POT_SWING];
@@ -1817,7 +1862,7 @@ int main()
                         samples[j].queueHit(currentTime, 0, thisVel);
                         //int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
-                        pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
+                        //pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
                     }
                 }
                 samples[j].update(currentTime);
@@ -2616,27 +2661,34 @@ bool getBoolFromBuffer(const uint8_t *buffer, uint position)
     return getIntFromBuffer(buffer, position) != 0;
 }
 
-void gpioPulseLowCallback(int user_data)
-{
-    uint gpioNum = user_data;
-    gpio_put(gpioNum, 0);
-    bitWrite(gpioPulseStatuses, gpioNum, false);
-}
+// void gpioPulseLowCallback(int user_data)
+// {
+//     uint gpioNum = user_data;
+//     gpio_put(gpioNum, 0);
+//     bitWrite(gpioPulseStatuses, gpioNum, false);
+// }
 
-void gpioPulseHighCallback(int user_data)
-{
-    uint gpioNum = user_data;
-    if(!bitRead(gpioPulseStatuses,gpioNum)) {
-        gpio_put(gpioNum, 1);
-        bitWrite(gpioPulseStatuses, gpioNum, true);
-        addEvent(outputPulseLength * 1000, gpioPulseLowCallback, gpioNum);
-    }
-}
+// void gpioPulseHighCallback(int user_data)
+// {
+//     uint gpioNum = user_data;
+//     if(!bitRead(gpioPulseStatuses,gpioNum)) {
+//         gpio_put(gpioNum, 1);
+//         bitWrite(gpioPulseStatuses, gpioNum, true);
+//         addEvent(outputPulseLength * 1000, gpioPulseLowCallback, gpioNum);
+//     }
+// }
 
-void pulseGpio(uint gpioNum, uint16_t delayMicros)
-{
-    addEvent(delayMicros, gpioPulseHighCallback, gpioNum);
-}
+// uint64_t lastPulseTime[32] = {0};
+// void pulseGpio(uint gpioNum, uint16_t delayMicros)
+// {
+//     uint64_t currentTime = time_us_64();
+//     if(currentTime - lastPulseTime[gpioNum] < delayMicros + 1000) {
+//         // too soon to trigger another pulse on this pin
+//         return;
+//     }
+//     lastPulseTime[gpioNum] = currentTime;
+//     addEvent(delayMicros, gpioPulseHighCallback, gpioNum);
+// }
 
 void loadDefaultBeats()
 {
@@ -2652,67 +2704,73 @@ void loadDefaultBeats()
     }
 }
 
-void testEventCallback(int user_data)
-{
-    printf("event! %d\n", user_data);
-}
-int highestQueueNum = 0;
-int64_t eventManager(alarm_id_t id, void *user_data)
-{
-    //printf("event manager triggered, t=%llu\n", time_us_64());
-    bool foundLastCurrentEvent = false;
-    int numEventsFired = 0;
-    for(int i=0; i<MAX_EVENTS && !foundLastCurrentEvent; i++) {
-        if(events[i].time <= time_us_64()) {
-            events[i].callback(events[i].user_data);
-            numEventsFired ++;
-        } else {
-            foundLastCurrentEvent = true;
-        }
-    }
-    for(int i=0; i<MAX_EVENTS; i++) {
-        if(i+numEventsFired < MAX_EVENTS) {
-            events[i] = events[i+numEventsFired];
-            // if(events[i].time < UINT64_MAX) {
-            //     if (i > highestQueueNum)
-            //     {
-            //         printf("highest queue num %d\n", i);
-            //         highestQueueNum = i;
-            //     }
-            // }
-        } else {
-            events[i].time = UINT64_MAX;
-        }
-    }
-    if(events[0].time < UINT64_MAX) {
-        eventAlarm = add_alarm_in_us(events[0].time - time_us_64(), eventManager, NULL, true);
-    }
+// void testEventCallback(int user_data)
+// {
+//     printf("event! %d\n", user_data);
+// }
+// int highestQueueNum = 0;
+// int64_t eventManager(alarm_id_t id, void *user_data)
+// {
+//     //printf("event manager triggered, t=%llu\n", time_us_64());
+//     bool foundLastCurrentEvent = false;
+//     int numEventsFired = 0;
+//     for(int i=0; i<MAX_EVENTS && !foundLastCurrentEvent; i++) {
+//         if(events[i].time <= time_us_64()) {
+//             events[i].callback(events[i].user_data);
+//             numEventsFired ++;
+//         } else {
+//             foundLastCurrentEvent = true;
+//         }
+//     }
+//     for(int i=0; i<MAX_EVENTS; i++) {
+//         if(i+numEventsFired < MAX_EVENTS) {
+//             events[i] = events[i+numEventsFired];
+//             // if(events[i].time < UINT64_MAX) {
+//             //     if (i > highestQueueNum)
+//             //     {
+//             //         printf("highest queue num %d\n", i);
+//             //         highestQueueNum = i;
+//             //     }
+//             // }
+//         } else {
+//             events[i].time = UINT64_MAX;
+//         }
+//     }
+//     if(events[0].time < UINT64_MAX) {
+//         eventAlarm = add_alarm_in_us(events[0].time - time_us_64(), eventManager, NULL, true);
+//     }
 
-    return 0;
-}
-void addEvent(uint64_t delay, void (*callback)(int), int user_data)
-{
-    bool foundQueuePlace = false;
-    uint64_t time = time_us_64() + delay;
-    for(int i=0; i<MAX_EVENTS && !foundQueuePlace; i++) {
-        if(time < events[i].time) {
-            // shift all other events one place back in queue and insert this event
-            for(int j=MAX_EVENTS-1; j>i; j--) {
-                events[j] = events[j-1];
-            }
-            events[i].time = time;
-            events[i].callback = callback;
-            events[i].user_data = user_data;
-            foundQueuePlace = true;
-            if(i==0) {
-                // first in queue, need to cancel current alarm and reschedule it
-                if(eventAlarm > 0) {
-                    cancel_alarm(eventAlarm);
-                    eventAlarm = 0; // probably a good thing to do?
-                }
-                eventAlarm = add_alarm_in_us(delay, eventManager, NULL, true);
-                //assert(eventAlarm > 0);
-            }
-        }
-    }
-}
+//     return 0;
+// }
+// void addEvent(uint64_t delay, void (*callback)(int), int user_data)
+// {
+//     bool foundQueuePlace = false;
+//     uint64_t time = time_us_64() + delay;
+//     for(int i=0; i<MAX_EVENTS && !foundQueuePlace; i++) {
+//         if(time < events[i].time) {
+//             // shift all other events one place back in queue and insert this event
+//             for(int j=MAX_EVENTS-1; j>i; j--) {
+//                 events[j] = events[j-1];
+//             }
+//             events[i].time = time;
+//             events[i].callback = callback;
+//             events[i].user_data = user_data;
+//             foundQueuePlace = true;
+//             if(i==0) {
+//                 // first in queue, need to cancel current alarm and reschedule it
+//                 if(eventAlarm > 0) {
+//                     cancel_alarm(eventAlarm);
+//                     eventAlarm = 0; // probably a good thing to do?
+//                 }
+//                 eventAlarm = add_alarm_in_us(delay, eventManager, NULL, true);
+//                 if(eventAlarm <= 0) {
+//                     printf("failed to add event alarm!\n");
+//                 }
+//                 //assert(eventAlarm > 0);
+//             }
+//         }
+//     }
+//     if(!foundQueuePlace) {
+//         printf("event queue full!\n");
+//     }
+// }

@@ -10,7 +10,7 @@
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 
 #define SAMPLES_PER_BUFFER 256 // was 32 but anything under 256 appears to cause timing issues
-#define MAX_EVENTS 32
+#define MAX_EVENTS 32 // has been 32 until recently - experimenting with other numbers
 #define DEBOUNCING_CYCLES 30
 #define CV_DEFAULT 2085 // CV reading when disconnected - should probably be calibrated for each CV input on each unit during setup
 
@@ -208,7 +208,7 @@ uint8_t sevenSegData[4] = {0b00000000, 0b00000000, 0b00000000, 0b00000000};
 uint8_t singleLedData = 0b0000; // 4 x 3mm LEDs
 uint16_t storedLedData[4] = {0, 0, 0, 0};
 // timers and alarms
-repeating_timer_t mainTimer;
+//repeating_timer_t mainTimer;
 repeating_timer_t performanceCheckTimer;
 
 uint analogLoopNum = 0; // 0 to 7
@@ -295,5 +295,10 @@ void flagError(uint8_t errorNum);
 void clearError(uint8_t errorNum);
 void setupQCPhase();
 void confirmQCPhase(bool skipTest);
+bool updateInputShiftRegisters();
+bool updateOutputShiftRegisters();
+bool updateMultiplexers();
+bool updateLedDisplay();
+bool updateHold();
 
 #endif
