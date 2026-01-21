@@ -193,7 +193,7 @@ void gpio_callback(uint gpio, uint32_t events)
     // }
     if(externalClock) {
         handleSyncPulse();
-        //pulseLed(1, 100); // delay was 0, seemed to cause issues, added 100us delay, can't pretend i know why this works
+        pulseLed(1, 0);
     }
 }
 
@@ -204,12 +204,12 @@ void setLed(uint8_t ledNum, bool value) {
     bitWrite(shiftRegOutBase, 15-ledNum, value);
 }
 
-void ledPulseLowCallback(int user_data)
-{
-    uint ledNum = (uint)user_data;
-    setLed(ledNum, false);
-    bitWrite(ledPulseStatuses, ledNum, false);
-}
+// void ledPulseLowCallback(int user_data)
+// {
+//     uint ledNum = (uint)user_data;
+//     setLed(ledNum, false);
+//     bitWrite(ledPulseStatuses, ledNum, false);
+// }
 
 // void ledPulseHighCallback(int user_data)
 // {
@@ -235,6 +235,18 @@ void ledPulseLowCallback(int user_data)
 //     addEvent(delayMicros, ledPulseHighCallback, ledNum);
 // }
 
+uint64_t ledHighTimes[4] = {0,0,0,0};
+uint64_t ledLowTimes[4] = {0,0,0,0};
+void pulseLed(uint ledNum, uint16_t delayMicros)
+{
+    uint64_t currentMicros = time_us_64();
+    // if(currentMicros - ledHighTimes[ledNum] < 5000) {
+    //     return; // prevent re-triggering if within 5ms
+    // }
+    ledHighTimes[ledNum] = currentMicros+delayMicros;
+    ledLowTimes[ledNum] = ledHighTimes[ledNum] + 20000;
+}
+
 int mainTimerCounter = 0;
 bool doLedTimer = true;
 bool mainTimerCallback(repeating_timer_t *rt)
@@ -256,21 +268,23 @@ bool mainTimerCallback(repeating_timer_t *rt)
     return true;
 }
 
-bool shiftRegistersShifting = false;
 bool updateOutputShiftRegisters()
 {
-    if(shiftRegistersShifting) {
-        printf("skip shift reg update\n");
-        return true; // skip this update if previous one is still in progress
+    for(int i=0; i<4; i++) {
+        if(ledHighTimes[i] != 0 && time_us_64() >= ledHighTimes[i]) {
+            setLed(i, true);
+            ledHighTimes[i] = 0;
+        }
+        if(ledLowTimes[i] != 0 && time_us_64() >= ledLowTimes[i]) {
+            setLed(i, false);
+            ledLowTimes[i] = 0;
+        }
     }
-    //printf("update shift reg digit %d\n", tempDigit);
-    shiftRegistersShifting = true;
     uint16_t b = shiftRegOutBase;
     bitWrite(b, 8+tempDigit, false); // set digit's common anode low to activate
     b += sevenSegData[tempDigit];
     sn74595::shiftreg_send(b);
     tempDigit = (tempDigit + 1) % 4;
-    shiftRegistersShifting = false;
     return true;
 }
 
@@ -1755,8 +1769,8 @@ int main()
                 }
                 if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
-                    //pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
-                    //pulseGpio(SYNC_OUT, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
+                    pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
+                    pulseTrigger(4, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
                     //pulseGpio(SYNC_OUT, 0);
                 }
                 if((step % SYSTEM_PPQN) == 0) {
@@ -1764,7 +1778,7 @@ int main()
                     if(activeButton == NO_ACTIVE_BUTTON || activeButton == BUTTON_LIVE_EDIT) {
                         displayPulse(step / SYSTEM_PPQN, pulseDelay);
                     }
-                    //pulseLed(2, pulseDelay);
+                    pulseLed(2, pulseDelay);
 
                     // swing gets set here because it prevents issue where fluctuating pot reading causes skipped hits
                     swing = analogReadings[POT_SWING];
@@ -1874,6 +1888,7 @@ int main()
                         //int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                         //pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
+                        pulseTrigger(j, syncOutDelay);
                     }
                 }
                 samples[j].update(currentTime);
@@ -1926,6 +1941,17 @@ int main()
         give_audio_buffer(ap, buffer);
         lastDacUpdateSamples = currentTime;
         lastDacUpdateMicros = time_us_64();
+
+        for(int i=0; i<5; i++) {
+            if(triggerHighTimes[i] != 0 && time_us_64() >= triggerHighTimes[i]) {
+                gpio_put(TRIGGER_OUT_PINS[i], 1);
+                triggerHighTimes[i] = 0;
+            }
+            if(triggerLowTimes[i] != 0 && time_us_64() >= triggerLowTimes[i]) {
+                gpio_put(TRIGGER_OUT_PINS[i], 0);
+                triggerLowTimes[i] = 0;
+            }
+        }
 
         if(doFactoryResetSafe) {
             wipeFlash(true);
@@ -2700,6 +2726,13 @@ bool getBoolFromBuffer(const uint8_t *buffer, uint position)
 //     lastPulseTime[gpioNum] = currentTime;
 //     addEvent(delayMicros, gpioPulseHighCallback, gpioNum);
 // }
+
+void pulseTrigger(uint triggerNum, uint16_t delayMicros)
+{
+    uint64_t currentMicros = time_us_64();
+    triggerHighTimes[triggerNum] = currentMicros+delayMicros;
+    triggerLowTimes[triggerNum] = triggerHighTimes[triggerNum] + outputPulseLength * 1000;
+}
 
 void loadDefaultBeats()
 {

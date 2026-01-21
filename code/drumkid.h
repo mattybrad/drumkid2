@@ -29,7 +29,7 @@
 #define DATA_165 14
 #define SYNC_IN 16
 #define SYNC_OUT 17
-const uint8_t TRIGGER_OUT_PINS[4] = {15, 28, 22, 18};
+const uint8_t TRIGGER_OUT_PINS[5] = {15, 28, 22, 18, SYNC_OUT};
 
 // default sample names
 #define KICK 0
@@ -225,6 +225,8 @@ uint shiftRegInLoopNum = 0;            // 0 to 15
 uint shiftRegInPhase = 0;              // 0 or 1
 
 int outputPulseLength = 15;
+uint64_t triggerHighTimes[5] = {0};
+uint64_t triggerLowTimes[5] = {0};
 int pitchCurve = PITCH_CURVE_DEFAULT;
 const int NUM_QUANTIZE_VALUES = 4;
 int quantizeValues[NUM_QUANTIZE_VALUES] = {4, 8, 16, 32};
@@ -257,7 +259,8 @@ void scanSampleFolders();
 void loadDefaultSamples();
 void loadSamplesFromSD();
 void updateLeds();
-void pulseGpio(uint gpioNum, uint16_t delayMicros);
+// void pulseGpio(uint gpioNum, uint16_t delayMicros);
+void pulseTrigger(uint triggerNum, uint16_t delayMicros);
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
 void loadSamplesFromFlash();
 void loadBeatsFromFlash();
