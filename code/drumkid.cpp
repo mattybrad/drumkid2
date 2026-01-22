@@ -82,6 +82,13 @@ uint32_t errorStatuses = 0;
 int isSilent = false;
 bool specificClearDone = false;
 
+// trying out a new trigger event system...
+int triggerIndex = 0;
+int numTriggers = 0;
+uint64_t triggerTimes[8] = {0};
+uint8_t triggerMasks[8] = {0};
+bool triggersScheduled = false;
+
 // NB order = NA,NA,NA,NA,tom,hat,snare,kick
 uint8_t dropRef[11] = {
     0b11110000,
@@ -261,7 +268,7 @@ bool mainTimerCallback(repeating_timer_t *rt)
     if((mainTimerCounter%240)==0 && doLedTimer) {
         doLedTimer = updateLedDisplay();
     }
-    if(mainTimerCounter==0) {
+    if((mainTimerCounter%480)==0) {
         updateHold();
     }
     mainTimerCounter = (mainTimerCounter + 1) % 480;
@@ -1603,6 +1610,8 @@ int main()
             syncInPpqn = 1;
         }
 
+        int thingsTriggered = 0;
+
         struct audio_buffer *buffer = take_audio_buffer(ap, true);
         int16_t *bufferSamples = (int16_t *)buffer->buffer->bytes;
 
@@ -1687,6 +1696,8 @@ int main()
         // update audio output
         for (uint i = 0; i < buffer->max_sample_count * 2; i += 2)
         {
+            int64_t newTriggerDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
+
             // sample updates go here
             int32_t out1 = 0;
             int32_t out2 = 0;
@@ -1769,9 +1780,10 @@ int main()
                 }
                 if((step % (SYSTEM_PPQN/syncOutPpqn)) == 0) {
                     int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
-                    pulseLed(0, syncOutDelay+15000); // the 15000 is a bodge because something is wrong here
-                    pulseTrigger(4, syncOutDelay); // removed 15000 bodge because we want minimum latency for devices receiving clock signal
-                    //pulseGpio(SYNC_OUT, 0);
+                    pulseLed(0, syncOutDelay+14000);
+                    //pulseTrigger(4, syncOutDelay+14000);
+                    thingsTriggered ++;
+                    scheduleTriggerPulse(4, newTriggerDelay+14000);
                 }
                 if((step % SYSTEM_PPQN) == 0) {
                     int64_t pulseDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
@@ -1888,7 +1900,9 @@ int main()
                         //int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64() + 15000; // the 15000 is a bodge because something is wrong here
                         int64_t syncOutDelay = (1000000 * (SAMPLES_PER_BUFFER + i / 2)) / 44100 + lastDacUpdateMicros - time_us_64();
                         //pulseGpio(TRIGGER_OUT_PINS[j], syncOutDelay);
-                        pulseTrigger(j, syncOutDelay);
+                        pulseTrigger(j, syncOutDelay+14000);
+                        scheduleTriggerPulse(j, newTriggerDelay+14000);
+                        thingsTriggered ++;
                     }
                 }
                 samples[j].update(currentTime);
@@ -1942,15 +1956,22 @@ int main()
         lastDacUpdateSamples = currentTime;
         lastDacUpdateMicros = time_us_64();
 
-        for(int i=0; i<5; i++) {
-            if(triggerHighTimes[i] != 0 && time_us_64() >= triggerHighTimes[i]) {
-                gpio_put(TRIGGER_OUT_PINS[i], 1);
-                triggerHighTimes[i] = 0;
-            }
-            if(triggerLowTimes[i] != 0 && time_us_64() >= triggerLowTimes[i]) {
-                gpio_put(TRIGGER_OUT_PINS[i], 0);
-                triggerLowTimes[i] = 0;
-            }
+        // for(int i=0; i<5; i++) {
+        //     if(triggerHighTimes[i] != 0 && time_us_64() >= triggerHighTimes[i]) {
+        //         gpio_put(TRIGGER_OUT_PINS[i], 1);
+        //         triggerHighTimes[i] = 0;
+        //     }
+        //     if(triggerLowTimes[i] != 0 && time_us_64() >= triggerLowTimes[i]) {
+        //         gpio_put(TRIGGER_OUT_PINS[i], 0);
+        //         triggerLowTimes[i] = 0;
+        //     }
+        // }
+        // if(thingsTriggered > 0) {
+        //     printf("t%d\n", thingsTriggered);
+        // }
+
+        if(triggersScheduled) {
+            createTriggerAlarms();
         }
 
         if(doFactoryResetSafe) {
@@ -2727,11 +2748,69 @@ bool getBoolFromBuffer(const uint8_t *buffer, uint position)
 //     addEvent(delayMicros, gpioPulseHighCallback, gpioNum);
 // }
 
+int64_t triggerOutputHigh(alarm_id_t id, void *user_data)
+{
+    uint triggerMask = (uint)(uintptr_t)user_data;
+    for(uint i=0; i<5; i++) {
+        if(bitRead(triggerMask, i)) {
+            //printf("trigger %d high\n", i);
+            gpio_put(TRIGGER_OUT_PINS[i], 1);
+        }
+    }
+    return 0;
+}
+
+int64_t triggerOutputLow(alarm_id_t id, void *user_data)
+{
+    uint triggerMask = (uint)(uintptr_t)user_data;
+    for(uint i=0; i<5; i++) {
+        if(bitRead(triggerMask, i)) {
+            //printf("trigger %d low\n", i);
+            gpio_put(TRIGGER_OUT_PINS[i], 0);
+        }
+    }
+    return 0;
+}
+
 void pulseTrigger(uint triggerNum, uint16_t delayMicros)
 {
-    uint64_t currentMicros = time_us_64();
-    triggerHighTimes[triggerNum] = currentMicros+delayMicros;
-    triggerLowTimes[triggerNum] = triggerHighTimes[triggerNum] + outputPulseLength * 1000;
+    // uint64_t currentMicros = time_us_64();
+    // triggerHighTimes[triggerNum] = currentMicros+delayMicros;
+    // triggerLowTimes[triggerNum] = triggerHighTimes[triggerNum] + outputPulseLength * 1000;
+    
+    // add_alarm_in_us(delayMicros, triggerOutputHigh, (void*)(uintptr_t)triggerNum, false);
+    // add_alarm_in_us(delayMicros + 500, triggerOutputLow,(void*)(uintptr_t)triggerNum, false);
+}
+
+void scheduleTriggerPulse(uint8_t triggerNum, uint16_t delayMicros)
+{
+    if(triggerIndex == 0 && triggerMasks[0] == 0) {
+        // first trigger being scheduled
+        triggerTimes[0] = delayMicros;
+    } else if(delayMicros == triggerTimes[triggerIndex]) {
+        // use current trigger slot
+    } else {
+        triggerIndex ++;
+        triggerTimes[triggerIndex] = delayMicros;
+        if(triggerIndex >= 8) {
+            triggerIndex = 7;
+            printf("trigger pulse scheduling overflow!\n");
+            return;
+        }
+    }
+    bitWrite(triggerMasks[triggerIndex], triggerNum, true);
+    triggersScheduled = true;
+}
+
+void createTriggerAlarms() {
+    for(int i=0; i<=triggerIndex; i++) {
+        uint8_t mask = triggerMasks[i];
+        add_alarm_in_us(triggerTimes[i], triggerOutputHigh, (void*)(uintptr_t)mask, false);
+        add_alarm_in_us(triggerTimes[i]+outputPulseLength * 1000, triggerOutputLow, (void*)(uintptr_t)mask, false);
+        triggerMasks[i] = 0;
+    }
+    triggerIndex = 0;
+    triggersScheduled = false;
 }
 
 void loadDefaultBeats()
