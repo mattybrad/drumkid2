@@ -257,8 +257,6 @@ void scanSampleFolders();
 void loadDefaultSamples();
 void loadSamplesFromSD();
 void updateLeds();
-// void pulseGpio(uint gpioNum, uint16_t delayMicros);
-void pulseTrigger(uint triggerNum, uint16_t delayMicros);
 void scheduleTriggerPulse(uint8_t triggerNum, uint16_t delayMicros);
 void createTriggerAlarms();
 void pulseLed(uint ledNum, uint16_t pulseLengthMicros);
