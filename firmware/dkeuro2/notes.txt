@@ -1,0 +1,8 @@
+Currently writing version 2 of the Drumkid Eurorack firmware. A few notes about it:
+
+- Version 1 was really an exercise in "can I make this work?" - version 2 should be "how well can I make this work?". Code should be really clean, well-organised, and efficient. No really long files, no unnecessary global variables.
+- If I can make use of the second core, I think I can squeeze a lot more performance out of the RP2350.
+- Memory/storage overview:
+    - 520kB SRAM (immediate audio storage?)
+    - 4MB flash (code)
+    - SD card (unlimited?)

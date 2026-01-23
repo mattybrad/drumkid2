@@ -51795,6 +51795,18 @@
 			(justify left bottom)
 		)
 	)
+	(gr_text "JLCJLCJLCJLC"
+		(at 78.25 92.25 0)
+		(layer "F.SilkS")
+		(uuid "b43aa0ea-f86f-4454-ac51-777a56a14741")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
 	(gr_text "Bradshaw Instruments\nDrumkid 2.07 (Eurorack)"
 		(at 86.4 61.8 0)
 		(layer "F.SilkS")

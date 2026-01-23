@@ -13,11 +13,11 @@ Started Jan 2026
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
-#include "pico/audio_i2s.h"
 #include "dkeuro2.h"
 #include "hardware/Pins.h"
 #include "hardware/Leds.h"
 #include "hardware/Buttons.h"
+#include "audio/Audio.h"
 
 #define SAMPLES_PER_BUFFER 8
 
@@ -29,42 +29,6 @@ void secondCoreCode() {
         sleep_ms(5);
         multicore_fifo_push_blocking(0);
     }
-}
-
-// Borrowed/adapted from pico-playground
-struct audio_buffer_pool *init_audio()
-{
-
-    static audio_format_t audio_format = {
-        44100,
-        AUDIO_BUFFER_FORMAT_PCM_S16,
-        2,
-    };
-
-    static struct audio_buffer_format producer_format = {
-        .format = &audio_format,
-        .sample_stride = 4};
-
-    struct audio_buffer_pool *producer_pool = audio_new_producer_pool(&producer_format, 3, SAMPLES_PER_BUFFER); // todo correct size
-    bool __unused ok;
-    const struct audio_format *output_format;
-    struct audio_i2s_config config = {
-        .data_pin = 9,
-        .clock_pin_base = 10,
-        .dma_channel = 2, // was 0, trying to avoid SD conflict
-        .pio_sm = 0,
-    };
-
-    output_format = audio_i2s_setup(&audio_format, &config);
-    if (!output_format)
-    {
-        panic("PicoAudio: Unable to open audio device.\n");
-    }
-
-    ok = audio_i2s_connect(producer_pool);
-    assert(ok);
-    audio_i2s_set_enabled(true);
-    return producer_pool;
 }
 
 typedef struct {
@@ -93,6 +57,7 @@ transport_t transport = {
 
 Leds leds;
 Buttons buttons;
+Audio audio;
 
 int64_t tempTriggerPulseOffCallback(alarm_id_t id, void *user_data)
 {
@@ -132,21 +97,10 @@ int main()
     buttons.init();
 
     leds.init();
-    leds.setDisplay(0, Leds::asciiChars['c']);
-    leds.setDisplay(1, Leds::asciiChars['a']);
-    leds.setDisplay(2, Leds::asciiChars['t']);
-    while(true) {
-        leds.setLed(Leds::CLOCK_OUT, true);
-        leds.setLed(Leds::PULSE, true);
-        leds.setLed(Leds::ERROR, false);
-        leds.setDisplay(3, Leds::asciiChars['t']);
-        sleep_ms(500);
-        leds.setLed(Leds::CLOCK_OUT, false);
-        leds.setLed(Leds::PULSE, false);
-        leds.setLed(Leds::ERROR, true);
-        leds.setDisplay(3, Leds::asciiChars['b']);
-        sleep_ms(500);
-    }
+    leds.setDisplay(0, Leds::asciiChars['t']);
+    leds.setDisplay(1, Leds::asciiChars['e']);
+    leds.setDisplay(2, Leds::asciiChars['s']);
+    leds.setDisplay(3, Leds::asciiChars['t']);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);
@@ -162,17 +116,9 @@ int main()
     //     }
     // }
 
-    struct audio_buffer_pool *ap = init_audio();
+    audio.init();
     while(true) {
-
-        struct audio_buffer *buffer = take_audio_buffer(ap, true);
-        int16_t *samples = (int16_t *) buffer->buffer->bytes;
-        for (uint i = 0; i < buffer->max_sample_count * 2; i++) {
-            samples[i] = gateState ? rand() % 32768 - 16384 : 0; // random noise
-        }
-        buffer->sample_count = buffer->max_sample_count;
-        give_audio_buffer(ap, buffer);
-
+        audio.update();
         updateTransport();
     }
 }
