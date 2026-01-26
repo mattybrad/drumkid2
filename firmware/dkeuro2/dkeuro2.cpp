@@ -18,6 +18,7 @@ Started Jan 2026
 #include "hardware/Leds.h"
 #include "hardware/Buttons.h"
 #include "audio/Audio.h"
+#include "audio/Channel.h"
 
 #define SAMPLES_PER_BUFFER 8
 
@@ -58,6 +59,7 @@ transport_t transport = {
 Leds leds;
 Buttons buttons;
 Audio audio;
+Channel channels[4];
 
 int64_t tempTriggerPulseOffCallback(alarm_id_t id, void *user_data)
 {
@@ -94,10 +96,16 @@ int main()
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
 
+    for(uint i = 0; i < 4; i++) {
+        channels[i].init();
+    }
+    //channels[0].sampleData = testKick;
+    //channels[0].sampleLength = testKickLength;
+
     buttons.init();
 
     leds.init();
-    leds.setDisplay(0, Leds::asciiChars['t']);
+    leds.setDisplay(0, Leds::asciiChars['j']);
     leds.setDisplay(1, Leds::asciiChars['e']);
     leds.setDisplay(2, Leds::asciiChars['s']);
     leds.setDisplay(3, Leds::asciiChars['t']);
@@ -118,7 +126,10 @@ int main()
 
     audio.init();
     while(true) {
-        audio.update();
+        audio.checkForBuffer();
+        for(uint i = 0; i < audio.numSamplesRequired(); i++) {
+            audio.giveSample(0);
+        }
         updateTransport();
     }
 }
@@ -163,135 +174,3 @@ void clockInCallback(uint gpio, uint32_t events)
         return;
     }
 }
-
-uint8_t Leds::asciiChars[] = {
-    0b00000000, // 0 NULL
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000, // 32 SPACE
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b01000000, // -
-    0b10000000, // .
-    0b00000000,
-    0b00111111, // digit 0
-    0b00000110,
-    0b01011011,
-    0b01001111,
-    0b01100110,
-    0b01101101,
-    0b01111101,
-    0b00000111,
-    0b01111111,
-    0b01101111, // digit 9
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b01010011,
-    0b00000000, // 64
-    0b01110111, // A (a)
-    0b01111100,
-    0b00111001,
-    0b01011110,
-    0b01111001,
-    0b01110001,
-    0b01101111,
-    0b01110110,
-    0b00000110,
-    0b00001111,
-    0b01110110,
-    0b00111000,
-    0b00110111,
-    0b01010100,
-    0b01011100,
-    0b01110011,
-    0b01100111,
-    0b01010000,
-    0b01101101,
-    0b01111000,
-    0b00111110,
-    0b00011100,
-    0b00111110,
-    0b01110110,
-    0b01101110,
-    0b01011011, // Z (z)
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00001000, // _
-    0b00000000, // 96
-    0b01110111, // a
-    0b01111100,
-    0b00111001,
-    0b01011110,
-    0b01111001,
-    0b01110001,
-    0b01101111,
-    0b01110110,
-    0b00000110,
-    0b00001111,
-    0b01110110,
-    0b00111000,
-    0b00110111,
-    0b01010100,
-    0b01011100,
-    0b01110011,
-    0b01100111,
-    0b01010000,
-    0b01101101,
-    0b01111000,
-    0b00111110,
-    0b00011100,
-    0b00111110,
-    0b01110110,
-    0b01101110,
-    0b01011011, // z
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-    0b00000000,
-};
-

@@ -1,25 +1,26 @@
 #include "Audio.h"
-#include "testsample.h"
 
 void Audio::init() {
     audioBufferPool = init_audio();
-    for(uint s = 0; s < 8; s++) {
-        //samples[s].init();
-        samples[s].pos = s*1000; // start each sample at different position
+}
+
+void Audio::checkForBuffer() {
+    buffer = take_audio_buffer(audioBufferPool, false);
+}
+
+void Audio::giveSample(int16_t sample) {
+    if(buffer == nullptr) {
+        return;
     }
+
+    
 }
 
 void Audio::update() {
-    struct audio_buffer *buffer = take_audio_buffer(audioBufferPool, true);
+    buffer = take_audio_buffer(audioBufferPool, true);
     int16_t *bufferSamples = (int16_t *) buffer->buffer->bytes;
-    uint testSampleLen = sizeof(testSample) / sizeof(testSample[0]);
     for (uint i = 0; i < buffer->max_sample_count * 2; i+=2) {
-        //bufferSamples[i] = rand() % 32768 - 16384; // random noise
-        int16_t thisSample = 0;
-        for(uint s = 0; s < 8; s++) {
-            thisSample += testSample[samples[s].pos] >> 4; // mix 8 samples, simple average
-            samples[s].pos = (samples[s].pos + 1) % testSampleLen;
-        }
+        int16_t thisSample = rand() % 32768 - 16384; // random noise
         bufferSamples[i] = thisSample;
         bufferSamples[i+1] = thisSample; // stereo
     }

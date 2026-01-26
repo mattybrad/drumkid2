@@ -1,5 +1,4 @@
-#ifndef TESTSAMPLE_H
-#define TESTSAMPLE_H
+#pragma once
 
 int16_t testSample[220416] = {                     
 0,
@@ -220419,5 +220418,3 @@ int16_t testSample[220416] = {
 0,
 0,
 };
-
-#endif

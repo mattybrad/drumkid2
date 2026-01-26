@@ -42,6 +42,7 @@ add_executable(dkeuro2
     hardware/Leds.cpp
     hardware/Buttons.cpp
     audio/Audio.cpp
+    audio/Channel.cpp
     )
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74595.pio)
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74165.pio)
