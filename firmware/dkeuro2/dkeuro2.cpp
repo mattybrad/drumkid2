@@ -134,44 +134,21 @@ int main()
     // }
 
     audio.init();
-    uint64_t lastAudioUpdateTime = time_us_64();
-    int printIndex = 0;
-    int16_t nextAudio[32];
     bool bufferReady = false;
     while(true) {
-        int64_t startTime = time_us_64();
-        bool anyUpdates = false;
-        int numUpdates = 0;
-        while(audio.bufferNeedsData()) {
-            anyUpdates = true;
-            audio.giveSample(nextAudio[numUpdates], random() % 32768 - 16384);
-            numUpdates++;
-        }
-        if(anyUpdates) {
-            bufferReady = false;
-            int64_t timeTaken = time_us_64() - startTime;
-            int64_t timeSinceLastAudioUpdate = time_us_64() - lastAudioUpdateTime;
-            lastAudioUpdateTime = time_us_64();
-            printIndex++;
-            if(printIndex % 1000 == 0) {
-                //printf("Audio buffer filled in %lldus, last update %lldus ago, %d updates\n", timeTaken, timeSinceLastAudioUpdate, numUpdates);
+        // generate audio in pre-buffer
+        if(!audio.preBufferReady) {
+            for(uint i=0; i<audio.preBufferSize; i+=2) {
+                audio.preBuffer[i] = channels[0].sampleData[channels[0].samplePosition]; // left
+                // weird ringing noise, something funny happening...
+                channels[0].samplePosition = (channels[0].samplePosition + 1) % channels[0].sampleLength;
+                audio.preBuffer[i+1] = 0; // right
             }
+            audio.preBufferReady = true;
         }
 
-        // generate audio here for next buffer(s)
-        if(!bufferReady) {
-            for(int i=0; i<32; i++) {
-                int16_t sample = 0;
-                for(int ch=0; ch<4; ch++) {
-                    sample += channels[ch].sampleData[channels[ch].samplePosition] >> 2; // divide by 4 to avoid clipping
-                    channels[ch].samplePosition = (channels[ch].samplePosition + 1) % channels[ch].sampleLength;
-                }
-                nextAudio[i] = sample;
-            }
-            bufferReady = true;
-        }
-
-        //updateTransport();
+        // check whether DAC needs data
+        audio.update();
     }
 }
 
