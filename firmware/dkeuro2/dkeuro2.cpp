@@ -139,10 +139,14 @@ int main()
         // generate audio in pre-buffer
         if(!audio.preBufferReady) {
             for(uint i=0; i<audio.preBufferSize; i+=2) {
-                audio.preBuffer[i] = channels[0].sampleData[channels[0].samplePosition]; // left
-                // weird ringing noise, something funny happening...
-                channels[0].samplePosition = (channels[0].samplePosition + 1) % channels[0].sampleLength;
-                audio.preBuffer[i+1] = 0; // right
+                int16_t sampleValue = 0;
+                for(uint ch=0; ch<4; ch++) {
+                    Channel &channel = channels[ch];
+                    sampleValue += channel.sampleData[channel.samplePosition] >> 2; // reduce volume
+                    channel.samplePosition = (channel.samplePosition + 1) % channel.sampleLength;
+                }
+                audio.preBuffer[i] = sampleValue; // left
+                audio.preBuffer[i+1] = channels[0].sampleData[channels[0].sampleLength - channels[0].samplePosition - 1]; // right
             }
             audio.preBufferReady = true;
         }

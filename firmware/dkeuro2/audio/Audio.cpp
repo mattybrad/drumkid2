@@ -7,6 +7,7 @@ void Audio::init() {
 
 void Audio::update() {
     bool audioProcessed = false;
+    uint preBufferIndex = 0;
     while(true) {
         buffer = take_audio_buffer(audioBufferPool, false);
         if (buffer == nullptr) {
@@ -18,8 +19,8 @@ void Audio::update() {
         audioProcessed = true;
         int16_t *bufferSamples = (int16_t *) buffer->buffer->bytes;
         for (uint i = 0; i < buffer->max_sample_count * 2; i+=2) {
-            bufferSamples[i] = preBuffer[i]; // left
-            bufferSamples[i+1] = preBuffer[i+1]; // right
+            bufferSamples[i] = preBuffer[preBufferIndex++]; // left
+            bufferSamples[i+1] = preBuffer[preBufferIndex++]; // right
         }
         buffer->sample_count = buffer->max_sample_count;
         give_audio_buffer(audioBufferPool, buffer);
@@ -40,7 +41,7 @@ struct audio_buffer_pool* Audio::init_audio()
         .format = &audio_format,
         .sample_stride = 4};
 
-    struct audio_buffer_pool *producer_pool = audio_new_producer_pool(&producer_format, 2, SAMPLES_PER_BUFFER); // todo correct size
+    struct audio_buffer_pool *producer_pool = audio_new_producer_pool(&producer_format, NUM_AUDIO_BUFFERS, SAMPLES_PER_BUFFER); // todo correct size
     bool __unused ok;
     const struct audio_format *output_format;
     struct audio_i2s_config config = {
