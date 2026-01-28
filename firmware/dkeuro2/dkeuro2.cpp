@@ -105,7 +105,7 @@ int main()
     buttons.init();
 
     leds.init();
-    leds.setDisplay(0, Leds::asciiChars['j']);
+    leds.setDisplay(0, Leds::asciiChars['b']);
     leds.setDisplay(1, Leds::asciiChars['e']);
     leds.setDisplay(2, Leds::asciiChars['s']);
     leds.setDisplay(3, Leds::asciiChars['t']);
@@ -126,9 +126,9 @@ int main()
 
     audio.init();
     while(true) {
-        audio.checkForBuffer();
-        for(uint i = 0; i < audio.numSamplesRequired(); i++) {
-            audio.giveSample(0);
+        bool bufferNeedsData = true;
+        while(bufferNeedsData) {
+            bufferNeedsData = audio.giveSample(rand() % 32768 - 16384);
         }
         updateTransport();
     }

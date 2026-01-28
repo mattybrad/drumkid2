@@ -2,31 +2,45 @@
 
 void Audio::init() {
     audioBufferPool = init_audio();
+    buffer = nullptr;
 }
 
-void Audio::checkForBuffer() {
-    buffer = take_audio_buffer(audioBufferPool, false);
-}
-
-void Audio::giveSample(int16_t sample) {
+bool Audio::giveSample(int16_t sample) {
     if(buffer == nullptr) {
-        return;
+        buffer = take_audio_buffer(audioBufferPool, false);
+        if(buffer == nullptr) {
+            return false;
+        } else {
+            bufferSamples = (int16_t *) buffer->buffer->bytes;
+            bufferIndex = 0;
+        }
     }
 
-    
+
+    bufferSamples[bufferIndex] = sample;
+    bufferIndex++;
+    if(bufferIndex == buffer->max_sample_count * 2) {
+        buffer->sample_count = buffer->max_sample_count;
+        give_audio_buffer(audioBufferPool, buffer);
+        buffer = nullptr;
+        bufferIndex = 0;
+        return false;
+    }
+
+    return true;
 }
 
-void Audio::update() {
-    buffer = take_audio_buffer(audioBufferPool, true);
-    int16_t *bufferSamples = (int16_t *) buffer->buffer->bytes;
-    for (uint i = 0; i < buffer->max_sample_count * 2; i+=2) {
-        int16_t thisSample = rand() % 32768 - 16384; // random noise
-        bufferSamples[i] = thisSample;
-        bufferSamples[i+1] = thisSample; // stereo
-    }
-    buffer->sample_count = buffer->max_sample_count;
-    give_audio_buffer(audioBufferPool, buffer);
-}
+// void Audio::update() {
+//     buffer = take_audio_buffer(audioBufferPool, true);
+//     int16_t *bufferSamples = (int16_t *) buffer->buffer->bytes;
+//     for (uint i = 0; i < buffer->max_sample_count * 2; i+=2) {
+//         int16_t thisSample = rand() % 32768 - 16384; // random noise
+//         bufferSamples[i] = thisSample;
+//         bufferSamples[i+1] = thisSample; // stereo
+//     }
+//     buffer->sample_count = buffer->max_sample_count;
+//     give_audio_buffer(audioBufferPool, buffer);
+// }
 
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool* Audio::init_audio()
