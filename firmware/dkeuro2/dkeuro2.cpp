@@ -20,7 +20,10 @@ Started Jan 2026
 #include "audio/Audio.h"
 #include "audio/Channel.h"
 
-#define SAMPLES_PER_BUFFER 8
+#include "audio/TestKick.h"
+#include "audio/TestClap.h"
+#include "audio/TestHat.h"
+#include "audio/TestTom.h"
 
 void secondCoreCode() {
     while (true) {
@@ -99,8 +102,14 @@ int main()
     for(uint i = 0; i < 4; i++) {
         channels[i].init();
     }
-    //channels[0].sampleData = testKick;
-    //channels[0].sampleLength = testKickLength;
+    channels[0].sampleData = testKick;
+    channels[0].sampleLength = testKickLength;
+    channels[1].sampleData = testClap;
+    channels[1].sampleLength = testClapLength;
+    channels[2].sampleData = testHat;
+    channels[2].sampleLength = testHatLength;
+    channels[3].sampleData = testTom;
+    channels[3].sampleLength = testTomLength;
 
     buttons.init();
 
@@ -125,12 +134,44 @@ int main()
     // }
 
     audio.init();
+    uint64_t lastAudioUpdateTime = time_us_64();
+    int printIndex = 0;
+    int16_t nextAudio[32];
+    bool bufferReady = false;
     while(true) {
-        bool bufferNeedsData = true;
-        while(bufferNeedsData) {
-            bufferNeedsData = audio.giveSample(rand() % 32768 - 16384);
+        int64_t startTime = time_us_64();
+        bool anyUpdates = false;
+        int numUpdates = 0;
+        while(audio.bufferNeedsData()) {
+            anyUpdates = true;
+            audio.giveSample(nextAudio[numUpdates], random() % 32768 - 16384);
+            numUpdates++;
         }
-        updateTransport();
+        if(anyUpdates) {
+            bufferReady = false;
+            int64_t timeTaken = time_us_64() - startTime;
+            int64_t timeSinceLastAudioUpdate = time_us_64() - lastAudioUpdateTime;
+            lastAudioUpdateTime = time_us_64();
+            printIndex++;
+            if(printIndex % 1000 == 0) {
+                //printf("Audio buffer filled in %lldus, last update %lldus ago, %d updates\n", timeTaken, timeSinceLastAudioUpdate, numUpdates);
+            }
+        }
+
+        // generate audio here for next buffer(s)
+        if(!bufferReady) {
+            for(int i=0; i<32; i++) {
+                int16_t sample = 0;
+                for(int ch=0; ch<4; ch++) {
+                    sample += channels[ch].sampleData[channels[ch].samplePosition] >> 2; // divide by 4 to avoid clipping
+                    channels[ch].samplePosition = (channels[ch].samplePosition + 1) % channels[ch].sampleLength;
+                }
+                nextAudio[i] = sample;
+            }
+            bufferReady = true;
+        }
+
+        //updateTransport();
     }
 }
 

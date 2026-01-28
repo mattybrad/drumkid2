@@ -4,8 +4,9 @@
 class Channel {
     public:
         void init();
-        int16_t* sampleData;
+        const int16_t* sampleData;
         uint32_t sampleLength;
+        uint32_t samplePosition;
 
     private:
 
