@@ -26,8 +26,9 @@ Started Jan 2026
 #include "audio/TestClap.h"
 #include "audio/TestHat.h"
 #include "audio/TestTom.h"
+#include "audio/TestLong.h"
 
-#define NUM_CHANNELS 8
+#define NUM_CHANNELS 16
 
 Leds leds;
 Buttons buttons;
@@ -63,7 +64,7 @@ int main()
     for(uint i = 3; i < NUM_CHANNELS; i++) {
         channels[i].sampleData = testTom;
         channels[i].sampleLength = testTomLength;
-        channels[i].playbackSpeed = (int64_t)((0.5+0.33*i) * (1LL << 32));
+        channels[i].playbackSpeed = (int64_t)((0.1+0.25*i) * (1LL << 32));
     }
 
     buttons.init();
@@ -130,7 +131,7 @@ int main()
                     } else {
                         lerpedSample = channel.sampleData[indexInt];
                     }
-                    leftSample += lerpedSample >> 2;
+                    leftSample += lerpedSample >> 4;
                     channel.samplePositionFP += channel.playbackSpeed;
                     channel.samplePosition = channel.samplePositionFP >> 32;
                 }
