@@ -19,78 +19,28 @@ Started Jan 2026
 #include "hardware/Buttons.h"
 #include "audio/Audio.h"
 #include "audio/Channel.h"
+#include "rhythm/Transport.h"
+#include "rhythm/Beat.h"
 
 #include "audio/TestKick.h"
 #include "audio/TestClap.h"
 #include "audio/TestHat.h"
 #include "audio/TestTom.h"
 
-void secondCoreCode() {
-    while (true) {
-        // Code for the second core
-        sleep_ms(50);
-        multicore_fifo_push_blocking(1);
-        sleep_ms(5);
-        multicore_fifo_push_blocking(0);
-    }
-}
-
-typedef struct {
-    int64_t pulseInCount; // total pulses received
-    int64_t positionFP; // Q32.32, pulses
-    int64_t lastPositionFP; // Q32.32, pulses
-    int64_t rateFP;     // Q32.32, pulses per microsecond
-    int64_t lastUpdateTime; // microseconds
-    int64_t lastPulseTime;   // microseconds
-    int64_t nextPulseTimeEstimate; // microseconds
-    bool firstPulseReceived;
-    bool secondPulseReceived;
-} transport_t;
-
-transport_t transport = {
-    .pulseInCount = 0,
-    .positionFP = 0,
-    .lastPositionFP = 0,
-    .rateFP = 0,
-    .lastUpdateTime = 0,
-    .lastPulseTime = 0,
-    .nextPulseTimeEstimate = 0,
-    .firstPulseReceived = false,
-    .secondPulseReceived = false
-};
-
 Leds leds;
 Buttons buttons;
 Audio audio;
 Channel channels[4];
+Transport transport;
 
-int64_t tempTriggerPulseOffCallback(alarm_id_t id, void *user_data)
-{
-    gpio_put(Pins::TRIGGER_1, 0);
-    return 0;
-}
-
-bool gateState = false;
-int64_t tempTriggerGateOffCallback(alarm_id_t id, void *user_data)
-{
-    gateState = false;
-    return 0;
-}
-
-void tempTriggerPulse() {
-    gpio_put(Pins::TRIGGER_1, 1);
-    add_alarm_in_us(500, tempTriggerPulseOffCallback, NULL, true);
-}
-
-void tempTriggerGate() {
-    gateState = true;
-    add_alarm_in_ms(50, tempTriggerGateOffCallback, NULL, true);
+// Static wrapper function for GPIO interrupt
+void pulseInCallback(uint gpio, uint32_t events) {
+    transport.pulseIn();
 }
 
 int main()
 {
     stdio_init_all();
-    multicore_launch_core1(secondCoreCode); // launch second core
 
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);
@@ -120,18 +70,7 @@ int main()
     leds.setDisplay(3, Leds::asciiChars['t']);
 
     // interrupt for clock in pulse
-    gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, &clockInCallback);
-
-    // while (true) {
-    //     uint32_t received = multicore_fifo_pop_blocking();
-    //     printf("Received from core 1: %d\n", received);
-
-    //     if (received == 0) {
-    //         gpio_put(17, 0); // Set GPIO 17 high
-    //     } else {
-    //         gpio_put(17, 1); // Set GPIO 17 low
-    //     }
-    // }
+    gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
 
     audio.init();
     bool bufferReady = false;
@@ -139,11 +78,27 @@ int main()
         // generate audio in pre-buffer
         if(!audio.preBufferReady) {
             for(uint i=0; i<audio.preBufferSize; i+=2) {
+                // this is a really naive/dirty way of mapping the transport position to sample triggering for now
+                if(i==0) {
+                    uint thisTransportPosition = transport.getPositionFP() >> 32;
+                    if(thisTransportPosition % 24 == 0) {
+                        channels[0].samplePosition = 0; // kick on downbeat
+                    }
+                    if(thisTransportPosition % 48 == 24) {
+                        channels[1].samplePosition = 0; // clap on "and" of 1
+                    }
+                    if(thisTransportPosition % 12 == 0) {
+                        channels[2].samplePosition = 0; // hat on downbeat
+                    }
+                }
+
                 int16_t sampleValue = 0;
                 for(uint ch=0; ch<4; ch++) {
                     Channel &channel = channels[ch];
-                    sampleValue += channel.sampleData[channel.samplePosition] >> 2; // reduce volume
-                    channel.samplePosition = (channel.samplePosition + 1) % channel.sampleLength;
+                    if(channel.samplePosition < channel.sampleLength) {
+                        sampleValue += channel.sampleData[channel.samplePosition] >> 2; // reduce volume
+                        channel.samplePosition++;
+                    }
                 }
                 audio.preBuffer[i] = sampleValue; // left
                 audio.preBuffer[i+1] = channels[0].sampleData[channels[0].sampleLength - channels[0].samplePosition - 1]; // right
@@ -153,46 +108,7 @@ int main()
 
         // check whether DAC needs data
         audio.update();
-    }
-}
 
-void updateTransport() {
-    if(!transport.secondPulseReceived) {
-        return; // can't update until we have a rate
-    }
-
-    uint64_t now = time_us_64();
-    int64_t period = transport.nextPulseTimeEstimate - transport.lastPulseTime;
-    transport.lastPositionFP = transport.positionFP;
-    transport.positionFP = (transport.pulseInCount << 32) + ((int64_t)(now - transport.nextPulseTimeEstimate) << 32) / period;
-    uint64_t wholePulsePosition = transport.positionFP >> 32;
-    if(wholePulsePosition > (transport.lastPositionFP >> 32)) {
-        if(wholePulsePosition % 24 == 0) {
-            tempTriggerPulse();
-        }
-        if(wholePulsePosition % 24 == 0 || wholePulsePosition % 24 == 6) {
-            tempTriggerGate();
-        }
-    }
-}
-
-void clockInCallback(uint gpio, uint32_t events)
-{
-    uint64_t now = time_us_64();
-    int64_t period = now - transport.lastPulseTime;
-    transport.pulseInCount++;
-
-    if(!transport.firstPulseReceived) {
-        transport.lastPulseTime = now;
-        transport.firstPulseReceived = true;
-        return;
-    }
-
-    transport.nextPulseTimeEstimate = now + period;
-    transport.lastPulseTime = now;
-
-    if(!transport.secondPulseReceived) {
-        transport.secondPulseReceived = true;
-        return;
+        transport.update();
     }
 }
