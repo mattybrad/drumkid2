@@ -4,7 +4,7 @@
 #include "Sample.h"
 #include <cstdint>
 
-#define SAMPLES_PER_BUFFER 16
+#define SAMPLES_PER_BUFFER 32
 #define NUM_AUDIO_BUFFERS 2
 
 class Audio {

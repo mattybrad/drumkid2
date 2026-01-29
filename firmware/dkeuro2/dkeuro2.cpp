@@ -27,10 +27,12 @@ Started Jan 2026
 #include "audio/TestHat.h"
 #include "audio/TestTom.h"
 
+#define NUM_CHANNELS 8
+
 Leds leds;
 Buttons buttons;
 Audio audio;
-Channel channels[4];
+Channel channels[NUM_CHANNELS];
 Transport transport;
 
 // Static wrapper function for GPIO interrupt
@@ -49,7 +51,7 @@ int main()
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
 
-    for(uint i = 0; i < 4; i++) {
+    for(uint i = 0; i < NUM_CHANNELS; i++) {
         channels[i].init();
     }
     channels[0].sampleData = testKick;
@@ -58,8 +60,11 @@ int main()
     channels[1].sampleLength = testClapLength;
     channels[2].sampleData = testHat;
     channels[2].sampleLength = testHatLength;
-    channels[3].sampleData = testTom;
-    channels[3].sampleLength = testTomLength;
+    for(uint i = 3; i < NUM_CHANNELS; i++) {
+        channels[i].sampleData = testTom;
+        channels[i].sampleLength = testTomLength;
+        channels[i].playbackSpeed = (int64_t)((0.5+0.33*i) * (1LL << 32));
+    }
 
     buttons.init();
 
@@ -76,6 +81,7 @@ int main()
     transport.init();
     int64_t lastTransportPositionFP = 0;
     uint64_t now;
+    int longestTime = 0;
     while(true) {
         // generate audio in pre-buffer
         uint sampleCount = 0;
@@ -89,22 +95,44 @@ int main()
                 // check for triggers
                 if(thisTransportPosition % 24 == 0) {
                     channels[0].samplePosition = 0;
+                    channels[0].samplePositionFP = 0;
                 }
                 if(thisTransportPosition % 48 == 24) {
                     channels[1].samplePosition = 0;
+                    channels[1].samplePositionFP = 0;
                 }
                 if(thisTransportPosition % 6 == 0) {
                     channels[2].samplePosition = 0;
+                    channels[2].samplePositionFP = 0;
+                }
+                for(uint i = 3; i < NUM_CHANNELS; i++) {
+                    if(thisTransportPosition % 4 == 0 && rand() % 4 == 0) {
+                        channels[i].samplePosition = 0;
+                        channels[i].samplePositionFP = 0;
+                    }
                 }
             }
 
             int16_t leftSample = 0;
             int16_t rightSample = 0;
-            for(uint ch=0; ch<4; ch++) {
+            for(uint ch=0; ch<NUM_CHANNELS; ch++) {
                 Channel &channel = channels[ch];
                 if(channel.samplePosition < channel.sampleLength) {
-                    leftSample += channel.sampleData[channel.samplePosition] >> 2;
-                    channel.samplePosition++;
+                    //leftSample += channel.sampleData[channel.samplePosition] >> 2;
+                    int16_t lerpedSample = 0;
+                    // simple linear interpolation
+                    uint32_t indexInt = channel.samplePositionFP >> 32;
+                    uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
+                    if(indexInt + 1 < channel.sampleLength) {
+                        int16_t sample1 = channel.sampleData[indexInt];
+                        int16_t sample2 = channel.sampleData[indexInt + 1];
+                        lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
+                    } else {
+                        lerpedSample = channel.sampleData[indexInt];
+                    }
+                    leftSample += lerpedSample >> 2;
+                    channel.samplePositionFP += channel.playbackSpeed;
+                    channel.samplePosition = channel.samplePositionFP >> 32;
                 }
             }
             rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
@@ -112,10 +140,13 @@ int main()
             audio.queueSample(leftSample, rightSample);
             sampleCount++;
         }
-        // if(sampleCount > 0) {
-        //     uint64_t elapsed = time_us_64() - now;
-        //     printf("%llu\n", elapsed);
-        // }
+        if(sampleCount > 0) {
+            uint64_t elapsed = time_us_64() - now;
+            if(elapsed > longestTime && time_us_64() > 2000000) {
+                longestTime = elapsed;
+                printf("%d\n", longestTime);
+            }
+        }
 
         // check whether DAC needs data
         audio.update();
