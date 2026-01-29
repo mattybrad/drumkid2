@@ -58,3 +58,12 @@ void Transport::pulseIn() {
 int64_t Transport::getPositionFP() {
     return positionFP;
 }
+
+int64_t Transport::getPositionAtTimeFP(uint64_t timeUs) {
+    if(!secondPulseReceived) {
+        return positionFP;
+    }
+    int64_t deltaTimeUs = (int64_t)(timeUs - lastPulseTime);
+    int64_t deltaPulsesFP = (rateFP * deltaTimeUs) >> 32;
+    return positionFP + deltaPulsesFP;
+}

@@ -73,26 +73,29 @@ int main()
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
 
     audio.init();
-    bool bufferReady = false;
+    transport.init();
+    int64_t lastTransportPositionFP = 0;
+    uint64_t now;
     while(true) {
         // generate audio in pre-buffer
+        uint sampleCount = 0;
+        now = time_us_64();
         while(audio.samplesRequired()) {
-            // this is a really naive/dirty way of mapping the transport position to sample triggering for now
-            uint thisTransportPosition = transport.getPositionFP() >> 32;
-            if(thisTransportPosition % 24 == 0) {
-                channels[0].samplePosition = 0;
-            }
-            if(thisTransportPosition % 48 == 24) {
-                channels[1].samplePosition = 0;
-            }
-            if(thisTransportPosition % 12 == 0) {
-                channels[2].samplePosition = 0;
-            }
-            if(thisTransportPosition % 12 == 0) {
-                channels[2].samplePosition = 0;
-            }
-            if(thisTransportPosition % 96 == 0) {
-                channels[3].samplePosition = 0;
+            uint32_t thisTransportPosition = transport.getPositionAtTimeFP(now+(sampleCount*22)) >> 32; // 22us per sample at 44.1kHz, approximate for now
+
+            if(thisTransportPosition != lastTransportPositionFP) {
+                lastTransportPositionFP = thisTransportPosition;
+                
+                // check for triggers
+                if(thisTransportPosition % 24 == 0) {
+                    channels[0].samplePosition = 0;
+                }
+                if(thisTransportPosition % 48 == 24) {
+                    channels[1].samplePosition = 0;
+                }
+                if(thisTransportPosition % 6 == 0) {
+                    channels[2].samplePosition = 0;
+                }
             }
 
             int16_t leftSample = 0;
@@ -100,14 +103,19 @@ int main()
             for(uint ch=0; ch<4; ch++) {
                 Channel &channel = channels[ch];
                 if(channel.samplePosition < channel.sampleLength) {
-                    leftSample += channel.sampleData[channel.samplePosition] >> 2; // reduce volume// reduce volume
+                    leftSample += channel.sampleData[channel.samplePosition] >> 2;
                     channel.samplePosition++;
                 }
             }
             rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
 
             audio.queueSample(leftSample, rightSample);
+            sampleCount++;
         }
+        // if(sampleCount > 0) {
+        //     uint64_t elapsed = time_us_64() - now;
+        //     printf("%llu\n", elapsed);
+        // }
 
         // check whether DAC needs data
         audio.update();

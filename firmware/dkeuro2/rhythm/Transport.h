@@ -7,6 +7,7 @@ class Transport {
         void pulseIn();
         void update();
         int64_t getPositionFP(); // Q32.32
+        int64_t getPositionAtTimeFP(uint64_t timeUs); // Q32.32
         void setBPM(float bpm);
     private:
         int64_t pulseInCount = 0; // total pulses received
