@@ -10,20 +10,17 @@
 class Audio {
     public:
         void init();
-        bool preBufferReady = false;
-        uint preBufferSize = SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 2; // stereo
-        bool bufferNeedsData();
-        void giveSample(int16_t sampleLeft, int16_t sampleRight);
+        bool samplesRequired();
+        void queueSample(int16_t sampleLeft, int16_t sampleRight);
         void update();
-        uint bufferRequestSize();
-        struct audio_buffer_pool* getAudioBufferPool();
-        int16_t preBuffer[SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 2]; // stereo
-
-    private:
-        uint _bufferRequestSize;
-        struct audio_buffer *buffer;
-        //int16_t *bufferSamples;
-        struct audio_buffer_pool* init_audio();
-        struct audio_buffer_pool* audioBufferPool;
-        uint bufferIndex = 0;
+        
+        private:
+        bool _preBufferReady = false;
+        uint _preBufferWriteIndex = 0;
+        int16_t _preBuffer[SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 2]; // stereo
+        uint _preBufferSize = SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 2; // stereo
+        //struct audio_buffer_pool* _getAudioBufferPool();
+        struct audio_buffer *_buffer;
+        struct audio_buffer_pool* _initAudio();
+        struct audio_buffer_pool* _audioBufferPool;
 };

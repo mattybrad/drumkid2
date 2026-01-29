@@ -64,10 +64,10 @@ int main()
     buttons.init();
 
     leds.init();
-    leds.setDisplay(0, Leds::asciiChars['b']);
-    leds.setDisplay(1, Leds::asciiChars['e']);
-    leds.setDisplay(2, Leds::asciiChars['s']);
-    leds.setDisplay(3, Leds::asciiChars['t']);
+    leds.setDisplay(0, Leds::asciiChars['M']);
+    leds.setDisplay(1, Leds::asciiChars['L']);
+    leds.setDisplay(2, Leds::asciiChars['B']);
+    leds.setDisplay(3, Leds::asciiChars[' ']);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
@@ -76,34 +76,37 @@ int main()
     bool bufferReady = false;
     while(true) {
         // generate audio in pre-buffer
-        if(!audio.preBufferReady) {
-            for(uint i=0; i<audio.preBufferSize; i+=2) {
-                // this is a really naive/dirty way of mapping the transport position to sample triggering for now
-                if(i==0) {
-                    uint thisTransportPosition = transport.getPositionFP() >> 32;
-                    if(thisTransportPosition % 24 == 0) {
-                        channels[0].samplePosition = 0; // kick on downbeat
-                    }
-                    if(thisTransportPosition % 48 == 24) {
-                        channels[1].samplePosition = 0; // clap on "and" of 1
-                    }
-                    if(thisTransportPosition % 12 == 0) {
-                        channels[2].samplePosition = 0; // hat on downbeat
-                    }
-                }
-
-                int16_t sampleValue = 0;
-                for(uint ch=0; ch<4; ch++) {
-                    Channel &channel = channels[ch];
-                    if(channel.samplePosition < channel.sampleLength) {
-                        sampleValue += channel.sampleData[channel.samplePosition] >> 2; // reduce volume
-                        channel.samplePosition++;
-                    }
-                }
-                audio.preBuffer[i] = sampleValue; // left
-                audio.preBuffer[i+1] = channels[0].sampleData[channels[0].sampleLength - channels[0].samplePosition - 1]; // right
+        while(audio.samplesRequired()) {
+            // this is a really naive/dirty way of mapping the transport position to sample triggering for now
+            uint thisTransportPosition = transport.getPositionFP() >> 32;
+            if(thisTransportPosition % 24 == 0) {
+                channels[0].samplePosition = 0;
             }
-            audio.preBufferReady = true;
+            if(thisTransportPosition % 48 == 24) {
+                channels[1].samplePosition = 0;
+            }
+            if(thisTransportPosition % 12 == 0) {
+                channels[2].samplePosition = 0;
+            }
+            if(thisTransportPosition % 12 == 0) {
+                channels[2].samplePosition = 0;
+            }
+            if(thisTransportPosition % 96 == 0) {
+                channels[3].samplePosition = 0;
+            }
+
+            int16_t leftSample = 0;
+            int16_t rightSample = 0;
+            for(uint ch=0; ch<4; ch++) {
+                Channel &channel = channels[ch];
+                if(channel.samplePosition < channel.sampleLength) {
+                    leftSample += channel.sampleData[channel.samplePosition] >> 2; // reduce volume// reduce volume
+                    channel.samplePosition++;
+                }
+            }
+            rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
+
+            audio.queueSample(leftSample, rightSample);
         }
 
         // check whether DAC needs data

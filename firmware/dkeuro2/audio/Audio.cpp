@@ -1,34 +1,47 @@
 #include "Audio.h"
 
 void Audio::init() {
-    audioBufferPool = init_audio();
-    buffer = nullptr;
+    _audioBufferPool = _initAudio();
+    _buffer = nullptr;
+}
+
+bool Audio::samplesRequired() {
+    return !_preBufferReady;
+}
+
+void Audio::queueSample(int16_t sampleLeft, int16_t sampleRight) {
+    _preBuffer[_preBufferWriteIndex++] = sampleLeft;
+    _preBuffer[_preBufferWriteIndex++] = sampleRight;
+    if(_preBufferWriteIndex >= _preBufferSize) {
+        _preBufferReady = true;
+    }
 }
 
 void Audio::update() {
     bool audioProcessed = false;
-    uint preBufferIndex = 0;
+    uint preBufferReadIndex = 0;
     while(true) {
-        buffer = take_audio_buffer(audioBufferPool, false);
-        if (buffer == nullptr) {
+        _buffer = take_audio_buffer(_audioBufferPool, false);
+        if (_buffer == nullptr) {
             if(audioProcessed) {
-                preBufferReady = false;
+                _preBufferReady = false;
+                _preBufferWriteIndex = 0;
             }
             return;
         }
         audioProcessed = true;
-        int16_t *bufferSamples = (int16_t *) buffer->buffer->bytes;
-        for (uint i = 0; i < buffer->max_sample_count * 2; i+=2) {
-            bufferSamples[i] = preBuffer[preBufferIndex++]; // left
-            bufferSamples[i+1] = preBuffer[preBufferIndex++]; // right
+        int16_t *bufferSamples = (int16_t *) _buffer->buffer->bytes;
+        for (uint i = 0; i < _buffer->max_sample_count * 2; i+=2) {
+            bufferSamples[i] = _preBuffer[preBufferReadIndex++]; // left
+            bufferSamples[i+1] = _preBuffer[preBufferReadIndex++]; // right
         }
-        buffer->sample_count = buffer->max_sample_count;
-        give_audio_buffer(audioBufferPool, buffer);
+        _buffer->sample_count = _buffer->max_sample_count;
+        give_audio_buffer(_audioBufferPool, _buffer);
     }
 }
 
 // Borrowed/adapted from pico-playground
-struct audio_buffer_pool* Audio::init_audio()
+struct audio_buffer_pool* Audio::_initAudio()
 {
 
     static audio_format_t audio_format = {
