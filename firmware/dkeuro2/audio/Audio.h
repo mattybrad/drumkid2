@@ -14,6 +14,7 @@ class Audio {
         void queueSample(int16_t sampleLeft, int16_t sampleRight);
         void update();
         int64_t lastDacUpdate();
+        int dacIntervalUs();
         
     private:
         bool _preBufferReady = false;

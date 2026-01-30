@@ -83,6 +83,7 @@ int main()
     int64_t lastTransportPositionFP = 0;
     uint64_t now;
     int longestTime = 0;
+    int dacIntervalUs = audio.dacIntervalUs();
     while(true) {
         // generate audio in pre-buffer
         uint sampleCount = 0;
@@ -150,7 +151,7 @@ int main()
         }
 
         // do regular hardware updates if enough time remains before next DAC update
-        if(time_us_64() - audio.lastDacUpdate() < 250) {
+        if(time_us_64() - audio.lastDacUpdate() < dacIntervalUs - 250) {
             if(time_us_64() - leds.lastUpdate() > 2000) {
                 leds.update();
             }

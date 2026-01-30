@@ -46,6 +46,10 @@ int64_t Audio::lastDacUpdate() {
     return _lastDacUpdateTimeUs;
 }
 
+int Audio::dacIntervalUs() {
+    return (SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 1000000) / 44100;
+}
+
 // Borrowed/adapted from pico-playground
 struct audio_buffer_pool* Audio::_initAudio()
 {
