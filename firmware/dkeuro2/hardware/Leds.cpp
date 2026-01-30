@@ -17,12 +17,6 @@ void Leds::init() {
     _segmentData[1] = 0b00110000;
     _segmentData[2] = 0b00001100;
     _segmentData[3] = 0b00000011;
-    add_repeating_timer_ms(2, Leds::_updateStatic, this, &_updateTimer);
-}
-
-bool Leds::_updateStatic(repeating_timer_t *rt) {
-    auto *self = static_cast<Leds *>(rt->user_data);
-    return self ? self->_update(rt) : false;
 }
 
 void Leds::setLed(uint8_t ledNum, bool state) {
@@ -41,7 +35,7 @@ void Leds::setDisplay(uint8_t digitNum, uint8_t digitSegmentData) {
     }
 }
 
-bool Leds::_update(repeating_timer_t *rt) {
+void Leds::update() {
     // Update LED states on hardware
     // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs
     uint16_t shiftRegData = 0b0000111100000000;
@@ -50,7 +44,11 @@ bool Leds::_update(repeating_timer_t *rt) {
     shiftRegData &= ~(1 << (8+_currentDigit)); // set selected digit low
     sn74595::shiftreg_send(shiftRegData);
     _currentDigit = (_currentDigit + 1) % 4;
-    return true;
+    _lastUpdateTime = time_us_64();
+}
+
+int64_t Leds::lastUpdate() {
+    return _lastUpdateTime;
 }
 
 uint8_t Leds::asciiChars[] = {

@@ -13,13 +13,14 @@ class Audio {
         bool samplesRequired();
         void queueSample(int16_t sampleLeft, int16_t sampleRight);
         void update();
+        int64_t lastDacUpdate();
         
-        private:
+    private:
         bool _preBufferReady = false;
         uint _preBufferWriteIndex = 0;
         int16_t _preBuffer[SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 2]; // stereo
         uint _preBufferSize = SAMPLES_PER_BUFFER * NUM_AUDIO_BUFFERS * 2; // stereo
-        //struct audio_buffer_pool* _getAudioBufferPool();
+        int64_t _lastDacUpdateTimeUs = 0;
         struct audio_buffer *_buffer;
         struct audio_buffer_pool* _initAudio();
         struct audio_buffer_pool* _audioBufferPool;

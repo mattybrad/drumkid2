@@ -1,4 +1,5 @@
 #include "Audio.h"
+#include "pico/time.h"
 
 void Audio::init() {
     _audioBufferPool = _initAudio();
@@ -37,7 +38,12 @@ void Audio::update() {
         }
         _buffer->sample_count = _buffer->max_sample_count;
         give_audio_buffer(_audioBufferPool, _buffer);
+        _lastDacUpdateTimeUs = time_us_64();
     }
+}
+
+int64_t Audio::lastDacUpdate() {
+    return _lastDacUpdateTimeUs;
 }
 
 // Borrowed/adapted from pico-playground

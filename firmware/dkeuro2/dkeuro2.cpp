@@ -28,7 +28,7 @@ Started Jan 2026
 #include "audio/TestTom.h"
 #include "audio/TestLong.h"
 
-#define NUM_CHANNELS 16
+#define NUM_CHANNELS 8
 
 Leds leds;
 Buttons buttons;
@@ -148,6 +148,18 @@ int main()
                 printf("%d\n", longestTime);
             }
         }
+
+        // do regular hardware updates if enough time remains before next DAC update
+        if(time_us_64() - audio.lastDacUpdate() < 250) {
+            if(time_us_64() - leds.lastUpdate() > 2000) {
+                leds.update();
+            }
+            if(time_us_64() - buttons.lastUpdate() > 1000) {
+                buttons.update();
+            }
+            // 4051 mux update will also go here
+        }
+
 
         // check whether DAC needs data
         audio.update();

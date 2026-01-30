@@ -12,12 +12,12 @@ class Leds {
         static const uint8_t PULSE = 2;
         static const uint8_t ERROR = 3;
         static uint8_t asciiChars[256];
+        void update();
+        int64_t lastUpdate();
         
-        private:
-        static bool _updateStatic(repeating_timer_t *rt);
-        bool _update(repeating_timer_t *rt);
-        repeating_timer_t _updateTimer;
+    private:
         uint8_t _singleLedStates;
         uint8_t _segmentData[4];
         uint8_t _currentDigit = 0;
+        int64_t _lastUpdateTime = 0;
 };

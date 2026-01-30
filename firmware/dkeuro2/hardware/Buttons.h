@@ -5,9 +5,9 @@
 class Buttons {
     public:
         void init();
+        void update();
+        int64_t lastUpdate();
         
-        private:
-        static bool _updateStatic(repeating_timer_t *rt);
-        bool _update(repeating_timer_t *rt);
-        repeating_timer_t _updateTimer;
+    private:
+        int64_t _lastUpdateTime = 0;
 };
