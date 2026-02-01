@@ -17,6 +17,7 @@ Started Jan 2026
 #include "hardware/Pins.h"
 #include "hardware/Leds.h"
 #include "hardware/Buttons.h"
+#include "hardware/CardReader.h"
 #include "audio/Audio.h"
 #include "audio/Channel.h"
 #include "rhythm/Transport.h"
@@ -30,6 +31,7 @@ Started Jan 2026
 
 #define NUM_CHANNELS 8
 
+CardReader cardReader;
 Leds leds;
 Buttons buttons;
 Audio audio;
@@ -44,6 +46,8 @@ void pulseInCallback(uint gpio, uint32_t events) {
 int main()
 {
     stdio_init_all();
+
+    cardReader.init();
 
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);

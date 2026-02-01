@@ -37,14 +37,18 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
+add_subdirectory(libraries/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src build)
+
 add_executable(dkeuro2
     dkeuro2.cpp
+    hardware/CardReader.cpp
     hardware/Leds.cpp
     hardware/Buttons.cpp
     audio/Audio.cpp
     audio/Channel.cpp
     rhythm/Transport.cpp
     rhythm/Beat.cpp
+    hw_config.c
     )
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74595.pio)
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74165.pio)
@@ -62,6 +66,7 @@ target_link_libraries(dkeuro2
         hardware_pio
         pico_multicore
         pico_audio_i2s
+        no-OS-FatFS-SD-SDIO-SPI-RPi-Pico
         )
 
 # disable usb output, enable uart output
