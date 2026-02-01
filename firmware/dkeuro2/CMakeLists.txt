@@ -42,13 +42,13 @@ add_subdirectory(libraries/no-OS-FatFS-SD-SDIO-SPI-RPi-Pico/src build)
 add_executable(dkeuro2
     dkeuro2.cpp
     hardware/CardReader.cpp
+    hardware/CardReaderConfig.c
     hardware/Leds.cpp
     hardware/Buttons.cpp
     audio/Audio.cpp
     audio/Channel.cpp
     rhythm/Transport.cpp
     rhythm/Beat.cpp
-    hw_config.c
     )
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74595.pio)
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74165.pio)
