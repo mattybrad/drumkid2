@@ -21,7 +21,7 @@ void Buttons::update() {
     data = sn74165::shiftreg_get(&tempInputChanged);
     if (tempInputChanged)
     {
-        printf("B%08X\n", data);
+        //printf("B%08X\n", data);
     }
     _lastUpdateTime = time_us_64();
 }

@@ -48,6 +48,8 @@ int main()
     stdio_init_all();
 
     cardReader.init();
+    cardReader.transferWavToFlash("samples/24bit/1.wav");
+    cardReader.transferWavToFlash("samples/24bit/2.wav");
 
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);
@@ -150,7 +152,7 @@ int main()
             uint64_t elapsed = time_us_64() - now;
             if(elapsed > longestTime && time_us_64() > 2000000) {
                 longestTime = elapsed;
-                printf("%d\n", longestTime);
+                //printf("%d\n", longestTime);
             }
         }
 
