@@ -51,6 +51,7 @@ int main()
 
     cardReader.init();
     cardReader.transferAudioFolderToFlash("8bit");
+    cardReader.transferAudioFolderToFlash("24bit");
 
     // memory.init();
     // uint8_t testData[256] = {0};
