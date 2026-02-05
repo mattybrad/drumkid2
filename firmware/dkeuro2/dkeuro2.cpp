@@ -49,20 +49,19 @@ int main()
 {
     stdio_init_all();
 
-    //cardReader.init();
-    //cardReader.transferWavToFlash("samples/8bit/1.wav");
-    //cardReader.transferWavToFlash("samples/8bit/2.wav");
+    cardReader.init();
+    cardReader.transferAudioFolderToFlash("8bit");
 
-    memory.init();
-    uint8_t testData[256] = {0};
-    for(uint i = 0; i < sizeof(testData); i++) {
-        testData[i] = i % 100;
-    }
-    memory.writeToFlashPage(256*16, testData);
-    memory.writeToFlashPage(256*16+1, testData);
+    // memory.init();
+    // uint8_t testData[256] = {0};
+    // for(uint i = 0; i < sizeof(testData); i++) {
+    //     testData[i] = i % 100;
+    // }
+    // memory.writeToFlashPage(256*16, testData);
+    // memory.writeToFlashPage(256*16+1, testData);
 
-    const uint8_t *testRead = (const uint8_t *)(XIP_BASE+256*16*FLASH_PAGE_SIZE+98);
-    printf("Data read from flash: %d, %d, %d, %d\n", testRead[0], testRead[1], testRead[2], testRead[3]);
+    // const uint8_t *testRead = (const uint8_t *)(XIP_BASE+256*16*FLASH_PAGE_SIZE+98);
+    // printf("Data read from flash: %d, %d, %d, %d\n", testRead[0], testRead[1], testRead[2], testRead[3]);
 
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);

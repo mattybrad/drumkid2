@@ -5,27 +5,88 @@ void CardReader::init() {
     
 }
 
-void CardReader::transferWavToFlash(const char* path) {
-    sd_init_driver();
+bool CardReader::checkCardInserted() {
     sd_card_t *pSD = sd_get_by_num(0);
     if (!pSD->sd_test_com(pSD))
     {
         printf("SD card not detected!\n");
         //flagError(ERROR_SD_MISSING);
-        return;
+        return false;
     }
     //clearError(ERROR_SD_MISSING);
-    FATFS fs;
+    return true;
+}
+
+bool CardReader::mountCard() {
     FRESULT fr = f_mount(&fs, "", 1);
     if (FR_OK != fr)
     {
         printf("f_mount error: %s (%d)\n", FRESULT_str(fr), fr);
         //flagError(ERROR_SD_MOUNT);
+        return false;
+    }
+    return true;
+}
+
+void CardReader::transferAudioFolderToFlash(const char* folderPath) {
+    sd_init_driver();
+    
+    if(!checkCardInserted()) {
         return;
     }
 
+    if(!mountCard()) {
+        return;
+    }
+
+    bool exitFindLoop = false;
+    for (int i = 1; i <= 16 && !exitFindLoop; i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
+        printf("Checking for sample at path: %s\n", path);
+        SampleInfo info = getSampleInfo(path);
+        if(info.lengthBytes > 0) {
+            printf("Sample %d: flash address=0x%08X, length=%d bytes, sample rate=%d\n", i, info.flashAddress, info.lengthBytes, info.sampleRate);
+        } else {
+            exitFindLoop = true;
+        }
+    }
+
+}
+
+CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
+    SampleInfo info = {0,0,0};
     FIL fil;
-    char filename[255];
+    char filename[128];
+    snprintf(filename, sizeof(filename), "%s", path);
+    FRESULT fr = f_open(&fil, filename, FA_READ);
+    if (FR_OK != fr)
+    {
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        //flagError(ERROR_SD_OPEN);
+        return info;
+    }
+    //clearError(ERROR_SD_OPEN);
+    info.flashAddress = 123;
+    info.sampleRate = 456;
+    info.lengthBytes = 789;
+    fr = f_close(&fil);
+    if (FR_OK != fr)
+    {
+        printf("f_close error: %s (%d)\n", FRESULT_str(fr), fr);
+    }
+    return info;
+}
+
+void CardReader::transferWavToFlash(const char* path) {
+    sd_init_driver();
+    if(!checkCardInserted()) {
+        return;
+    }
+    FRESULT fr;
+
+    FIL fil;
+    char filename[128];
     snprintf(filename, sizeof(filename), "%s", path);
     fr = f_open(&fil, filename, FA_READ);
     if (FR_OK != fr)

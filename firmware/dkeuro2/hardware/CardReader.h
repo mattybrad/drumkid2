@@ -8,7 +8,17 @@
 
 class CardReader {
     public:
+        FATFS fs;
+        struct SampleInfo {
+            uint32_t flashAddress;
+            uint32_t lengthBytes;
+            uint32_t sampleRate;
+        };
         void init();
+        bool checkCardInserted();
+        bool mountCard();
+        void transferAudioFolderToFlash(const char* folderPath);
+        SampleInfo getSampleInfo(const char* path);
         void transferWavToFlash(const char* path);
         
     private:
