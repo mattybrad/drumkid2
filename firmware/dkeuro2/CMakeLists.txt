@@ -45,6 +45,7 @@ add_executable(dkeuro2
     hardware/CardReaderConfig.c
     hardware/Leds.cpp
     hardware/Buttons.cpp
+    hardware/Memory.cpp
     audio/Audio.cpp
     audio/Channel.cpp
     rhythm/Transport.cpp
@@ -63,6 +64,9 @@ pico_enable_stdio_usb(dkeuro2 0)
 # Add the standard library to the build
 target_link_libraries(dkeuro2
         pico_stdlib
+        hardware_adc
+        hardware_flash
+        hardware_sync
         hardware_pio
         pico_multicore
         pico_audio_i2s

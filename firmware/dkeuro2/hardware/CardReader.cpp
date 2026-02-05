@@ -67,6 +67,9 @@ void CardReader::transferWavToFlash(const char* path) {
     }
     printf("Valid WAV file detected\n");
 
+    uint16_t fmtChannels;
+    uint32_t fmtRate;
+    uint16_t fmtBitsPerSample;
     while (!foundDataChunk)
     {
         // after the first three required sections, WAV files have a series of chunks of the form: <chunk ID (4 bytes), chunk size (4 bytes), chunk data (chunk size bytes)>
@@ -75,34 +78,29 @@ void CardReader::transferWavToFlash(const char* path) {
         fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
         uint32_t chunkSize;
         memcpy(&chunkSize, sizeBuffer, 4);
-        printf("size=%d bytes\n", chunkSize);
+        printf("chunk size=%d bytes\n", chunkSize);
+        uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
         uint brTotal = 0;
+        bool isFormatChunk = strncmp(descriptorBuffer, "fmt ", 4) == 0;
+        bool isDataChunk = strncmp(descriptorBuffer, "data", 4) == 0;
         for (;;)
         {
-            uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
             fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
 
-            if(strncmp(descriptorBuffer, "fmt ", 4) == 0) {
+            if(isFormatChunk) {
                 printf("FORMAT SECTION\n");
-                uint16_t fmtType;
-                uint16_t fmtChannels;
-                uint32_t fmtRate;
-                uint16_t fmtBitsPerSample;
-                memcpy(&fmtType, &sampleDataBuffer[0], 2);
                 memcpy(&fmtChannels, &sampleDataBuffer[2], 2);
                 memcpy(&fmtRate, &sampleDataBuffer[4], 4);
                 memcpy(&fmtBitsPerSample, &sampleDataBuffer[14], 2);
-                printf("type=%d, channels=%d, rate=%d, bitsPerSample=%d\n", fmtType, fmtChannels, fmtRate, fmtBitsPerSample);
-                //sampleRates[n] = fmtRate;
-                if(fmtChannels == 2) isStereo = true;
+                printf("channels=%d, rate=%d, bitsPerSample=%d\n", fmtChannels, fmtRate, fmtBitsPerSample);
             }
 
             if (br == 0)
                 break;
 
-            if(strncmp(descriptorBuffer, "data", 4) == 0) {
-                //printf("DATA SECTION\n");
-                //printf("data chunk size: %d bytes\n", chunkSize);
+            if(isDataChunk) {
+                printf("DATA SECTION\n");
+                printf("data chunk size: %d bytes\n", chunkSize);
                 foundDataChunk = true;
             }
 
@@ -154,8 +152,9 @@ void CardReader::transferWavToFlash(const char* path) {
             // }
 
             brTotal += br;
-            if (brTotal == chunkSize)
+            if (brTotal >= chunkSize)
             {
+                printf("last br for this chunk: %d\n", br);
                 break;
             }
         }
