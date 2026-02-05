@@ -1,8 +1,8 @@
 #include "CardReader.h"
 #include <algorithm>
 
-void CardReader::init() {
-    
+void CardReader::init(Memory *memory) {
+    _memory = memory;
 }
 
 bool CardReader::checkCardInserted() {
@@ -41,18 +41,28 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath) {
 
     bool exitFindLoop = false;
     int numSamples = 0;
+    uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
+    uint32_t samplePositionTally = 0;
     for (int i = 1; i <= 16 && !exitFindLoop; i++) {
         char path[128];
         snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
         //printf("Checking for sample at path: %s\n", path);
         SampleInfo info = getSampleInfo(path);
         if(info.lengthBytes > 0) {
-            printf("Sample %d: flash address=0x%08X, length=%d bytes, sample rate=%d\n", i, info.flashAddress, info.lengthBytes, info.sampleRate);
+            printf("Sample %d: length=%d bytes, sample rate=%d\n", i, info.lengthBytes, info.sampleRate);
+            uint sampleMetadataOffset = 1 + 15 + 32 + (i-1) * (4+4+4); // numSamples (1 byte) + reserved (15 bytes) + folder name (32 bytes) + sample info for each sample (12 bytes)
+            memcpy(&audioMetadataPage[sampleMetadataOffset], &samplePositionTally, 4);
+            memcpy(&audioMetadataPage[sampleMetadataOffset + 4], &info.lengthBytes, 4);
+            memcpy(&audioMetadataPage[sampleMetadataOffset + 8], &info.sampleRate, 4);
             numSamples = i;
+            samplePositionTally += info.lengthBytes;
         } else {
             exitFindLoop = true;
         }
     }
+    audioMetadataPage[0] = numSamples;
+    memcpy(&audioMetadataPage[16], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
+    _memory->writeToFlashPage(384 * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE, audioMetadataPage); // write metadata to flash page
     printf("Found %d samples in folder %s\n", numSamples, folderPath);
 
     f_unmount("");
@@ -67,7 +77,6 @@ CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
     
     // read WAV file header before reading data
     uint br; // bytes read
-    bool foundDataChunk = false;
     char descriptorBuffer[4];
     uint8_t sizeBuffer[4];
     uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
@@ -78,7 +87,7 @@ CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
     // first 3 4-byte sections should be "RIFF", file size, "WAVE"
     fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
     if(strncmp(descriptorBuffer, "RIFF", 4) != 0) {
-        printf("Not a valid WAV file (no RIFF header)\n");
+        //printf("Not a valid WAV file (no RIFF header)\n");
         f_close(&fil);
         return info;
     }
@@ -88,7 +97,7 @@ CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
     //printf("WAV file size: %d bytes\n", fileSize);
     fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
     if(strncmp(descriptorBuffer, "WAVE", 4) != 0) {
-        printf("Not a valid WAV file (no WAVE header)\n");
+        //printf("Not a valid WAV file (no WAVE header)\n");
         f_close(&fil);
         return info;
     }
@@ -97,7 +106,9 @@ CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
     uint16_t fmtChannels;
     uint32_t fmtRate;
     uint16_t fmtBitsPerSample;
-    while (!foundDataChunk)
+    bool isDataChunk = false;
+    uint audioDataPageTally = 0; // IMPORTANT - this actually needs to be defined outside this function because it needs to be cumulative for all samples, but it's late and I'm going to bed
+    while (!isDataChunk)
     {
         // after the first three required sections, WAV files have a series of chunks of the form: <chunk ID (4 bytes), chunk size (4 bytes), chunk data (chunk size bytes)>
         fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
@@ -109,7 +120,10 @@ CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
         uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
         uint brTotal = 0;
         bool isFormatChunk = strncmp(descriptorBuffer, "fmt ", 4) == 0;
-        bool isDataChunk = strncmp(descriptorBuffer, "data", 4) == 0;
+        isDataChunk = strncmp(descriptorBuffer, "data", 4) == 0;
+        if(isDataChunk) {
+            info.lengthBytes = chunkSize;
+        }
         for (;;)
         {
             fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
@@ -128,16 +142,15 @@ CardReader::SampleInfo CardReader::getSampleInfo(const char* path) {
                 break;
 
             if(isDataChunk) {
-                //printf("DATA SECTION\n");
-                //printf("data chunk size: %d bytes\n", chunkSize);
-                info.lengthBytes = chunkSize;
-                foundDataChunk = true;
+                printf(".");
+                _memory->writeToFlashPage((384 * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + audioDataPageTally, sampleDataBuffer);
+                audioDataPageTally++;
             }
 
             brTotal += br;
             if (brTotal >= chunkSize)
             {
-                //printf("last br for this chunk: %d\n", br);
+                printf("\n");
                 break;
             }
         }

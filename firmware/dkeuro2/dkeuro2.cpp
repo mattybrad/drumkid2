@@ -49,9 +49,25 @@ int main()
 {
     stdio_init_all();
 
-    cardReader.init();
+    memory.init();
+
+    cardReader.init(&memory);
     cardReader.transferAudioFolderToFlash("8bit");
     cardReader.transferAudioFolderToFlash("24bit");
+
+    const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
+    uint numSamples = audioMetadata[0];
+    printf("Audio metadata - numSamples: %d\n", numSamples);
+    for(int i = 0; i < numSamples; i++) {
+        uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
+        uint32_t flashAddress;
+        uint32_t lengthBytes;
+        uint32_t sampleRate;
+        memcpy(&flashAddress, &audioMetadata[sampleMetadataOffset], 4);
+        memcpy(&lengthBytes, &audioMetadata[sampleMetadataOffset + 4], 4);
+        memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + 8], 4);
+        printf("Sample %d - flash address: 0x%08X, length: %d bytes, sample rate: %d\n", i+1, flashAddress, lengthBytes, sampleRate);
+    }
 
     // memory.init();
     // uint8_t testData[256] = {0};

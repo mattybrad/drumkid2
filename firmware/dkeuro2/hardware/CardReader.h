@@ -14,7 +14,7 @@ class CardReader {
             uint32_t lengthBytes;
             uint32_t sampleRate;
         };
-        void init();
+        void init(Memory *memory);
         bool checkCardInserted();
         bool mountCard();
         void transferAudioFolderToFlash(const char* folderPath);
@@ -22,5 +22,6 @@ class CardReader {
         void transferWavToFlash(const char* path);
         
     private:
+        Memory *_memory;
         // Private methods and members for card communication
 };
