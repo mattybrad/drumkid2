@@ -52,33 +52,32 @@ int main()
     memory.init();
 
     cardReader.init(&memory);
-    cardReader.transferAudioFolderToFlash("8bit");
-    cardReader.transferAudioFolderToFlash("24bit");
+    cardReader.transferAudioFolderToFlash("default");
 
     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
     uint numSamples = audioMetadata[0];
     printf("Audio metadata - numSamples: %d\n", numSamples);
     for(int i = 0; i < numSamples; i++) {
         uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
-        uint32_t flashAddress;
+        uint32_t flashPage;
         uint32_t lengthBytes;
         uint32_t sampleRate;
-        memcpy(&flashAddress, &audioMetadata[sampleMetadataOffset], 4);
+        memcpy(&flashPage, &audioMetadata[sampleMetadataOffset], 4);
         memcpy(&lengthBytes, &audioMetadata[sampleMetadataOffset + 4], 4);
         memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + 8], 4);
-        printf("Sample %d - flash address: 0x%08X, length: %d bytes, sample rate: %d\n", i+1, flashAddress, lengthBytes, sampleRate);
+        printf("Sample %d - flash page: %d, length: %d bytes, sample rate: %d\n", i+1, flashPage, lengthBytes, sampleRate);
     }
 
-    // memory.init();
-    // uint8_t testData[256] = {0};
-    // for(uint i = 0; i < sizeof(testData); i++) {
-    //     testData[i] = i % 100;
-    // }
-    // memory.writeToFlashPage(256*16, testData);
-    // memory.writeToFlashPage(256*16+1, testData);
-
-    // const uint8_t *testRead = (const uint8_t *)(XIP_BASE+256*16*FLASH_PAGE_SIZE+98);
-    // printf("Data read from flash: %d, %d, %d, %d\n", testRead[0], testRead[1], testRead[2], testRead[3]);
+    for(int i=0; i<numSamples; i++) {
+        uint thisPage;
+        memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
+        const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
+        printf("%d.wav: ", i+1);
+        for(int j=0; j<32; j++) {
+            printf("%d ", audioData[j]);
+        }
+        printf("\n");
+    }
 
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);

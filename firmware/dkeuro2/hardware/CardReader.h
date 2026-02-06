@@ -18,7 +18,7 @@ class CardReader {
         bool checkCardInserted();
         bool mountCard();
         void transferAudioFolderToFlash(const char* folderPath);
-        SampleInfo getSampleInfo(const char* path);
+        SampleInfo parseWavFile(const char* path, bool writeToFlash = false, uint32_t flashPageStart = 0);
         void transferWavToFlash(const char* path);
         
     private:
