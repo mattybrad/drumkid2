@@ -1,6 +1,12 @@
 #include "CardReader.h"
 #include <algorithm>
 
+/*
+
+This is currently the messiest bit of the codebase. Need to add better variable names, make functions private where possible, figure out error handling, etc. Take out hardcoded numbers (e.g. page numbers, flash addresses, max sample num guesses, etc).
+
+*/
+
 void CardReader::init(Memory *memory) {
     _memory = memory;
 }

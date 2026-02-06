@@ -30,14 +30,14 @@ Started Jan 2026
 #include "audio/TestTom.h"
 #include "audio/TestLong.h"
 
-#define NUM_CHANNELS 8
+#define MAX_CHANNELS 8
 
 CardReader cardReader;
 Memory memory;
 Leds leds;
 Buttons buttons;
 Audio audio;
-Channel channels[NUM_CHANNELS];
+Channel channels[MAX_CHANNELS];
 Transport transport;
 
 // Static wrapper function for GPIO interrupt
@@ -47,17 +47,22 @@ void pulseInCallback(uint gpio, uint32_t events) {
 
 int main()
 {
+    uint8_t numChannels = 0;
+    for(uint i = 0; i < MAX_CHANNELS; i++) {
+        channels[i].init();
+    }
+
     stdio_init_all();
 
     memory.init();
 
     cardReader.init(&memory);
-    cardReader.transferAudioFolderToFlash("default");
+    cardReader.transferAudioFolderToFlash("dnb");
 
     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
-    uint numSamples = audioMetadata[0];
-    printf("Audio metadata - numSamples: %d\n", numSamples);
-    for(int i = 0; i < numSamples; i++) {
+    numChannels = audioMetadata[0];
+    printf("Audio metadata - num samples: %d\n", numChannels);
+    for(int i = 0; i < numChannels; i++) {
         uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
         uint32_t flashPage;
         uint32_t lengthBytes;
@@ -66,9 +71,12 @@ int main()
         memcpy(&lengthBytes, &audioMetadata[sampleMetadataOffset + 4], 4);
         memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + 8], 4);
         printf("Sample %d - flash page: %d, length: %d bytes, sample rate: %d\n", i+1, flashPage, lengthBytes, sampleRate);
+        channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
+        channels[i].sampleLength = lengthBytes / 2;
+        channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
     }
 
-    for(int i=0; i<numSamples; i++) {
+    for(int i=0; i<numChannels; i++) {
         uint thisPage;
         memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
         const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
@@ -85,21 +93,6 @@ int main()
     gpio_set_dir(Pins::SYNC_OUT, GPIO_OUT);
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
-
-    for(uint i = 0; i < NUM_CHANNELS; i++) {
-        channels[i].init();
-    }
-    channels[0].sampleData = testKick;
-    channels[0].sampleLength = testKickLength;
-    channels[1].sampleData = testClap;
-    channels[1].sampleLength = testClapLength;
-    channels[2].sampleData = testHat;
-    channels[2].sampleLength = testHatLength;
-    for(uint i = 3; i < NUM_CHANNELS; i++) {
-        channels[i].sampleData = testTom;
-        channels[i].sampleLength = testTomLength;
-        channels[i].playbackSpeed = (int64_t)((0.1+0.25*i) * (1LL << 32));
-    }
 
     buttons.init();
 
@@ -141,7 +134,7 @@ int main()
                     channels[2].samplePosition = 0;
                     channels[2].samplePositionFP = 0;
                 }
-                for(uint i = 3; i < NUM_CHANNELS; i++) {
+                for(uint i = 3; i < numChannels; i++) {
                     if(thisTransportPosition % 4 == 0 && rand() % 4 == 0) {
                         channels[i].samplePosition = 0;
                         channels[i].samplePositionFP = 0;
@@ -151,7 +144,7 @@ int main()
 
             int16_t leftSample = 0;
             int16_t rightSample = 0;
-            for(uint ch=0; ch<NUM_CHANNELS; ch++) {
+            for(uint ch=0; ch<numChannels; ch++) {
                 Channel &channel = channels[ch];
                 if(channel.samplePosition < channel.sampleLength) {
                     //leftSample += channel.sampleData[channel.samplePosition] >> 2;
