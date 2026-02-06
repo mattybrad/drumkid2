@@ -15,15 +15,19 @@ void Buttons::init() {
     sn74165::shiftreg_init();
 }
 
-void Buttons::update() {
+bool Buttons::update() {
     uint32_t data;
     bool tempInputChanged = false;
     data = sn74165::shiftreg_get(&tempInputChanged);
     if (tempInputChanged)
     {
-        //printf("B%08X\n", data);
+        newButtonPresses = data & ~_buttonStates;
+        _buttonStates = data;
+    } else {
+        newButtonPresses = 0;
     }
     _lastUpdateTime = time_us_64();
+    return newButtonPresses != 0;
 }
 
 int64_t Buttons::lastUpdate() {

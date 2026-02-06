@@ -30,7 +30,7 @@ Started Jan 2026
 #include "audio/TestTom.h"
 #include "audio/TestLong.h"
 
-#define MAX_CHANNELS 8
+#define MAX_CHANNELS 16
 
 CardReader cardReader;
 Memory memory;
@@ -183,7 +183,46 @@ int main()
                 leds.update();
             }
             if(time_us_64() - buttons.lastUpdate() > 1000) {
-                buttons.update();
+                if(buttons.update()) {
+                    for(int i=0; i<32; i++) {
+                        if(buttons.newButtonPresses & (1 << i)) {
+                            printf("Button %d pressed\n", i);
+                            if(i<=2) {
+                                if(i==0) cardReader.transferAudioFolderToFlash("default");
+                                if(i==1) cardReader.transferAudioFolderToFlash("dnb");
+                                if(i==2) cardReader.transferAudioFolderToFlash("808_8channel");
+
+                                const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
+                                numChannels = audioMetadata[0];
+                                printf("Audio metadata - num samples: %d\n", numChannels);
+                                for(int i = 0; i < numChannels; i++) {
+                                    uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
+                                    uint32_t flashPage;
+                                    uint32_t lengthBytes;
+                                    uint32_t sampleRate;
+                                    memcpy(&flashPage, &audioMetadata[sampleMetadataOffset], 4);
+                                    memcpy(&lengthBytes, &audioMetadata[sampleMetadataOffset + 4], 4);
+                                    memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + 8], 4);
+                                    printf("Sample %d - flash page: %d, length: %d bytes, sample rate: %d\n", i+1, flashPage, lengthBytes, sampleRate);
+                                    channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
+                                    channels[i].sampleLength = lengthBytes / 2;
+                                    channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+                                }
+
+                                for(int i=0; i<numChannels; i++) {
+                                    uint thisPage;
+                                    memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
+                                    const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
+                                    printf("%d.wav: ", i+1);
+                                    for(int j=0; j<32; j++) {
+                                        printf("%d ", audioData[j]);
+                                    }
+                                    printf("\n");
+                                }
+                            }
+                        }
+                    }
+                }
             }
             // 4051 mux update will also go here
         }
