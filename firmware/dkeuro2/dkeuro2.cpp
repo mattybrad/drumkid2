@@ -30,7 +30,7 @@ Started Jan 2026
 #include "audio/TestTom.h"
 #include "audio/TestLong.h"
 
-#define MAX_CHANNELS 16
+#define MAX_CHANNELS 6
 
 CardReader cardReader;
 Memory memory;
@@ -57,7 +57,7 @@ int main()
     memory.init();
 
     cardReader.init(&memory);
-    cardReader.transferAudioFolderToFlash("dnb");
+    //cardReader.transferAudioFolderToFlash("dnb");
 
     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
     numChannels = audioMetadata[0];
@@ -190,7 +190,7 @@ int main()
                             if(i<=2) {
                                 if(i==0) cardReader.transferAudioFolderToFlash("default");
                                 if(i==1) cardReader.transferAudioFolderToFlash("dnb");
-                                if(i==2) cardReader.transferAudioFolderToFlash("808_8channel");
+                                if(i==2) cardReader.transferAudioFolderToFlash("formattest");
 
                                 const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
                                 numChannels = audioMetadata[0];

@@ -50,7 +50,7 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath) {
     uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
     uint32_t samplePageNumberTally = 385 * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
     uint32_t samplePageNumbers[16] = {0}; // support up to 16 samples for now, can expand later if needed
-    for (int i = 1; i <= 16 && !exitFindLoop; i++) {
+    for (int i = 1; i <= 6 && !exitFindLoop; i++) {
         char path[128];
         snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
         //printf("Checking for sample at path: %s\n", path);
@@ -95,45 +95,49 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
     uint dataChunksProcessed = 0;
     char descriptorBuffer[4];
     uint8_t sizeBuffer[4];
-    uint8_t sampleDataBuffer[FLASH_PAGE_SIZE];
+    //uint8_t sampleDataBuffer1[FLASH_PAGE_SIZE];
     //uint8_t sampleDataBuffer2[FLASH_PAGE_SIZE]; // required for stereo samples
-    //bool useSecondBuffer = false;
+    uint8_t inputBuffer[48]; // needs to handle mono/stereo, 16/24/32 bits, i.e. 2,3,4,6 or 8 bytes per sample frame
+    uint8_t outputBuffer[FLASH_PAGE_SIZE];
     bool isStereo = false;
+    uint32_t outputBufferPos = 0;
+    uint32_t dataPagesWritten = 0;
 
     // first 3 4-byte sections should be "RIFF", file size, "WAVE"
     fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
     if(strncmp(descriptorBuffer, "RIFF", 4) != 0) {
-        //printf("Not a valid WAV file (no RIFF header)\n");
+        printf("Not a valid WAV file (no RIFF header)\n");
         f_close(&fil);
         return info;
     }
     fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
     uint32_t fileSize;
     memcpy(&fileSize, descriptorBuffer, 4);
-    //printf("WAV file size: %d bytes\n", fileSize);
+    printf("WAV file size: %d bytes\n", fileSize);
     fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
     if(strncmp(descriptorBuffer, "WAVE", 4) != 0) {
         //printf("Not a valid WAV file (no WAVE header)\n");
         f_close(&fil);
         return info;
     }
-    //printf("Valid WAV file detected\n");
+    printf("Valid WAV file detected\n");
 
     uint16_t fmtChannels;
     uint32_t fmtRate;
     uint16_t fmtBitsPerSample;
+    uint16_t fmtFormatType;
     bool isDataChunk = false;
     while (!isDataChunk)
     {
         // after the first three required sections, WAV files have a series of chunks of the form: <chunk ID (4 bytes), chunk size (4 bytes), chunk data (chunk size bytes)>
         fr = f_read(&fil, descriptorBuffer, sizeof descriptorBuffer, &br);
-        //printf("descriptor=%s, ", descriptorBuffer);
+        printf("descriptor=%s, ", descriptorBuffer);
         fr = f_read(&fil, sizeBuffer, sizeof sizeBuffer, &br);
         uint32_t chunkSize;
         memcpy(&chunkSize, sizeBuffer, 4);
-        //printf("chunk size=%d bytes\n", chunkSize);
-        uint bytesToRead = std::min(sizeof sampleDataBuffer, (uint)chunkSize);
-        uint brTotal = 0;
+        printf("chunk size=%d bytes\n", chunkSize);
+        uint bytesToRead = std::min(sizeof inputBuffer, (uint)chunkSize);
+        uint brTotal = 0; // bytes read so far from this chunk
         bool isFormatChunk = strncmp(descriptorBuffer, "fmt ", 4) == 0;
         isDataChunk = strncmp(descriptorBuffer, "data", 4) == 0;
         if(isDataChunk) {
@@ -141,14 +145,16 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
         }
         for (;;)
         {
-            fr = f_read(&fil, sampleDataBuffer, bytesToRead, &br);
+            fr = f_read(&fil, inputBuffer, bytesToRead, &br);
 
             if(isFormatChunk) {
                 //printf("FORMAT SECTION\n");
-                memcpy(&fmtChannels, &sampleDataBuffer[2], 2);
-                memcpy(&fmtRate, &sampleDataBuffer[4], 4);
-                memcpy(&fmtBitsPerSample, &sampleDataBuffer[14], 2);
-                //printf("channels=%d, rate=%d, bitsPerSample=%d\n", fmtChannels, fmtRate, fmtBitsPerSample);
+                memcpy(&fmtFormatType, &inputBuffer[0], 2);
+
+                memcpy(&fmtChannels, &inputBuffer[2], 2);
+                memcpy(&fmtRate, &inputBuffer[4], 4);
+                memcpy(&fmtBitsPerSample, &inputBuffer[14], 2);
+                printf("channels=%d, rate=%d, bitsPerSample=%d, formatType=%d\n", fmtChannels, fmtRate, fmtBitsPerSample, fmtFormatType);
                 info.flashAddress = flashPageStart * FLASH_PAGE_SIZE;
                 info.sampleRate = fmtRate;
             }
@@ -157,16 +163,37 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
                 break;
 
             if(isDataChunk) {
-                printf(".");
+                //printf(".");
                 if(writeToFlash) {
-                    // write sample data to flash starting at given address
-                    _memory->writeToFlashPage(flashPageStart + dataChunksProcessed, sampleDataBuffer);
+                    // _memory->writeToFlashPage(flashPageStart + dataChunksProcessed, sampleDataBuffer1);
+                    // dataChunksProcessed++;
+
+                    uint8_t bytesPerSampleFrame = (fmtBitsPerSample / 8) * fmtChannels;
+                    for(uint i=0; i<br; i+=bytesPerSampleFrame) {
+                        int16_t thisSample = 0;
+                        for(uint j=0; j<fmtChannels; j++) {
+                            if(fmtBitsPerSample == 16) {
+                                memcpy(&thisSample, &inputBuffer[i + j * 2], 2);
+                            } else if(fmtBitsPerSample == 24) {
+                                // this isn't right, but whatever i do i just get noise so i'll fix this another day
+                                memcpy(&thisSample, &inputBuffer[i + j * 3 + 1], 2);
+                            }
+                        }
+                        outputBuffer[outputBufferPos] = thisSample & 0xFF;
+                        outputBuffer[outputBufferPos + 1] = (thisSample >> 8) & 0xFF;
+                        outputBufferPos += 2;
+                        if(outputBufferPos >= FLASH_PAGE_SIZE) {
+                            _memory->writeToFlashPage(flashPageStart + dataPagesWritten, outputBuffer);
+                            dataPagesWritten++;
+                            outputBufferPos = 0;
+                        }
+                    }
                 }
-                dataChunksProcessed++;
             }
             brTotal += br;
             if (brTotal >= chunkSize)
             {
+                // probably handle leftover bytes here?
                 printf("\n");
                 break;
             }
