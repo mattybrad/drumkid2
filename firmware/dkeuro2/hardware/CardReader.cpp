@@ -141,7 +141,7 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
         bool isFormatChunk = strncmp(descriptorBuffer, "fmt ", 4) == 0;
         isDataChunk = strncmp(descriptorBuffer, "data", 4) == 0;
         if(isDataChunk) {
-            info.lengthBytes = chunkSize;
+            info.lengthBytes = 2 * chunkSize / ((fmtBitsPerSample / 8) * fmtChannels);
         }
         for (;;)
         {
@@ -175,8 +175,12 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
                             if(fmtBitsPerSample == 16) {
                                 memcpy(&thisSample, &inputBuffer[i + j * 2], 2);
                             } else if(fmtBitsPerSample == 24) {
-                                // this isn't right, but whatever i do i just get noise so i'll fix this another day
-                                memcpy(&thisSample, &inputBuffer[i + j * 3 + 1], 2);
+                                int32_t thisSample32 = 0;
+                                memcpy(&thisSample32, &inputBuffer[i + j * 3], 3);
+                                thisSample = thisSample32 >> 8;
+                                if(brTotal == 0 && i < 24) { // print first few samples for debugging
+                                    printf("Sample %d (channel %d): %d\n", i/bytesPerSampleFrame, j, thisSample);
+                                }
                             }
                         }
                         outputBuffer[outputBufferPos] = thisSample & 0xFF;
@@ -194,6 +198,8 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
             if (brTotal >= chunkSize)
             {
                 // probably handle leftover bytes here?
+                _memory->writeToFlashPage(flashPageStart + dataPagesWritten, outputBuffer);
+                dataPagesWritten++;
                 printf("\n");
                 break;
             }

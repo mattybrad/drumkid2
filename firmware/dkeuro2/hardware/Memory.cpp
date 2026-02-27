@@ -70,7 +70,7 @@ void Memory::writeToFlashPage(uint16_t page, const uint8_t* data)
         }
     }
 
-    printf("Writing to flash page %d (address 0x%08X)\n", page, page * FLASH_PAGE_SIZE);
+    //printf("Writing to flash page %d (address 0x%08X)\n", page, page * FLASH_PAGE_SIZE);
     uint32_t interrupts = save_and_disable_interrupts();
     flash_range_program(page * FLASH_PAGE_SIZE, data, FLASH_PAGE_SIZE);
     restore_interrupts(interrupts);
