@@ -50,7 +50,7 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath) {
     uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
     uint32_t samplePageNumberTally = 385 * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
     uint32_t samplePageNumbers[16] = {0}; // support up to 16 samples for now, can expand later if needed
-    for (int i = 1; i <= 6 && !exitFindLoop; i++) {
+    for (int i = 1; i <= 16 && !exitFindLoop; i++) {
         char path[128];
         snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
         //printf("Checking for sample at path: %s\n", path);
@@ -181,6 +181,10 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
                                 if(brTotal == 0 && i < 24) { // print first few samples for debugging
                                     printf("Sample %d (channel %d): %d\n", i/bytesPerSampleFrame, j, thisSample);
                                 }
+                            } else if(fmtBitsPerSample == 32) {
+                                float thisSampleFloat = 0.0f;
+                                memcpy(&thisSampleFloat, &inputBuffer[i + j * 4], 4);
+                                thisSample = (int16_t)(thisSampleFloat * 32767.0f);
                             }
                         }
                         outputBuffer[outputBufferPos] = thisSample & 0xFF;
@@ -197,10 +201,16 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
             brTotal += br;
             if (brTotal >= chunkSize)
             {
-                // probably handle leftover bytes here?
-                _memory->writeToFlashPage(flashPageStart + dataPagesWritten, outputBuffer);
-                dataPagesWritten++;
+                if(isDataChunk) {
+                    // probably handle leftover bytes here?
+                    _memory->writeToFlashPage(flashPageStart + dataPagesWritten, outputBuffer);
+                    dataPagesWritten++;
+                }
                 printf("\n");
+                if(chunkSize % 2 != 0) {
+                    // skip padding byte at end of chunk if chunk size is odd
+                    f_lseek(&fil, fil.fptr + 1);
+                }
                 break;
             }
         }
