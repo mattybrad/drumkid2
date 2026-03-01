@@ -8,12 +8,14 @@ Started Jan 2026
 */
 
 #include <stdio.h>
+#include <algorithm>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/structs/clocks.h"
 #include "dkeuro2.h"
+#include "Config.h"
 #include "hardware/Pins.h"
 #include "hardware/Leds.h"
 #include "hardware/Buttons.h"
@@ -23,14 +25,6 @@ Started Jan 2026
 #include "audio/Channel.h"
 #include "rhythm/Transport.h"
 #include "rhythm/Beat.h"
-
-#include "audio/TestKick.h"
-#include "audio/TestClap.h"
-#include "audio/TestHat.h"
-#include "audio/TestTom.h"
-#include "audio/TestLong.h"
-
-#define MAX_CHANNELS 16
 
 CardReader cardReader;
 Memory memory;
@@ -61,6 +55,7 @@ int main()
 
     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
     numChannels = audioMetadata[0];
+    numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
     printf("Audio metadata - num samples: %d\n", numChannels);
     for(int i = 0; i < numChannels; i++) {
         uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
@@ -194,6 +189,7 @@ int main()
 
                                 const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
                                 numChannels = audioMetadata[0];
+                                numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
                                 printf("Audio metadata - num samples: %d\n", numChannels);
                                 for(int i = 0; i < numChannels; i++) {
                                     uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
