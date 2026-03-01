@@ -30,7 +30,7 @@ Started Jan 2026
 #include "audio/TestTom.h"
 #include "audio/TestLong.h"
 
-#define MAX_CHANNELS 6
+#define MAX_CHANNELS 16
 
 CardReader cardReader;
 Memory memory;
@@ -164,7 +164,7 @@ int main()
                     channel.samplePosition = channel.samplePositionFP >> 32;
                 }
             }
-            rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
+            //rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
 
             audio.queueSample(leftSample, rightSample);
             sampleCount++;

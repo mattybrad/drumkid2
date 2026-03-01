@@ -171,24 +171,24 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
                     uint8_t bytesPerSampleFrame = (fmtBitsPerSample / 8) * fmtChannels;
                     for(uint i=0; i<br; i+=bytesPerSampleFrame) {
                         int16_t thisSample = 0;
+                        int32_t summedSample = 0;
                         for(uint j=0; j<fmtChannels; j++) {
                             if(fmtBitsPerSample == 16) {
                                 memcpy(&thisSample, &inputBuffer[i + j * 2], 2);
                             } else if(fmtBitsPerSample == 24) {
-                                int32_t thisSample32 = 0;
-                                memcpy(&thisSample32, &inputBuffer[i + j * 3], 3);
-                                thisSample = thisSample32 >> 8;
-                                if(brTotal == 0 && i < 24) { // print first few samples for debugging
-                                    printf("Sample %d (channel %d): %d\n", i/bytesPerSampleFrame, j, thisSample);
-                                }
+                                int32_t thisSample24 = 0;
+                                memcpy(&thisSample24, &inputBuffer[i + j * 3], 3);
+                                thisSample = thisSample24 >> 8;
                             } else if(fmtBitsPerSample == 32) {
                                 float thisSampleFloat = 0.0f;
                                 memcpy(&thisSampleFloat, &inputBuffer[i + j * 4], 4);
                                 thisSample = (int16_t)(thisSampleFloat * 32767.0f);
                             }
+                            summedSample += thisSample;
                         }
-                        outputBuffer[outputBufferPos] = thisSample & 0xFF;
-                        outputBuffer[outputBufferPos + 1] = (thisSample >> 8) & 0xFF;
+                        summedSample /= fmtChannels; // average samples together for stereo files, or just pass through mono samples
+                        outputBuffer[outputBufferPos] = summedSample & 0xFF;
+                        outputBuffer[outputBufferPos + 1] = (summedSample >> 8) & 0xFF;
                         outputBufferPos += 2;
                         if(outputBufferPos >= FLASH_PAGE_SIZE) {
                             _memory->writeToFlashPage(flashPageStart + dataPagesWritten, outputBuffer);
