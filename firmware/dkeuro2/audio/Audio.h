@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pico/audio_i2s.h"
-#include "Sample.h"
 #include <cstdint>
 
 #define SAMPLES_PER_BUFFER 32

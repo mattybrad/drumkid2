@@ -31,8 +31,8 @@ Memory memory;
 Leds leds;
 Buttons buttons;
 Audio audio;
-Channel channels[MAX_CHANNELS];
 Transport transport;
+Channel channels[MAX_CHANNELS];
 
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
@@ -49,25 +49,23 @@ int main()
     stdio_init_all();
 
     memory.init();
-
     cardReader.init(&memory);
-    //cardReader.transferAudioFolderToFlash("dnb");
 
     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
     numChannels = audioMetadata[0];
     numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
     printf("Audio metadata - num samples: %d\n", numChannels);
     for(int i = 0; i < numChannels; i++) {
-        uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
+        uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
         uint32_t flashPage;
-        uint32_t lengthBytes;
+        uint32_t lengthSamples;
         uint32_t sampleRate;
-        memcpy(&flashPage, &audioMetadata[sampleMetadataOffset], 4);
-        memcpy(&lengthBytes, &audioMetadata[sampleMetadataOffset + 4], 4);
-        memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + 8], 4);
-        printf("Sample %d - flash page: %d, length: %d bytes, sample rate: %d\n", i+1, flashPage, lengthBytes, sampleRate);
+        memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
+        memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
+        memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
+        printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
         channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
-        channels[i].sampleLength = lengthBytes / 2;
+        channels[i].sampleLength = lengthSamples;
         channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
     }
 
@@ -192,22 +190,22 @@ int main()
                                 numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
                                 printf("Audio metadata - num samples: %d\n", numChannels);
                                 for(int i = 0; i < numChannels; i++) {
-                                    uint sampleMetadataOffset = 1 + 15 + 32 + i * (4+4+4);
+                                    uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
                                     uint32_t flashPage;
-                                    uint32_t lengthBytes;
+                                    uint32_t lengthSamples;
                                     uint32_t sampleRate;
-                                    memcpy(&flashPage, &audioMetadata[sampleMetadataOffset], 4);
-                                    memcpy(&lengthBytes, &audioMetadata[sampleMetadataOffset + 4], 4);
-                                    memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + 8], 4);
-                                    printf("Sample %d - flash page: %d, length: %d bytes, sample rate: %d\n", i+1, flashPage, lengthBytes, sampleRate);
+                                    memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
+                                    memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
+                                    memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
+                                    printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
                                     channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
-                                    channels[i].sampleLength = lengthBytes / 2;
+                                    channels[i].sampleLength = lengthSamples;
                                     channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
                                 }
 
                                 for(int i=0; i<numChannels; i++) {
                                     uint thisPage;
-                                    memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
+                                    memcpy(&thisPage, &audioMetadata[ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4) + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
                                     const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
                                     printf("%d.wav: ", i+1);
                                     for(int j=0; j<32; j++) {

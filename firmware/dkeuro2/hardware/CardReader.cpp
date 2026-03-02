@@ -48,29 +48,30 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath) {
     bool exitFindLoop = false;
     int numSamples = 0;
     uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
-    uint32_t samplePageNumberTally = 385 * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
-    uint32_t samplePageNumbers[16] = {0}; // support up to 16 samples for now, can expand later if needed
-    for (int i = 1; i <= 16 && !exitFindLoop; i++) {
+    uint32_t samplePageNumberTally = SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
+    uint32_t samplePageNumbers[MAX_CHANNELS] = {0}; // support up to 16 samples for now, can expand later if needed
+    for (int i = 1; i <= MAX_CHANNELS && !exitFindLoop; i++) {
         char path[128];
         snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
         //printf("Checking for sample at path: %s\n", path);
         SampleInfo info = parseWavFile(path);
         if(info.lengthBytes > 0) {
             printf("Sample %d: length=%d bytes, sample rate=%d\n", i, info.lengthBytes, info.sampleRate);
-            uint sampleMetadataOffset = 1 + 15 + 32 + (i-1) * (4+4+4); // numSamples (1 byte) + reserved (15 bytes) + folder name (32 bytes) + sample info for each sample (12 bytes)
+            uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + (i-1) * (4+4+4);
             samplePageNumbers[i-1] = samplePageNumberTally;
-            memcpy(&audioMetadataPage[sampleMetadataOffset], &samplePageNumberTally, 4);
-            memcpy(&audioMetadataPage[sampleMetadataOffset + 4], &info.lengthBytes, 4);
-            memcpy(&audioMetadataPage[sampleMetadataOffset + 8], &info.sampleRate, 4);
+            memcpy(&audioMetadataPage[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], &samplePageNumberTally, 4);
+            uint32_t lengthSamples = info.lengthBytes / 2;
+            memcpy(&audioMetadataPage[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], &lengthSamples, 4);
+            memcpy(&audioMetadataPage[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], &info.sampleRate, 4);
             numSamples = i;
             samplePageNumberTally += (info.lengthBytes / FLASH_PAGE_SIZE) + 1;
         } else {
             exitFindLoop = true;
         }
     }
-    audioMetadataPage[0] = numSamples;
-    memcpy(&audioMetadataPage[16], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
-    _memory->writeToFlashPage(384 * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE, audioMetadataPage); // write metadata to flash page
+    audioMetadataPage[ADDRESS_AUDIO_METADATA_NUM_SAMPLES] = numSamples;
+    memcpy(&audioMetadataPage[ADDRESS_AUDIO_METADATA_FOLDER_NAME], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
+    _memory->writeToFlashPage(SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE, audioMetadataPage); // write metadata to flash page
     printf("Found %d samples in folder %s\n", numSamples, folderPath);
 
     printf("Transferring samples from folder %s to flash...\n", folderPath);
