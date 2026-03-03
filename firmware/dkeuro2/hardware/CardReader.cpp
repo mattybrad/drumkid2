@@ -1,12 +1,6 @@
 #include "CardReader.h"
 #include <algorithm>
 
-/*
-
-This is currently the messiest bit of the codebase. Need to add better variable names, make functions private where possible, figure out error handling, etc. Take out hardcoded numbers (e.g. page numbers, flash addresses, max sample num guesses, etc).
-
-*/
-
 void CardReader::init(Memory *memory) {
     _memory = memory;
 }
@@ -69,6 +63,9 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath) {
             exitFindLoop = true;
         }
     }
+    // this is roughly where sample size would be checked, but the new plan is to allow ~8 kits which will require rejigging the code anyway so come back to this later
+    printf("Total sample size = %d pages, %d bytes, %d%%\n", samplePageNumberTally - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), (samplePageNumberTally - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE)) * FLASH_PAGE_SIZE, ((samplePageNumberTally - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE)) * FLASH_PAGE_SIZE * 100) / (FLASH_SIZE - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE)));
+
     audioMetadataPage[ADDRESS_AUDIO_METADATA_NUM_SAMPLES] = numSamples;
     memcpy(&audioMetadataPage[ADDRESS_AUDIO_METADATA_FOLDER_NAME], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
     _memory->writeToFlashPage(SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE, audioMetadataPage); // write metadata to flash page

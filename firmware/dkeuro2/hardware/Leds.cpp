@@ -35,6 +35,14 @@ void Leds::setDisplay(uint8_t digitNum, uint8_t digitSegmentData) {
     }
 }
 
+void Leds::setDisplayString(const char* str) {
+    bool stringFinished = false;
+    for(uint8_t i=0; i<4; i++) {
+        if(str[i] == '\0') stringFinished = true;
+        setDisplay(i, stringFinished ? 0 : asciiChars[(uint8_t)str[i]]);
+    }
+}
+
 void Leds::update() {
     // Update LED states on hardware
     // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs

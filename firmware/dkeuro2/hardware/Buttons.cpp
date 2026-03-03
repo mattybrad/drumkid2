@@ -19,17 +19,30 @@ bool Buttons::update() {
     uint32_t data;
     bool tempInputChanged = false;
     data = sn74165::shiftreg_get(&tempInputChanged);
+    data &= ~(0x1F << 3); // set bits 3-7 to 0 (unused buttons)
     if (tempInputChanged)
     {
-        newButtonPresses = data & ~_buttonStates;
+        _newButtonPresses = data & ~_buttonStates;
         _buttonStates = data;
     } else {
-        newButtonPresses = 0;
+        _newButtonPresses = 0;
     }
     _lastUpdateTime = time_us_64();
-    return newButtonPresses != 0;
+    _nextButtonIndex = 0;
+    return _newButtonPresses != 0;
 }
 
 int64_t Buttons::lastUpdate() {
     return _lastUpdateTime;
+}
+
+int16_t Buttons::getButtonPress() {
+    for(uint i=_nextButtonIndex; i<24; i++) {
+        if(_newButtonPresses & (1 << i)) {
+            _newButtonPresses &= ~(1 << i); // clear this button press so it won't be returned again
+            _nextButtonIndex = i + 1;
+            return _buttonMap[i];
+        }
+    }
+    return -1;
 }
