@@ -20,11 +20,12 @@ Allowing 1MB of flash for code, need a way of checking size on compile
 Sector usage:
 
 From    To      Description
-0       255     Program (1MB max, probably overkill, drumkid.bin is 286kB today)
+0       255     Program (1MB max, probably overkill, V1 drumkid.bin was ~286kB)
 256     319     Settings, updated on a 64-sector cycle to reduce wear
 320     383     User beats (1024 bytes per beat, theoretical max 256 beats)
 384     384     Audio metadata
-385     1023    Audio sample data
+385     385     File allocation table for audio data
+386     1023    Audio sample data
 
 Audio metadata format (one page, assume max 16 samples for now):
 
@@ -35,10 +36,27 @@ Sample n flash address (4 bytes)
 Sample n length in bytes (4 bytes)
 Sample n sample rate (4 bytes)
 
+File allocation table format:
+1024 x 4-byte (uint32_t) sector addresses (4096 bytes total)
+Each entry refers to the next sector to go to. For example, if there is continuous audio data from sectors 386 to 388:
+
+Position    Data (next sector)
+386         387
+387         388
+388         0 (end)
+
+Or if the audio is too big and has to be spaced over different areas:
+
+400         401
+401         500
+500         501
+501         0 (end)
+
 */
 
 #define SECTOR_AUDIO_METADATA 384
-#define SECTOR_AUDIO_DATA_START 385
+#define SECTOR_FILE_ALLOCATION_TABLE 385
+#define SECTOR_AUDIO_DATA_START 386
 
 // byte positions/offsets within audio metadata page
 #define ADDRESS_AUDIO_METADATA_NUM_SAMPLES 0
