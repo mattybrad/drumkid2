@@ -6,8 +6,9 @@
 #define FLASH_SIZE (4*1024*1024)
 #define FLASH_PAGE_SIZE 256
 #define FLASH_SECTOR_SIZE 4096
+#define MAX_KITS 8
 #define MAX_CHANNELS 16
-static_assert(MAX_CHANNELS <= 16, "MAX_CHANNELS must not exceed 16"); // need to rewrite metadata format if more than 16 channels required, would require more than one page of flash
+static_assert(MAX_CHANNELS <= 16, "MAX_CHANNELS must not exceed 16"); // need to rewrite metadata format if more than 16 channels required, would require more than one page of flash (actually need to rewrite metadata format anyway now we're using multiple kits)
 #define MAX_FOLDER_NAME_LENGTH 32
 
 /*

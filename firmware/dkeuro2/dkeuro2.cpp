@@ -9,6 +9,7 @@ Started Jan 2026
 
 #include <stdio.h>
 #include <algorithm>
+#include <string>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/pio.h"
@@ -22,9 +23,11 @@ Started Jan 2026
 #include "hardware/Memory.h"
 #include "hardware/CardReader.h"
 #include "audio/Audio.h"
+#include "audio/Kit.h"
 #include "audio/Channel.h"
 #include "rhythm/Transport.h"
 #include "rhythm/Beat.h"
+#include "interface/Menu.h"
 
 CardReader cardReader;
 Memory memory;
@@ -33,6 +36,11 @@ Buttons buttons;
 Audio audio;
 Transport transport;
 Channel channels[MAX_CHANNELS];
+Kit kits[MAX_KITS];
+Menu menu;
+
+// some globals which WILL be moved later
+uint8_t currentKit = 0;
 
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
@@ -50,7 +58,7 @@ int main()
 
     memory.init();
     cardReader.init(&memory);
-
+    
     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
     numChannels = audioMetadata[0];
     numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
@@ -68,7 +76,7 @@ int main()
         channels[i].sampleLength = lengthSamples;
         channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
     }
-
+    
     for(int i=0; i<numChannels; i++) {
         uint thisPage;
         memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
@@ -79,18 +87,17 @@ int main()
         }
         printf("\n");
     }
-
+    
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);
     gpio_init(Pins::SYNC_OUT);
     gpio_set_dir(Pins::SYNC_OUT, GPIO_OUT);
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
-
+    
     buttons.init();
-
     leds.init();
-    leds.setDisplayString("V2");
+    menu.init(&leds);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
@@ -176,7 +183,7 @@ int main()
                 if(buttons.update()) {
                     int16_t buttonIndex;
                     while((buttonIndex = buttons.getButtonPress()) != -1) {
-                        handleButtonPress(buttonIndex);
+                        menu.handleButtonPress(buttonIndex);
                     }
                 }
             }
@@ -188,13 +195,6 @@ int main()
         audio.update();
 
         transport.update();
-    }
-}
-
-void handleButtonPress(int16_t buttonIndex) {
-    printf("Button %d pressed\n", buttonIndex);
-    if(buttonIndex == BUTTON_MENU) {
-        leds.setDisplayString("MENU");
     }
 }
 
