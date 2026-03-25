@@ -52,38 +52,6 @@ int main()
     }
 
     stdio_init_all();
-
-    memory.init();
-    cardReader.init(&memory);
-    
-    const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
-    numChannels = audioMetadata[0];
-    numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
-    printf("Audio metadata - num samples: %d\n", numChannels);
-    for(int i = 0; i < numChannels; i++) {
-        uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
-        uint32_t flashPage;
-        uint32_t lengthSamples;
-        uint32_t sampleRate;
-        memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
-        memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
-        memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
-        printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
-        channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
-        channels[i].sampleLength = lengthSamples;
-        channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
-    }
-    
-    for(int i=0; i<numChannels; i++) {
-        uint thisPage;
-        memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
-        const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
-        printf("%d.wav: ", i+1);
-        for(int j=0; j<32; j++) {
-            printf("%d ", audioData[j]);
-        }
-        printf("\n");
-    }
     
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);
@@ -92,9 +60,42 @@ int main()
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
     
+    memory.init();
+    kitManager.init(&memory);
+    cardReader.init(&memory);
     buttons.init();
     leds.init();
     menu.init(&leds, &memory, &cardReader, &kitManager);
+    
+    // const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
+    // numChannels = audioMetadata[0];
+    // numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
+    // printf("Audio metadata - num samples: %d\n", numChannels);
+    // for(int i = 0; i < numChannels; i++) {
+    //     uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
+    //     uint32_t flashPage;
+    //     uint32_t lengthSamples;
+    //     uint32_t sampleRate;
+    //     memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
+    //     memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
+    //     memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
+    //     printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
+    //     channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
+    //     channels[i].sampleLength = lengthSamples;
+    //     channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+    // }
+    
+    // for(int i=0; i<numChannels; i++) {
+    //     uint thisPage;
+    //     memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
+    //     const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
+    //     printf("%d.wav: ", i+1);
+    //     for(int j=0; j<32; j++) {
+    //         printf("%d ", audioData[j]);
+    //     }
+    //     printf("\n");
+    // }
+    
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
@@ -138,26 +139,26 @@ int main()
 
             int16_t leftSample = 0;
             int16_t rightSample = 0;
-            for(uint ch=0; ch<numChannels; ch++) {
-                Channel &channel = channels[ch];
-                if(channel.samplePosition < channel.sampleLength) {
-                    //leftSample += channel.sampleData[channel.samplePosition] >> 2;
-                    int16_t lerpedSample = 0;
-                    // simple linear interpolation
-                    uint32_t indexInt = channel.samplePositionFP >> 32;
-                    uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
-                    if(indexInt + 1 < channel.sampleLength) {
-                        int16_t sample1 = channel.sampleData[indexInt];
-                        int16_t sample2 = channel.sampleData[indexInt + 1];
-                        lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
-                    } else {
-                        lerpedSample = channel.sampleData[indexInt];
-                    }
-                    leftSample += lerpedSample >> 4;
-                    channel.samplePositionFP += channel.playbackSpeed;
-                    channel.samplePosition = channel.samplePositionFP >> 32;
-                }
-            }
+            // for(uint ch=0; ch<numChannels; ch++) {
+            //     Channel &channel = channels[ch];
+            //     if(channel.samplePosition < channel.sampleLength) {
+            //         //leftSample += channel.sampleData[channel.samplePosition] >> 2;
+            //         int16_t lerpedSample = 0;
+            //         // simple linear interpolation
+            //         uint32_t indexInt = channel.samplePositionFP >> 32;
+            //         uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
+            //         if(indexInt + 1 < channel.sampleLength) {
+            //             int16_t sample1 = channel.sampleData[indexInt];
+            //             int16_t sample2 = channel.sampleData[indexInt + 1];
+            //             lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
+            //         } else {
+            //             lerpedSample = channel.sampleData[indexInt];
+            //         }
+            //         leftSample += lerpedSample >> 4;
+            //         channel.samplePositionFP += channel.playbackSpeed;
+            //         channel.samplePosition = channel.samplePositionFP >> 32;
+            //     }
+            // }
             //rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
 
             audio.queueSample(leftSample, rightSample);
@@ -195,37 +196,37 @@ int main()
     }
 }
 
-void tempKitLoad(uint kitNum) {
-    if(kitNum==1) cardReader.transferAudioFolderToFlash("default");
-    if(kitNum==2) cardReader.transferAudioFolderToFlash("dnb");
-    if(kitNum==3) cardReader.transferAudioFolderToFlash("formattest");
+// void tempKitLoad(uint kitNum) {
+//     if(kitNum==1) cardReader.transferAudioFolderToFlash("default");
+//     if(kitNum==2) cardReader.transferAudioFolderToFlash("dnb");
+//     if(kitNum==3) cardReader.transferAudioFolderToFlash("formattest");
 
-    const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
-    uint8_t numChannels = audioMetadata[0];
-    numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
-    printf("Audio metadata - num samples: %d\n", numChannels);
-    for(int i = 0; i < numChannels; i++) {
-        uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
-        uint32_t flashPage;
-        uint32_t lengthSamples;
-        uint32_t sampleRate;
-        memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
-        memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
-        memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
-        printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
-        channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
-        channels[i].sampleLength = lengthSamples;
-        channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
-    }
+//     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
+//     uint8_t numChannels = audioMetadata[0];
+//     numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
+//     printf("Audio metadata - num samples: %d\n", numChannels);
+//     for(int i = 0; i < numChannels; i++) {
+//         uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
+//         uint32_t flashPage;
+//         uint32_t lengthSamples;
+//         uint32_t sampleRate;
+//         memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
+//         memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
+//         memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
+//         printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
+//         channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
+//         channels[i].sampleLength = lengthSamples;
+//         channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+//     }
 
-    for(int i=0; i<numChannels; i++) {
-        uint thisPage;
-        memcpy(&thisPage, &audioMetadata[ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4) + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
-        const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
-        printf("%d.wav: ", i+1);
-        for(int j=0; j<32; j++) {
-            printf("%d ", audioData[j]);
-        }
-        printf("\n");
-    }
-}
+//     for(int i=0; i<numChannels; i++) {
+//         uint thisPage;
+//         memcpy(&thisPage, &audioMetadata[ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4) + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
+//         const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
+//         printf("%d.wav: ", i+1);
+//         for(int j=0; j<32; j++) {
+//             printf("%d ", audioData[j]);
+//         }
+//         printf("\n");
+//     }
+// }

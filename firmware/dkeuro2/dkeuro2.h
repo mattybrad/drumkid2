@@ -3,6 +3,6 @@
 
 void updateTransport();
 void clockInCallback(uint gpio, uint32_t events);
-void tempKitLoad(uint kitNum);
+//void tempKitLoad(uint kitNum);
 
 #endif

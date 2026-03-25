@@ -1,5 +1,6 @@
 #pragma once
 #include "audio/Sample.h"
+#include "Config.h"
 #include <cstdint>
 
 class Kit {

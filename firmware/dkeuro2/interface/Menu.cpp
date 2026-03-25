@@ -132,6 +132,8 @@ void Menu::_handleButtonLoad(int16_t buttonIndex) {
     char subMenuString[5];
     const char* kitFolderName = nullptr;
     char testFolderString[5];
+    int kitSize = 0;
+    int freeSectors = 0;
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::SUBMENU_SELECTING;
@@ -154,15 +156,16 @@ void Menu::_handleButtonLoad(int16_t buttonIndex) {
         case BUTTON_YES:
             printf("Load: YES button pressed\n");
             // attempt to load the selected kit
-            int kitSize = _cardReader->getKitSize(_selectedKit);
+            kitSize = _cardReader->getKitSize(_selectedKit);
             printf("Selected kit size: %d bytes\n", kitSize);
-            int freeSectors = _kitManager->getFreeSectors();
+            freeSectors = _kitManager->getFreeSectors();
             printf("Free sectors available: %d\n", freeSectors);
             if(kitSize > freeSectors * FLASH_SECTOR_SIZE) {
                 printf("Not enough free space to load kit %d\n", _selectedKit);
                 // could add some UI feedback here to indicate failure
             } else {
-                
+                printf("Enough space for kit %d, choose slot...\n", _selectedKit);
+                // switch to special state for choosing kit slot?
             }
             break;
         default:

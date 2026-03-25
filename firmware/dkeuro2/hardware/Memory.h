@@ -17,6 +17,7 @@ class Memory {
         //bool operationInProgress();
         void writeToFlash(uint16_t page, const uint8_t* data, size_t length);
         void writeToFlashPage(uint16_t page, const uint8_t* data);
+        uint32_t readIntFromFlash(uint32_t address, size_t length);
     private:
         bool _operationInProgress;
         uint8_t _pageReady[(FLASH_SIZE) / FLASH_PAGE_SIZE / 8]; // bitfield to track which pages have been erased and are ready for writing

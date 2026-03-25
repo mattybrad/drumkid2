@@ -1,6 +1,7 @@
 #include "Memory.h"
 #include <algorithm>
 #include <stdio.h>
+#include <string.h>
 #include "hardware/flash.h"
 #include "hardware/sync.h"
 
@@ -51,3 +52,13 @@ void Memory::writeToFlashPage(uint16_t page, const uint8_t* data)
     _operationInProgress = false;
 }
 
+// just an AI function for now, tidy up later...
+uint32_t Memory::readIntFromFlash(uint32_t address, size_t length) {
+    if(address >= FLASH_SIZE || address + length > FLASH_SIZE) {
+        printf("Error: Attempt to read from invalid flash address 0x%08X\n", address);
+        return 0;
+    }
+    uint32_t result = 0;
+    memcpy(&result, (const void *)(XIP_BASE + address), length);
+    return result;
+}

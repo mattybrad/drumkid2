@@ -4,6 +4,7 @@
 #include "f_util.h"
 #include "ff.h"
 #include <cstdint>
+#include "Config.h"
 #include "Memory.h"
 
 class CardReader {
