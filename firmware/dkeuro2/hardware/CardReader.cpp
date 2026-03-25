@@ -3,6 +3,7 @@
 
 void CardReader::init(Memory *memory) {
     _memory = memory;
+    scanSampleFolders();
 }
 
 bool CardReader::checkCardInserted() {
@@ -27,6 +28,8 @@ bool CardReader::mountCard() {
     }
     return true;
 }
+
+
 
 void CardReader::transferAudioFolderToFlash(const char* folderPath) {
     sd_init_driver();
@@ -203,4 +206,88 @@ CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFl
         }
     }
     return info;
+}
+
+void CardReader::scanSampleFolders() {
+    sd_init_driver();
+    
+    if(!checkCardInserted()) {
+        return;
+    }
+
+    if(!mountCard()) {
+        return;
+    }
+
+    _numFolders = 0;
+    // reset folder names
+    for(int i=0; i<MAX_FOLDERS; i++) {
+        _folderNames[i][0] = '\0';
+    }
+    char samplePath[] = "samples/";
+    
+    DIR dir;
+    FRESULT fr = f_opendir(&dir, samplePath);
+    if (FR_OK != fr)
+    {
+        printf("f_open error: %s (%d)\n", FRESULT_str(fr), fr);
+        return;
+    }
+    printf("Scanning for sample folders...\n");
+
+    for(;;)
+    {
+        FILINFO fno;
+        fr = f_readdir(&dir, &fno);
+        if (FR_OK != fr || fno.fname[0] == 0)
+            break; // end of directory (or error?)
+        if (fno.fattrib & AM_DIR)
+        {
+            printf("Found folder: %s\n", fno.fname);
+            if(_numFolders < MAX_FOLDERS) {
+                strncpy(_folderNames[_numFolders], fno.fname, MAX_FOLDER_NAME_LENGTH-1);
+                _folderNames[_numFolders][MAX_FOLDER_NAME_LENGTH-1] = '\0'; // ensure null termination
+                _numFolders++;
+            } else {
+                printf("Max folders reached, skipping folder: %s\n", fno.fname);
+            }
+        }
+    }
+
+}
+
+int CardReader::getKitSize(uint16_t kitIndex) {
+    if(kitIndex < _numFolders) {
+        const char* folderName = getSampleFolderName(kitIndex);
+        // check cumulative sample size required for kit
+        uint totalSampleSizeBytes = 0;
+
+        // initial setup
+        sd_init_driver();
+        if(!checkCardInserted()) {
+            return -1;
+        }
+        if(!mountCard()) {
+            return -1;
+        }
+
+        bool exitFindLoop = false;
+        for (int i = 1; i <= MAX_CHANNELS && !exitFindLoop; i++) {
+            char path[128];
+            snprintf(path, sizeof(path), "samples/%s/%d.wav", folderName, i);
+            printf("Checking for sample at path: %s\n", path);
+            SampleInfo info = parseWavFile(path);
+            if(info.lengthBytes > 0) {
+                totalSampleSizeBytes += info.lengthBytes;
+            } else {
+                printf("No sample found at path: %s\n", path);
+                exitFindLoop = true;
+            }
+        }
+
+        return totalSampleSizeBytes;
+    } else {
+        printf("Invalid kit index: %d\n", kitIndex);
+        return -1;
+    }
 }

@@ -50,3 +50,4 @@ void Memory::writeToFlashPage(uint16_t page, const uint8_t* data)
     bitWriteArray(_pageReady, page, 0); // mark page as not ready until next erase
     _operationInProgress = false;
 }
+

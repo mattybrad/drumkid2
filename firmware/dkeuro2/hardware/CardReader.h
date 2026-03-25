@@ -20,8 +20,14 @@ class CardReader {
         void transferAudioFolderToFlash(const char* folderPath);
         SampleInfo parseWavFile(const char* path, bool writeToFlash = false, uint32_t flashPageStart = 0);
         void transferWavToFlash(const char* path);
+        void scanSampleFolders();
+        uint16_t getNumSampleFolders() const { return _numFolders; };
+        const char* getSampleFolderName(uint16_t index) const { return (index < _numFolders) ? _folderNames[index] : nullptr; };
+        int getKitSize(uint16_t kitIndex);
         
     private:
         Memory *_memory;
+        char _folderNames[MAX_FOLDERS][MAX_FOLDER_NAME_LENGTH];
+        uint16_t _numFolders = 0;
         // Private methods and members for card communication
 };

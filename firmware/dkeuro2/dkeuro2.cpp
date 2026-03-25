@@ -23,7 +23,7 @@ Started Jan 2026
 #include "hardware/Memory.h"
 #include "hardware/CardReader.h"
 #include "audio/Audio.h"
-#include "audio/Kit.h"
+#include "audio/KitManager.h"
 #include "audio/Channel.h"
 #include "rhythm/Transport.h"
 #include "rhythm/Beat.h"
@@ -36,11 +36,8 @@ Buttons buttons;
 Audio audio;
 Transport transport;
 Channel channels[MAX_CHANNELS];
-Kit kits[MAX_KITS];
+KitManager kitManager;
 Menu menu;
-
-// some globals which WILL be moved later
-uint8_t currentKit = 0;
 
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
@@ -97,7 +94,7 @@ int main()
     
     buttons.init();
     leds.init();
-    menu.init(&leds);
+    menu.init(&leds, &memory, &cardReader, &kitManager);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);

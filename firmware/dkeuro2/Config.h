@@ -10,11 +10,13 @@
 #define MAX_CHANNELS 16
 static_assert(MAX_CHANNELS <= 16, "MAX_CHANNELS must not exceed 16"); // need to rewrite metadata format if more than 16 channels required, would require more than one page of flash (actually need to rewrite metadata format anyway now we're using multiple kits)
 #define MAX_FOLDER_NAME_LENGTH 32
+#define MAX_FOLDERS 64
 
 /*
 
 Memory info:
 Pico 2 has 512KB of SRAM, 4MB of flash memory (1024 sectors x 4096 bytes)
+One sector contains 16 flash pages (256 bytes per page)
 Allowing 1MB of flash for code, need a way of checking size on compile
 3MB for data storage
 
@@ -25,10 +27,9 @@ From    To      Description
 256     319     Settings, updated on a 64-sector cycle to reduce wear
 320     383     User beats (1024 bytes per beat, theoretical max 256 beats)
 384     384     Audio metadata
-385     385     File allocation table for audio data
-386     1023    Audio sample data
+385     1023    Audio sample data
 
-Audio metadata format (one page, assume max 16 samples for now):
+OLD Audio metadata format (one page, assume max 16 samples for now):
 
 Number of samples (1 byte)
 Reserved (15 bytes)
@@ -37,35 +38,31 @@ Sample n flash address (4 bytes)
 Sample n length in bytes (4 bytes)
 Sample n sample rate (4 bytes)
 
-File allocation table format:
-1024 x 4-byte (uint32_t) sector addresses (4096 bytes total)
-Each entry refers to the next sector to go to. For example, if there is continuous audio data from sectors 386 to 388:
-
-Position    Data (next sector)
-386         387
-387         388
-388         0 (end)
-
-Or if the audio is too big and has to be spaced over different areas:
-
-400         401
-401         500
-500         501
-501         0 (end)
+NEW audio metadata format (1 page per kit, up to 16 kits in theory)
+For each kit:
+    Kit name (32 bytes)
+    Total kit size in bytes (4 bytes)
+    Number of samples (1 byte)
+    Check number (1 byte, used to check whether flash is valid)
+    For each sample in kit (up to 16 samples in theory):
+        Sample address in flash (4 bytes)
+        Sample length in bytes (4 bytes)
+        Sample sample rate (4 bytes)
 
 */
 
 #define SECTOR_AUDIO_METADATA 384
-#define SECTOR_FILE_ALLOCATION_TABLE 385
-#define SECTOR_AUDIO_DATA_START 386
+#define SECTOR_AUDIO_DATA_START 385
 
 // byte positions/offsets within audio metadata page
-#define ADDRESS_AUDIO_METADATA_NUM_SAMPLES 0
-#define ADDRESS_AUDIO_METADATA_FOLDER_NAME 16
-#define ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START 48
-#define OFFSET_AUDIO_METADATA_PAGE_NUM 0
-#define OFFSET_AUDIO_METADATA_LENGTH_SAMPLES 4
-#define OFFSET_AUDIO_METADATA_SAMPLE_RATE 8
+#define PAGE_ADDRESS_KIT_NAME 0
+#define PAGE_ADDRESS_KIT_SIZE 32
+#define PAGE_ADDRESS_NUM_SAMPLES 36
+#define PAGE_ADDRESS_CHECK_NUM 37
+#define PAGE_ADDRESS_SAMPLE_INFO_START 38
+#define PAGE_OFFSET_SAMPLE_ADDRESS 0
+#define PAGE_OFFSET_SAMPLE_LENGTH 4
+#define PAGE_OFFSET_SAMPLE_RATE 8
 
 #define BUTTON_PLAY 1
 #define BUTTON_TAP 2
