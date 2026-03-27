@@ -52,6 +52,31 @@ void Memory::writeToFlashPage(uint16_t page, const uint8_t* data)
     _operationInProgress = false;
 }
 
+void Memory::backupSector(uint32_t sector) {
+    if(sector * FLASH_SECTOR_SIZE >= FLASH_SIZE) {
+        printf("Error: Attempt to backup invalid flash sector %d\n", sector);
+        return;
+    }
+    memcpy(_sectorBuffer, (const void *)(XIP_BASE + sector * FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
+    _backupAddress = sector;
+}
+
+void Memory::restoreSector(uint32_t sector) {
+    if(sector * FLASH_SECTOR_SIZE >= FLASH_SIZE) {
+        printf("Error: Attempt to restore invalid flash sector %d\n", sector);
+        return;
+    }
+    if(sector != _backupAddress) {
+        printf("Error: Attempt to restore sector %d which is not currently backed up (backup address: %d)\n", sector, _backupAddress);
+        return;
+    }
+    for(size_t i = 0; i < FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE; i++) {
+        if(bitReadArray(_pageReady, (sector * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + i)) {
+            writeToFlashPage((sector * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + i, &_sectorBuffer[i * FLASH_PAGE_SIZE]); 
+        }
+    }
+}
+
 // just an AI function for now, tidy up later...
 uint32_t Memory::readIntFromFlash(uint32_t address, size_t length) {
     if(address >= FLASH_SIZE || address + length > FLASH_SIZE) {

@@ -95,7 +95,16 @@ int main()
     //     }
     //     printf("\n");
     // }
-    
+
+    // temporarily set channel data from kitmanager here
+    for(int i=0; i<MAX_CHANNELS; i++) {
+        if(kitManager.kits[0].numSamples > i) {
+            channels[i].sampleData = (const int16_t *)(XIP_BASE + (kitManager.kits[0].samples[i].address * FLASH_PAGE_SIZE));
+            channels[i].sampleLength = kitManager.kits[0].samples[i].lengthSamples;
+            channels[i].playbackSpeed = (int64_t)(kitManager.kits[0].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+        }
+    }
+    numChannels = kitManager.kits[0].numSamples;
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
@@ -139,26 +148,26 @@ int main()
 
             int16_t leftSample = 0;
             int16_t rightSample = 0;
-            // for(uint ch=0; ch<numChannels; ch++) {
-            //     Channel &channel = channels[ch];
-            //     if(channel.samplePosition < channel.sampleLength) {
-            //         //leftSample += channel.sampleData[channel.samplePosition] >> 2;
-            //         int16_t lerpedSample = 0;
-            //         // simple linear interpolation
-            //         uint32_t indexInt = channel.samplePositionFP >> 32;
-            //         uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
-            //         if(indexInt + 1 < channel.sampleLength) {
-            //             int16_t sample1 = channel.sampleData[indexInt];
-            //             int16_t sample2 = channel.sampleData[indexInt + 1];
-            //             lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
-            //         } else {
-            //             lerpedSample = channel.sampleData[indexInt];
-            //         }
-            //         leftSample += lerpedSample >> 4;
-            //         channel.samplePositionFP += channel.playbackSpeed;
-            //         channel.samplePosition = channel.samplePositionFP >> 32;
-            //     }
-            // }
+            for(uint ch=0; ch<numChannels; ch++) {
+                Channel &channel = channels[ch];
+                if(channel.samplePosition < channel.sampleLength) {
+                    //leftSample += channel.sampleData[channel.samplePosition] >> 2;
+                    int16_t lerpedSample = 0;
+                    // simple linear interpolation
+                    uint32_t indexInt = channel.samplePositionFP >> 32;
+                    uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
+                    if(indexInt + 1 < channel.sampleLength) {
+                        int16_t sample1 = channel.sampleData[indexInt];
+                        int16_t sample2 = channel.sampleData[indexInt + 1];
+                        lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
+                    } else {
+                        lerpedSample = channel.sampleData[indexInt];
+                    }
+                    leftSample += lerpedSample >> 4;
+                    channel.samplePositionFP += channel.playbackSpeed;
+                    channel.samplePosition = channel.samplePositionFP >> 32;
+                }
+            }
             //rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
 
             audio.queueSample(leftSample, rightSample);

@@ -1,5 +1,6 @@
 #pragma once
 #include "audio/Kit.h"
+#include "audio/Channel.h"
 #include "hardware/Memory.h"
 #include "Config.h"
 #include <cstdint>

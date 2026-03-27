@@ -15,7 +15,6 @@ void KitManager::init(Memory* memory) {
             checkPassed = false;
         }
     }
-    checkPassed = true; // temp
     if(!checkPassed) {
         printf("Audio metadata check failed, formatting default metadata pages\n");
         for(int i=0; i<MAX_KITS; i++) {

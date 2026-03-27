@@ -68,7 +68,9 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath, uint8_t kitS
 
     audioMetadataPage[PAGE_ADDRESS_NUM_SAMPLES] = numSamples;
     memcpy(&audioMetadataPage[PAGE_ADDRESS_KIT_NAME], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
+    _memory->backupSector(SECTOR_AUDIO_METADATA);
     _memory->writeToFlashPage(SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE + kitSlot, audioMetadataPage); // write metadata to flash page
+    _memory->restoreSector(SECTOR_AUDIO_METADATA);
     printf("Found %d samples in folder %s\n", numSamples, folderPath);
 
     printf("Transferring samples from folder %s to flash...\n", folderPath);
