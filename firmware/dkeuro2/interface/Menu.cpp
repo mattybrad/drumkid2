@@ -68,6 +68,12 @@ void Menu::_updateDisplay() {
             displayStr[4] = '\0';
             _leds->setDisplayString(displayStr);
             break;
+        case MenuState::KIT_LOAD_SLOT_SELECT:
+            char slotStr[2];
+            slotStr[0] = '1' + _kitLoadSlot;
+            slotStr[1] = '\0';
+            _leds->setDisplayString(slotStr);
+            break;
         default:
             _leds->setDisplayString("????");
             break;
@@ -168,6 +174,10 @@ void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
         case BUTTON_YES:
             printf("Loading kit %d into slot %d\n", _kitLoadFolderIndex, _kitLoadSlot);
             // code goes here
+            //_kitManager->loadKitFromCard(_kitLoadFolderIndex, _kitLoadSlot);
+            _cardReader->transferAudioFolderToFlash(_cardReader->getSampleFolderName(_kitLoadFolderIndex), _kitLoadSlot, SECTOR_AUDIO_DATA_START);
+            // after transferring, re-init to update kit metadata from flash
+            _kitManager->init(_memory);
             break;
         default:
             printf("Unhandled button in KIT_LOAD_SLOT_SELECT\n");

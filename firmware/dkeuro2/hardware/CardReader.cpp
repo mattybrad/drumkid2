@@ -29,60 +29,57 @@ bool CardReader::mountCard() {
     return true;
 }
 
-
-
-// void CardReader::transferAudioFolderToFlash(const char* folderPath) {
-//     sd_init_driver();
+void CardReader::transferAudioFolderToFlash(const char* folderPath, uint8_t kitSlot, uint32_t flashSectorStart) {
+    sd_init_driver();
     
-//     if(!checkCardInserted()) {
-//         return;
-//     }
+    if(!checkCardInserted()) {
+        return;
+    }
 
-//     if(!mountCard()) {
-//         return;
-//     }
+    if(!mountCard()) {
+        return;
+    }
 
-//     bool exitFindLoop = false;
-//     int numSamples = 0;
-//     uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
-//     uint32_t samplePageNumberTally = SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
-//     uint32_t samplePageNumbers[MAX_CHANNELS] = {0}; // support up to 16 samples for now, can expand later if needed
-//     for (int i = 1; i <= MAX_CHANNELS && !exitFindLoop; i++) {
-//         char path[128];
-//         snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
-//         //printf("Checking for sample at path: %s\n", path);
-//         SampleInfo info = parseWavFile(path);
-//         if(info.lengthBytes > 0) {
-//             printf("Sample %d: length=%d bytes, sample rate=%d\n", i, info.lengthBytes, info.sampleRate);
-//             uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + (i-1) * (4+4+4);
-//             samplePageNumbers[i-1] = samplePageNumberTally;
-//             memcpy(&audioMetadataPage[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], &samplePageNumberTally, 4);
-//             uint32_t lengthSamples = info.lengthBytes / 2;
-//             memcpy(&audioMetadataPage[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], &lengthSamples, 4);
-//             memcpy(&audioMetadataPage[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], &info.sampleRate, 4);
-//             numSamples = i;
-//             samplePageNumberTally += (info.lengthBytes / FLASH_PAGE_SIZE) + 1;
-//         } else {
-//             exitFindLoop = true;
-//         }
-//     }
-//     // this is roughly where sample size would be checked, but the new plan is to allow ~8 kits which will require rejigging the code anyway so come back to this later
-//     printf("Total sample size = %d pages, %d bytes, %d%%\n", samplePageNumberTally - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), (samplePageNumberTally - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE)) * FLASH_PAGE_SIZE, ((samplePageNumberTally - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE)) * FLASH_PAGE_SIZE * 100) / (FLASH_SIZE - (SECTOR_AUDIO_DATA_START * FLASH_SECTOR_SIZE)));
+    bool exitFindLoop = false;
+    int numSamples = 0;
+    uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
+    memcpy(&audioMetadataPage[PAGE_ADDRESS_CHECK_NUM], &kitSlot, 1); // write kit slot to check num for basic validation of metadata
+    uint32_t samplePageNumberTally = flashSectorStart * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
+    uint32_t samplePageNumbers[MAX_CHANNELS] = {0}; // support up to 16 samples for now, can expand later if needed
+    for (int i = 1; i <= MAX_CHANNELS && !exitFindLoop; i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
+        //printf("Checking for sample at path: %s\n", path);
+        SampleInfo info = parseWavFile(path);
+        if(info.lengthBytes > 0) {
+            printf("Sample %d: length=%d bytes, sample rate=%d\n", i, info.lengthBytes, info.sampleRate);
+            uint sampleMetadataOffset = PAGE_ADDRESS_SAMPLE_INFO_START + (i-1) * (4+4+4);
+            samplePageNumbers[i-1] = samplePageNumberTally;
+            memcpy(&audioMetadataPage[sampleMetadataOffset + PAGE_OFFSET_SAMPLE_ADDRESS], &samplePageNumberTally, 4);
+            uint32_t lengthSamples = info.lengthBytes / 2;
+            memcpy(&audioMetadataPage[sampleMetadataOffset + PAGE_OFFSET_SAMPLE_LENGTH], &lengthSamples, 4);
+            memcpy(&audioMetadataPage[sampleMetadataOffset + PAGE_OFFSET_SAMPLE_RATE], &info.sampleRate, 4);
+            numSamples = i;
+            samplePageNumberTally += (info.lengthBytes / FLASH_PAGE_SIZE) + 1;
+        } else {
+            exitFindLoop = true;
+        }
+    }
 
-//     audioMetadataPage[ADDRESS_AUDIO_METADATA_NUM_SAMPLES] = numSamples;
-//     memcpy(&audioMetadataPage[ADDRESS_AUDIO_METADATA_FOLDER_NAME], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
-//     _memory->writeToFlashPage(SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE, audioMetadataPage); // write metadata to flash page
-//     printf("Found %d samples in folder %s\n", numSamples, folderPath);
+    audioMetadataPage[PAGE_ADDRESS_NUM_SAMPLES] = numSamples;
+    memcpy(&audioMetadataPage[PAGE_ADDRESS_KIT_NAME], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
+    _memory->writeToFlashPage(SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE + kitSlot, audioMetadataPage); // write metadata to flash page
+    printf("Found %d samples in folder %s\n", numSamples, folderPath);
 
-//     printf("Transferring samples from folder %s to flash...\n", folderPath);
-//     for(int i = 1; i <= numSamples; i++) {
-//         char path[128];
-//         snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
-//         parseWavFile(path, true, samplePageNumbers[i-1]);
-//     }
+    printf("Transferring samples from folder %s to flash...\n", folderPath);
+    for(int i = 1; i <= numSamples; i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "samples/%s/%d.wav", folderPath, i);
+        parseWavFile(path, true, samplePageNumbers[i-1]);
+    }
 
-//     f_unmount("");
-// }
+    f_unmount("");
+}
 
 CardReader::SampleInfo CardReader::parseWavFile(const char* path, bool writeToFlash, uint32_t flashPageStart) {
     SampleInfo info = {0,0,0};
@@ -259,7 +256,7 @@ void CardReader::scanSampleFolders() {
 
 }
 
-int CardReader::getKitSize(uint16_t kitIndex) {
+int CardReader::getKitSize(uint8_t kitIndex) {
     if(kitIndex < _numFolders) {
         const char* folderName = getSampleFolderName(kitIndex);
         // check cumulative sample size required for kit

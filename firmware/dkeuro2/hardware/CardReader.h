@@ -18,13 +18,13 @@ class CardReader {
         void init(Memory *memory);
         bool checkCardInserted();
         bool mountCard();
-        void transferAudioFolderToFlash(const char* folderPath);
+        void transferAudioFolderToFlash(const char* folderPath, uint8_t kitSlot, uint32_t flashSectorStart);
         SampleInfo parseWavFile(const char* path, bool writeToFlash = false, uint32_t flashPageStart = 0);
-        void transferWavToFlash(const char* path);
+        void transferWavToFlash(const char* path, uint32_t flashPageStart);
         void scanSampleFolders();
         uint16_t getNumSampleFolders() const { return _numFolders; };
         const char* getSampleFolderName(uint16_t index) const { return (index < _numFolders) ? _folderNames[index] : nullptr; };
-        int getKitSize(uint16_t kitIndex);
+        int getKitSize(uint8_t kitIndex);
         
     private:
         Memory *_memory;
