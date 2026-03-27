@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "hardware/Leds.h"
 #include "hardware/Memory.h"
 #include "hardware/CardReader.h"
@@ -14,36 +15,40 @@ enum class MenuState {
     MANUAL_TEMPO,
     TUPLET_SELECT,
     SUBMENU_SELECTING,
-    SUBMENU_SELECTED,
+    INPUT_PPQN_SELECT,
+    OUTPUT_PPQN_SELECT,
+    KIT_LOAD_FOLDER_SELECT,
+    KIT_LOAD_SLOT_SELECT,
     KIT_SELECT,
     TIME_SIGNATURE_SELECT,
 };
 
-enum class SubMenuState {
-    TEST_1,
-    TEST_2,
-    TEST_3,
-    TEST_4,
-    LOAD
-};
 
 class Menu {
     public:
         void init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* kitManager);
         void handleButtonPress(int16_t buttonIndex);
-        
-        private:
+    
+    private:
         Leds* _leds = nullptr;
         Memory* _memory = nullptr;
         CardReader* _cardReader = nullptr;
         KitManager* _kitManager = nullptr;
-
+    
         MenuState _state = MenuState::HOME;
-        SubMenuState _subMenuState = SubMenuState::TEST_1;
-        uint16_t _selectedKit = 0;
+        uint8_t _subMenuIndex = 0;
+        uint16_t _kitLoadFolderIndex = 0;
+        uint16_t _kitLoadSlot = 0;
+        std::array<MenuState, 3> _subMenuStates = {
+            MenuState::INPUT_PPQN_SELECT,
+            MenuState::OUTPUT_PPQN_SELECT,
+            MenuState::KIT_LOAD_FOLDER_SELECT,
+        };
 
         void _handleButtonHome(int16_t buttonIndex);
         void _handleButtonKitSelect(int16_t buttonIndex);
         void _handleButtonSubMenuSelecting(int16_t buttonIndex);
-        void _handleButtonLoad(int16_t buttonIndex);
+        void _handleButtonKitLoadFolderSelect(int16_t buttonIndex);
+        void _handleButtonKitLoadSlotSelect(int16_t buttonIndex);
+        void _updateDisplay();
 };

@@ -21,30 +21,55 @@ void Menu::handleButtonPress(int16_t buttonIndex) {
         case MenuState::SUBMENU_SELECTING:
             _handleButtonSubMenuSelecting(buttonIndex);
             break;
-        case MenuState::SUBMENU_SELECTED:
-            switch(_subMenuState) {
-                case SubMenuState::TEST_1:
-                    printf("In TEST_1 submenu\n");
-                    break;
-                case SubMenuState::TEST_2:
-                    printf("In TEST_2 submenu\n");
-                    break;
-                case SubMenuState::TEST_3:
-                    printf("In TEST_3 submenu\n");
-                    break;
-                case SubMenuState::TEST_4:
-                    printf("In TEST_4 submenu\n");
-                    break;
-                case SubMenuState::LOAD:
-                    printf("In LOAD submenu\n");
-                    _handleButtonLoad(buttonIndex);
-                    break;
-                default:
-                    printf("Unhandled submenu state\n");
-            }
+        case MenuState::KIT_LOAD_FOLDER_SELECT:
+            _handleButtonKitLoadFolderSelect(buttonIndex);
+            break;
+        case MenuState::KIT_LOAD_SLOT_SELECT:
+            _handleButtonKitLoadSlotSelect(buttonIndex);
             break;
         default:
             printf("Unhandled menu state\n");
+            break;
+    }
+    _updateDisplay();
+}
+
+void Menu::_updateDisplay() {
+    char displayStr[5];
+    switch(_state) {
+        case MenuState::HOME:
+            _leds->setDisplayString("HOME");
+            break;
+        case MenuState::KIT_SELECT:
+            char kitStr[2];
+            kitStr[0] = '1' + _kitManager->kitNum;
+            kitStr[1] = '\0';
+            _leds->setDisplayString(kitStr);
+            break;
+        case MenuState::SUBMENU_SELECTING:
+            switch(_subMenuStates[_subMenuIndex]) {
+                case MenuState::INPUT_PPQN_SELECT:
+                    _leds->setDisplayString("PPQI");
+                    break;
+                case MenuState::OUTPUT_PPQN_SELECT:
+                    _leds->setDisplayString("PPQO");
+                    break;
+                case MenuState::KIT_LOAD_FOLDER_SELECT:
+                    _leds->setDisplayString("LOAD");
+                    break;
+                default:
+                    _leds->setDisplayString("????");
+                    break;
+
+            }
+            break;
+        case MenuState::KIT_LOAD_FOLDER_SELECT:
+            strncpy(displayStr, _cardReader->getSampleFolderName(_kitLoadFolderIndex), 4);
+            displayStr[4] = '\0';
+            _leds->setDisplayString(displayStr);
+            break;
+        default:
+            _leds->setDisplayString("????");
             break;
     }
 }
@@ -53,17 +78,9 @@ void Menu::_handleButtonHome(int16_t buttonIndex) {
     switch(buttonIndex) {
         case BUTTON_KIT:
             _state = MenuState::KIT_SELECT;
-            printf("Entered KIT_SELECT state\n");
-            char kitStr[2];
-            kitStr[0] = '1' + _kitManager->kitNum;
-            kitStr[1] = '\0';
-            _leds->setDisplayString(kitStr);
             break;
         case BUTTON_MENU:
             _state = MenuState::SUBMENU_SELECTING;
-            printf("Entered SUBMENU_SELECTING state\n");
-            _subMenuState = SubMenuState::TEST_1; // Default to TEST for now
-            _leds->setDisplayString("TEST");
             break;
         default:
             printf("Unhandled button in HOME\n");
@@ -75,23 +92,13 @@ void Menu::_handleButtonKitSelect(int16_t buttonIndex) {
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::HOME;
-            _leds->setDisplayString("HOME");
             break;
         case BUTTON_INC:
             _kitManager->kitNum = (_kitManager->kitNum + 1) % 3;
             printf("Selected kit %d\n", _kitManager->kitNum+1);
-            char kitStr[2];
-            kitStr[0] = '1' + _kitManager->kitNum;
-            kitStr[1] = '\0';
-            _leds->setDisplayString(kitStr);
             break;
         case BUTTON_DEC:
             _kitManager->kitNum = (_kitManager->kitNum - 1 + 3) % 3;
-            printf("Selected kit %d\n", _kitManager->kitNum+1);
-            char kitStrDec[2];
-            kitStrDec[0] = '1' + _kitManager->kitNum;
-            kitStrDec[1] = '\0';
-            _leds->setDisplayString(kitStrDec);
             break;
         default:
             printf("Unhandled button in KIT_SELECT\n");
@@ -100,27 +107,15 @@ void Menu::_handleButtonKitSelect(int16_t buttonIndex) {
 }
 
 void Menu::_handleButtonSubMenuSelecting(int16_t buttonIndex) {
-    int currentSubMenu;
-    char subMenuString[5];
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::HOME;
-            _leds->setDisplayString("HOME");
             break;
         case BUTTON_INC:
-            currentSubMenu = static_cast<int>(_subMenuState);
-            currentSubMenu = (currentSubMenu + 1) % 5; // temp
-            _subMenuState = static_cast<SubMenuState>(currentSubMenu);
-            printf("Selected submenu %d\n", currentSubMenu);
-            subMenuString[0] = 'S';
-            subMenuString[1] = 'u';
-            subMenuString[2] = 'b';
-            subMenuString[3] = '1' + currentSubMenu;
-            subMenuString[4] = '\0';
-            _leds->setDisplayString(subMenuString);
+            _subMenuIndex = (_subMenuIndex + 1) % _subMenuStates.size();
             break;
         case BUTTON_YES:
-            _state = MenuState::SUBMENU_SELECTED;
+            _state = _subMenuStates[_subMenuIndex];
             break;
         default:
             printf("Unhandled button in SUBMENU_SELECTING\n");
@@ -128,48 +123,54 @@ void Menu::_handleButtonSubMenuSelecting(int16_t buttonIndex) {
     }
 }
 
-void Menu::_handleButtonLoad(int16_t buttonIndex) {
-    char subMenuString[5];
-    const char* kitFolderName = nullptr;
-    char testFolderString[5];
+void Menu::_handleButtonKitLoadFolderSelect(int16_t buttonIndex) {
     int kitSize = 0;
     int freeSectors = 0;
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::SUBMENU_SELECTING;
-            subMenuString[0] = 'S';
-            subMenuString[1] = 'u';
-            subMenuString[2] = 'b';
-            subMenuString[3] = '1' + static_cast<int>(_subMenuState);
-            subMenuString[4] = '\0';
-            _leds->setDisplayString(subMenuString);
             break;
         case BUTTON_INC:
             printf("Load: INC button pressed\n");
-            _selectedKit = (_selectedKit + 1) % _cardReader->getNumSampleFolders();
-            printf("Selected kit index: %d\n", _selectedKit);
-            kitFolderName = _cardReader->getSampleFolderName(_selectedKit);
-            strncpy(testFolderString, kitFolderName, 4);
-            testFolderString[4] = '\0';
-            _leds->setDisplayString(testFolderString);
+            _kitLoadFolderIndex = (_kitLoadFolderIndex + 1) % _cardReader->getNumSampleFolders();
+            printf("Selected kit index: %d\n", _kitLoadFolderIndex);
             break;
         case BUTTON_YES:
             printf("Load: YES button pressed\n");
             // attempt to load the selected kit
-            kitSize = _cardReader->getKitSize(_selectedKit);
+            kitSize = _cardReader->getKitSize(_kitLoadFolderIndex);
             printf("Selected kit size: %d bytes\n", kitSize);
             freeSectors = _kitManager->getFreeSectors();
             printf("Free sectors available: %d\n", freeSectors);
             if(kitSize > freeSectors * FLASH_SECTOR_SIZE) {
-                printf("Not enough free space to load kit %d\n", _selectedKit);
+                printf("Not enough free space to load kit %d\n", _kitLoadFolderIndex);
                 // could add some UI feedback here to indicate failure
             } else {
-                printf("Enough space for kit %d, choose slot...\n", _selectedKit);
+                printf("Enough space for kit %d, choose slot...\n", _kitLoadFolderIndex);
                 // switch to special state for choosing kit slot?
+                _state = MenuState::KIT_LOAD_SLOT_SELECT;
             }
             break;
         default:
             printf("Unhandled button in LOAD submenu\n");
+            break;
+    }
+}
+
+void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
+    switch(buttonIndex) {
+        case BUTTON_BACK:
+            _state = MenuState::KIT_LOAD_FOLDER_SELECT;
+            break;
+        case BUTTON_INC:
+            _kitLoadSlot = (_kitLoadSlot + 1) % MAX_KITS;
+            break;
+        case BUTTON_YES:
+            printf("Loading kit %d into slot %d\n", _kitLoadFolderIndex, _kitLoadSlot);
+            // code goes here
+            break;
+        default:
+            printf("Unhandled button in KIT_LOAD_SLOT_SELECT\n");
             break;
     }
 }
