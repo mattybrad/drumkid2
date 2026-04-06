@@ -3,9 +3,13 @@
 #include "Config.h"
 #include <cstring>
 
-void KitManager::init(Memory* memory) {
+void KitManager::init(Memory* memory, ChannelManager* channelManager) {
     _memory = memory;
+    _channelManager = channelManager;
+    reloadMetaData();
+}
 
+void KitManager::reloadMetaData() {
     // check that audio metadata check numbers are correct
     bool checkPassed = true;
     for(int i=0; i<MAX_KITS && checkPassed; i++) {
@@ -49,6 +53,24 @@ void KitManager::init(Memory* memory) {
         }
     }
 }
+
+void KitManager::initKit(uint8_t newKitNum) {
+    if(newKitNum >= MAX_KITS) {
+        printf("Invalid kit number\n");
+        return;
+    }
+    kitNum = newKitNum; // set current kit number
+    
+    for(int i=0; i<MAX_CHANNELS; i++) {
+        if(kits[kitNum].numSamples > i) {
+            _channelManager->channels[i].sampleData = (const int16_t *)(XIP_BASE + (kits[kitNum].samples[i].address * FLASH_PAGE_SIZE));
+            _channelManager->channels[i].sampleLength = kits[kitNum].samples[i].lengthSamples;
+            _channelManager->channels[i].playbackSpeed = (int64_t)(kits[kitNum].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+        }
+    }
+    _channelManager->numChannels = kits[kitNum].numSamples;
+}
+    
 
 // void KitManager::loadKitFromCard(uint16_t folderIndex, uint16_t kitSlot) {
 //     printf("Loading kit from card - folder index: %d, kit slot: %d\n", folderIndex, kitSlot);

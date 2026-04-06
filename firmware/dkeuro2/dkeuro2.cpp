@@ -25,6 +25,7 @@ Started Jan 2026
 #include "audio/Audio.h"
 #include "audio/KitManager.h"
 #include "audio/Channel.h"
+#include "audio/ChannelManager.h"
 #include "rhythm/Transport.h"
 #include "rhythm/Beat.h"
 #include "interface/Menu.h"
@@ -35,7 +36,8 @@ Leds leds;
 Buttons buttons;
 Audio audio;
 Transport transport;
-Channel channels[MAX_CHANNELS];
+//Channel channels[MAX_CHANNELS];
+ChannelManager channelManager;
 KitManager kitManager;
 Menu menu;
 
@@ -46,10 +48,10 @@ void pulseInCallback(uint gpio, uint32_t events) {
 
 int main()
 {
-    uint8_t numChannels = 0;
-    for(uint i = 0; i < MAX_CHANNELS; i++) {
-        channels[i].init();
-    }
+    channelManager.init();
+    // for(uint i = 0; i < MAX_CHANNELS; i++) {
+    //     channels[i].init();
+    // }
 
     stdio_init_all();
     
@@ -61,50 +63,24 @@ int main()
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
     
     memory.init();
-    kitManager.init(&memory);
+    kitManager.init(&memory, &channelManager);
     cardReader.init(&memory);
     buttons.init();
     leds.init();
     menu.init(&leds, &memory, &cardReader, &kitManager);
-    
-    // const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
-    // numChannels = audioMetadata[0];
-    // numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
-    // printf("Audio metadata - num samples: %d\n", numChannels);
-    // for(int i = 0; i < numChannels; i++) {
-    //     uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
-    //     uint32_t flashPage;
-    //     uint32_t lengthSamples;
-    //     uint32_t sampleRate;
-    //     memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
-    //     memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
-    //     memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
-    //     printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
-    //     channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
-    //     channels[i].sampleLength = lengthSamples;
-    //     channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
-    // }
-    
-    // for(int i=0; i<numChannels; i++) {
-    //     uint thisPage;
-    //     memcpy(&thisPage, &audioMetadata[1 + 15 + 32 + i * (4+4+4)], 4);
-    //     const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
-    //     printf("%d.wav: ", i+1);
-    //     for(int j=0; j<32; j++) {
-    //         printf("%d ", audioData[j]);
-    //     }
-    //     printf("\n");
-    // }
 
     // temporarily set channel data from kitmanager here
-    for(int i=0; i<MAX_CHANNELS; i++) {
-        if(kitManager.kits[0].numSamples > i) {
-            channels[i].sampleData = (const int16_t *)(XIP_BASE + (kitManager.kits[0].samples[i].address * FLASH_PAGE_SIZE));
-            channels[i].sampleLength = kitManager.kits[0].samples[i].lengthSamples;
-            channels[i].playbackSpeed = (int64_t)(kitManager.kits[0].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
-        }
-    }
-    numChannels = kitManager.kits[0].numSamples;
+    // for(int i=0; i<MAX_CHANNELS; i++) {
+    //     if(kitManager.kits[0].numSamples > i) {
+    //         channelManager.channels[i].sampleData = (const int16_t *)(XIP_BASE + (kitManager.kits[0].samples[i].address * FLASH_PAGE_SIZE));
+    //         channelManager.channels[i].sampleLength = kitManager.kits[0].samples[i].lengthSamples;
+    //         channelManager.channels[i].playbackSpeed = (int64_t)(kitManager.kits[0].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+    //     }
+    // }
+    // numChannels = kitManager.kits[0].numSamples;
+
+    // newer way to init kit
+    kitManager.initKit(0);
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
@@ -127,29 +103,29 @@ int main()
                 
                 // check for triggers
                 if(thisTransportPosition % 24 == 0) {
-                    channels[0].samplePosition = 0;
-                    channels[0].samplePositionFP = 0;
+                    channelManager.channels[0].samplePosition = 0;
+                    channelManager.channels[0].samplePositionFP = 0;
                 }
                 if(thisTransportPosition % 48 == 24) {
-                    channels[1].samplePosition = 0;
-                    channels[1].samplePositionFP = 0;
+                    channelManager.channels[1].samplePosition = 0;
+                    channelManager.channels[1].samplePositionFP = 0;
                 }
                 if(thisTransportPosition % 6 == 0) {
-                    channels[2].samplePosition = 0;
-                    channels[2].samplePositionFP = 0;
+                    channelManager.channels[2].samplePosition = 0;
+                    channelManager.channels[2].samplePositionFP = 0;
                 }
-                for(uint i = 3; i < numChannels; i++) {
+                for(uint i = 3; i < channelManager.numChannels; i++) {
                     if(thisTransportPosition % 4 == 0 && rand() % 4 == 0) {
-                        channels[i].samplePosition = 0;
-                        channels[i].samplePositionFP = 0;
+                        channelManager.channels[i].samplePosition = 0;
+                        channelManager.channels[i].samplePositionFP = 0;
                     }
                 }
             }
 
             int16_t leftSample = 0;
             int16_t rightSample = 0;
-            for(uint ch=0; ch<numChannels; ch++) {
-                Channel &channel = channels[ch];
+            for(uint ch=0; ch<channelManager.numChannels; ch++) {
+                Channel &channel = channelManager.channels[ch];
                 if(channel.samplePosition < channel.sampleLength) {
                     //leftSample += channel.sampleData[channel.samplePosition] >> 2;
                     int16_t lerpedSample = 0;
@@ -168,7 +144,7 @@ int main()
                     channel.samplePosition = channel.samplePositionFP >> 32;
                 }
             }
-            //rightSample = channels[3].sampleData[channels[3].sampleLength - channels[3].samplePosition - 1];
+            //rightSample = channelManager.channels[3].sampleData[channelManager.channels[3].sampleLength - channelManager.channels[3].samplePosition - 1];
 
             audio.queueSample(leftSample, rightSample);
             sampleCount++;
@@ -204,38 +180,3 @@ int main()
         transport.update();
     }
 }
-
-// void tempKitLoad(uint kitNum) {
-//     if(kitNum==1) cardReader.transferAudioFolderToFlash("default");
-//     if(kitNum==2) cardReader.transferAudioFolderToFlash("dnb");
-//     if(kitNum==3) cardReader.transferAudioFolderToFlash("formattest");
-
-//     const uint8_t *audioMetadata = (const uint8_t *)(XIP_BASE + 384 * FLASH_SECTOR_SIZE);
-//     uint8_t numChannels = audioMetadata[0];
-//     numChannels = std::min(numChannels, (uint8_t)MAX_CHANNELS);
-//     printf("Audio metadata - num samples: %d\n", numChannels);
-//     for(int i = 0; i < numChannels; i++) {
-//         uint sampleMetadataOffset = ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4);
-//         uint32_t flashPage;
-//         uint32_t lengthSamples;
-//         uint32_t sampleRate;
-//         memcpy(&flashPage, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
-//         memcpy(&lengthSamples, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_LENGTH_SAMPLES], 4);
-//         memcpy(&sampleRate, &audioMetadata[sampleMetadataOffset + OFFSET_AUDIO_METADATA_SAMPLE_RATE], 4);
-//         printf("Sample %d - flash page: %d, length: %d samples, sample rate: %d\n", i+1, flashPage, lengthSamples, sampleRate);
-//         channels[i].sampleData = (const int16_t *)(XIP_BASE + (flashPage * FLASH_PAGE_SIZE));
-//         channels[i].sampleLength = lengthSamples;
-//         channels[i].playbackSpeed = (int64_t)(sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
-//     }
-
-//     for(int i=0; i<numChannels; i++) {
-//         uint thisPage;
-//         memcpy(&thisPage, &audioMetadata[ADDRESS_AUDIO_METADATA_SAMPLE_INFO_START + i * (4+4+4) + OFFSET_AUDIO_METADATA_PAGE_NUM], 4);
-//         const int16_t *audioData = (const int16_t *)(XIP_BASE + (thisPage * FLASH_PAGE_SIZE));
-//         printf("%d.wav: ", i+1);
-//         for(int j=0; j<32; j++) {
-//             printf("%d ", audioData[j]);
-//         }
-//         printf("\n");
-//     }
-// }

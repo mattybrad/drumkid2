@@ -44,7 +44,7 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath, uint8_t kitS
     int numSamples = 0;
     uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
     memcpy(&audioMetadataPage[PAGE_ADDRESS_CHECK_NUM], &kitSlot, 1); // write kit slot to check num for basic validation of metadata
-    uint32_t samplePageNumberTally = flashSectorStart * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
+    uint32_t samplePageNumberTally = flashSectorStart * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE  + 2048*kitSlot; // temp offset using kit slot before adding function to compress space
     uint32_t samplePageNumbers[MAX_CHANNELS] = {0}; // support up to 16 samples for now, can expand later if needed
     for (int i = 1; i <= MAX_CHANNELS && !exitFindLoop; i++) {
         char path[128];

@@ -1,9 +1,11 @@
 #pragma once
 #include <cstdint>
+#include "audio/Sample.h"
 
 class Channel {
     public:
         void init();
+        Sample* sample;
         const int16_t* sampleData;
         uint32_t sampleLength;
         uint32_t samplePosition;

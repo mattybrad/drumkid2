@@ -48,6 +48,7 @@ add_executable(dkeuro2
     hardware/Memory.cpp
     audio/Audio.cpp
     audio/Channel.cpp
+    audio/ChannelManager.cpp
     audio/KitManager.cpp
     rhythm/Transport.cpp
     rhythm/Beat.cpp

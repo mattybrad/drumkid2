@@ -101,10 +101,13 @@ void Menu::_handleButtonKitSelect(int16_t buttonIndex) {
             break;
         case BUTTON_INC:
             _kitManager->kitNum = (_kitManager->kitNum + 1) % 3;
+            _kitManager->initKit(_kitManager->kitNum);
             printf("Selected kit %d\n", _kitManager->kitNum+1);
             break;
         case BUTTON_DEC:
             _kitManager->kitNum = (_kitManager->kitNum - 1 + 3) % 3;
+            _kitManager->initKit(_kitManager->kitNum);
+            printf("Selected kit %d\n", _kitManager->kitNum+1);
             break;
         default:
             printf("Unhandled button in KIT_SELECT\n");
@@ -177,7 +180,8 @@ void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
             //_kitManager->loadKitFromCard(_kitLoadFolderIndex, _kitLoadSlot);
             _cardReader->transferAudioFolderToFlash(_cardReader->getSampleFolderName(_kitLoadFolderIndex), _kitLoadSlot, SECTOR_AUDIO_DATA_START);
             // after transferring, re-init to update kit metadata from flash
-            _kitManager->init(_memory);
+            _kitManager->reloadMetaData();
+            _kitManager->initKit(_kitLoadSlot);
             break;
         default:
             printf("Unhandled button in KIT_LOAD_SLOT_SELECT\n");
