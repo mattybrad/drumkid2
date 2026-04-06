@@ -44,7 +44,8 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath, uint8_t kitS
     int numSamples = 0;
     uint8_t audioMetadataPage[FLASH_PAGE_SIZE] = {0};
     memcpy(&audioMetadataPage[PAGE_ADDRESS_CHECK_NUM], &kitSlot, 1); // write kit slot to check num for basic validation of metadata
-    uint32_t samplePageNumberTally = flashSectorStart * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE  + 2048*kitSlot; // temp offset using kit slot before adding function to compress space
+    memcpy(&audioMetadataPage[PAGE_ADDRESS_KIT_START_SECTOR], &flashSectorStart, 2); // write kit start sector to metadata
+    uint32_t samplePageNumberTally = flashSectorStart * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE;
     uint32_t samplePageNumbers[MAX_CHANNELS] = {0}; // support up to 16 samples for now, can expand later if needed
     for (int i = 1; i <= MAX_CHANNELS && !exitFindLoop; i++) {
         char path[128];
@@ -68,6 +69,9 @@ void CardReader::transferAudioFolderToFlash(const char* folderPath, uint8_t kitS
 
     audioMetadataPage[PAGE_ADDRESS_NUM_SAMPLES] = numSamples;
     memcpy(&audioMetadataPage[PAGE_ADDRESS_KIT_NAME], folderPath, std::min(strlen(folderPath), (size_t)32)); // copy folder name into metadata
+    uint16_t kitSizeSectors = (samplePageNumberTally - (flashSectorStart * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE)) / (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE) + 1; // calculate kit size in sectors, add 1 to round up
+    printf("Calculated kit size in sectors: %d\n", kitSizeSectors);
+    memcpy(&audioMetadataPage[PAGE_ADDRESS_KIT_SIZE], &kitSizeSectors, 2);
     _memory->backupSector(SECTOR_AUDIO_METADATA);
     _memory->writeToFlashPage(SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE/FLASH_PAGE_SIZE + kitSlot, audioMetadataPage); // write metadata to flash page
     _memory->restoreSector(SECTOR_AUDIO_METADATA);
@@ -258,11 +262,12 @@ void CardReader::scanSampleFolders() {
 
 }
 
-int CardReader::getKitSize(uint8_t kitIndex) {
+int CardReader::getKitSizeSectors(uint8_t kitIndex) {
     if(kitIndex < _numFolders) {
         const char* folderName = getSampleFolderName(kitIndex);
         // check cumulative sample size required for kit
-        uint totalSampleSizeBytes = 0;
+        //uint totalSampleSizeBytes = 0;
+        uint totalSampleSizePages = 0;
 
         // initial setup
         sd_init_driver();
@@ -280,14 +285,14 @@ int CardReader::getKitSize(uint8_t kitIndex) {
             printf("Checking for sample at path: %s\n", path);
             SampleInfo info = parseWavFile(path);
             if(info.lengthBytes > 0) {
-                totalSampleSizeBytes += info.lengthBytes;
+                totalSampleSizePages += (info.lengthBytes + FLASH_PAGE_SIZE - 1) / FLASH_PAGE_SIZE;
             } else {
                 printf("No sample found at path: %s\n", path);
                 exitFindLoop = true;
             }
         }
 
-        return totalSampleSizeBytes;
+        return (totalSampleSizePages * FLASH_PAGE_SIZE + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE; // convert total sample size in pages to sectors, add 1 to round up
     } else {
         printf("Invalid kit index: %d\n", kitIndex);
         return -1;

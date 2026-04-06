@@ -24,7 +24,7 @@ class CardReader {
         void scanSampleFolders();
         uint16_t getNumSampleFolders() const { return _numFolders; };
         const char* getSampleFolderName(uint16_t index) const { return (index < _numFolders) ? _folderNames[index] : nullptr; };
-        int getKitSize(uint8_t kitIndex);
+        int getKitSizeSectors(uint8_t kitIndex);
         
     private:
         Memory *_memory;

@@ -35,11 +35,15 @@ void KitManager::reloadMetaData() {
         uint32_t metadataAddress = SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE + i * FLASH_PAGE_SIZE;
         uint8_t numSamples = _memory->readIntFromFlash(metadataAddress + PAGE_ADDRESS_NUM_SAMPLES, 1);
         kits[i].numSamples = numSamples;
+        uint16_t startSector = _memory->readIntFromFlash(metadataAddress + PAGE_ADDRESS_KIT_START_SECTOR, 2);
+        kits[i].startSector = startSector;
+        uint16_t kitSizeSectors = _memory->readIntFromFlash(metadataAddress + PAGE_ADDRESS_KIT_SIZE, 2);
+        kits[i].sizeSectors = kitSizeSectors;
         if(numSamples > 0) {
             char folderName[33];
             memcpy(folderName, (const void *)(XIP_BASE + metadataAddress + PAGE_ADDRESS_KIT_NAME), 32);
             folderName[32] = '\0';
-            printf("Kit %d: %d samples, folder name: %s\n", i+1, numSamples, folderName);
+            printf("Kit %d: %d samples, start sector %d, %d sectors, folder name: %s\n", i+1, numSamples, startSector, kitSizeSectors, folderName);
             memcpy(kits[i].name, folderName, 32);
 
             for(int j=0; j<numSamples; j++) {
@@ -61,6 +65,7 @@ void KitManager::initKit(uint8_t newKitNum) {
     }
     kitNum = newKitNum; // set current kit number
     
+    // some stuff could be tidied up here probably
     for(int i=0; i<MAX_CHANNELS; i++) {
         if(kits[kitNum].numSamples > i) {
             _channelManager->channels[i].sampleData = (const int16_t *)(XIP_BASE + (kits[kitNum].samples[i].address * FLASH_PAGE_SIZE));
@@ -70,20 +75,63 @@ void KitManager::initKit(uint8_t newKitNum) {
     }
     _channelManager->numChannels = kits[kitNum].numSamples;
 }
-    
 
-// void KitManager::loadKitFromCard(uint16_t folderIndex, uint16_t kitSlot) {
-//     printf("Loading kit from card - folder index: %d, kit slot: %d\n", folderIndex, kitSlot);
-//     if(folderIndex >= _cardReader->getNumSampleFolders() || kitSlot >= MAX_KITS) {
-//         printf("Invalid folder index or kit slot\n");
-//         return;
-//     }
-//     _cardReader->transferAudioFolderToFlash(_cardReader->getSampleFolderName(folderIndex));
-//     // after transferring, re-init to update kit metadata from flash
-//     init(_memory);
-// }
+uint32_t KitManager::getFreeSectors(uint8_t kitSlot) {
+    uint32_t usedSectorTally = 0;
+    for(int i=0; i<MAX_KITS; i++) {
+        if(i != kitSlot) {
+            usedSectorTally += kits[i].sizeSectors;
+        }
+    }
+    printf("Used sectors: %d\n", usedSectorTally);
+    uint32_t freeSectors = (1023 - SECTOR_AUDIO_DATA_START) - usedSectorTally + 1;
+    printf("Free sectors: %d\n", freeSectors);
+    return freeSectors; // assuming 256 sectors available for audio data
+}
 
-uint32_t KitManager::getFreeSectors() {
-    // for now just return a dummy value, will need to implement a way of tracking used/free sectors in flash to get an accurate number here
-    return 256; // 1MB free (256 sectors) for audio data, starting from sector 386
+void KitManager::createSpaceForKit(uint8_t kitSlot, uint32_t kitSizeSectors) {
+    if(kitSlot >= MAX_KITS) {
+        printf("Invalid kit slot\n");
+        return;
+    }
+    printf("Creating space for kit in slot %d, size %d sectors\n", kitSlot, kitSizeSectors);
+    uint32_t freeSectors = getFreeSectors(kitSlot);
+    if(kitSizeSectors > freeSectors) {
+        printf("Not enough free space to create space for kit\n");
+        return;
+    }
+
+    // find start sector for new kit by tallying used sectors from existing kits
+    uint32_t newKitStartSector = SECTOR_AUDIO_DATA_START;
+    for(int i=0; i<kitSlot; i++) {
+        if(kits[i].sizeSectors > 0) {
+            newKitStartSector += kits[i].sizeSectors;
+        }
+    }
+    printf("New kit will be written starting at sector %d\n", newKitStartSector);
+
+    bool anyKitsAfter = false;
+    uint32_t existingNextKitStartSector = 0;
+    for(int i=kitSlot+1; i<MAX_KITS; i++) {
+        if(kits[i].sizeSectors > 0) {
+            anyKitsAfter = true;
+            existingNextKitStartSector = kits[i].startSector;
+            printf("Existing kit found after slot %d at sector %d\n", kitSlot, existingNextKitStartSector);
+            break;
+        }
+    }
+
+    if(!anyKitsAfter) {
+        printf("No existing kits after slot %d, no need to move data\n", kitSlot);
+        return;
+    }
+
+    if(newKitStartSector + kitSizeSectors == existingNextKitStartSector) {
+        printf("New kit fits exactly in free space, no need to move data\n");
+        return;
+    }
+
+    int32_t sectorShift = (newKitStartSector + kitSizeSectors) - existingNextKitStartSector;
+    printf("Shifting existing kits starting from sector %d by %d sectors\n", existingNextKitStartSector, sectorShift);
+
 }

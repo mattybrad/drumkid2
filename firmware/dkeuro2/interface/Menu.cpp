@@ -133,8 +133,6 @@ void Menu::_handleButtonSubMenuSelecting(int16_t buttonIndex) {
 }
 
 void Menu::_handleButtonKitLoadFolderSelect(int16_t buttonIndex) {
-    int kitSize = 0;
-    int freeSectors = 0;
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::SUBMENU_SELECTING;
@@ -147,18 +145,7 @@ void Menu::_handleButtonKitLoadFolderSelect(int16_t buttonIndex) {
         case BUTTON_YES:
             printf("Load: YES button pressed\n");
             // attempt to load the selected kit
-            kitSize = _cardReader->getKitSize(_kitLoadFolderIndex);
-            printf("Selected kit size: %d bytes\n", kitSize);
-            freeSectors = _kitManager->getFreeSectors();
-            printf("Free sectors available: %d\n", freeSectors);
-            if(kitSize > freeSectors * FLASH_SECTOR_SIZE) {
-                printf("Not enough free space to load kit %d\n", _kitLoadFolderIndex);
-                // could add some UI feedback here to indicate failure
-            } else {
-                printf("Enough space for kit %d, choose slot...\n", _kitLoadFolderIndex);
-                // switch to special state for choosing kit slot?
-                _state = MenuState::KIT_LOAD_SLOT_SELECT;
-            }
+            _state = MenuState::KIT_LOAD_SLOT_SELECT;
             break;
         default:
             printf("Unhandled button in LOAD submenu\n");
@@ -167,6 +154,9 @@ void Menu::_handleButtonKitLoadFolderSelect(int16_t buttonIndex) {
 }
 
 void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
+    int kitSizeSectors = 0;
+    int freeSectors = 0;
+    int newKitStartSector = 0;
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::KIT_LOAD_FOLDER_SELECT;
@@ -175,11 +165,23 @@ void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
             _kitLoadSlot = (_kitLoadSlot + 1) % MAX_KITS;
             break;
         case BUTTON_YES:
+            // check kit size and free space, then load if possible
+            kitSizeSectors = _cardReader->getKitSizeSectors(_kitLoadFolderIndex);
+            freeSectors = _kitManager->getFreeSectors(_kitLoadSlot);
+            if(kitSizeSectors > freeSectors) {
+                printf("Not enough free space to load kit, need %d sectors but only %d sectors free\n", kitSizeSectors, freeSectors);
+                return;
+            }
+
             printf("Loading kit %d into slot %d\n", _kitLoadFolderIndex, _kitLoadSlot);
-            // code goes here
-            //_kitManager->loadKitFromCard(_kitLoadFolderIndex, _kitLoadSlot);
-            _cardReader->transferAudioFolderToFlash(_cardReader->getSampleFolderName(_kitLoadFolderIndex), _kitLoadSlot, SECTOR_AUDIO_DATA_START);
-            // after transferring, re-init to update kit metadata from flash
+            _kitManager->createSpaceForKit(_kitLoadSlot, _cardReader->getKitSizeSectors(_kitLoadFolderIndex));
+            newKitStartSector = SECTOR_AUDIO_DATA_START;
+            for(int i=0; i<_kitLoadSlot; i++) {
+                if(_kitManager->kits[i].sizeSectors > 0) {
+                    newKitStartSector += _kitManager->kits[i].sizeSectors;
+                }
+            }
+            _cardReader->transferAudioFolderToFlash(_cardReader->getSampleFolderName(_kitLoadFolderIndex), _kitLoadSlot, newKitStartSector);
             _kitManager->reloadMetaData();
             _kitManager->initKit(_kitLoadSlot);
             break;

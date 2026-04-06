@@ -29,19 +29,11 @@ From    To      Description
 384     384     Audio metadata
 385     1023    Audio sample data
 
-OLD Audio metadata format (one page, assume max 16 samples for now):
-
-Number of samples (1 byte)
-Reserved (15 bytes)
-Folder name (32 bytes)
-Sample n flash address (4 bytes)
-Sample n length in bytes (4 bytes)
-Sample n sample rate (4 bytes)
-
-NEW audio metadata format (1 page per kit, up to 16 kits in theory)
+Audio metadata format (1 page per kit, up to 16 kits in theory)
 For each kit:
     Kit name (32 bytes)
-    Total kit size in bytes (4 bytes)
+    Kit start sector (2 bytes)
+    Total kit size in sectors (2 bytes)
     Number of samples (1 byte)
     Check number (1 byte, used to check whether flash is valid)
     For each sample in kit (up to 16 samples in theory):
@@ -56,7 +48,8 @@ For each kit:
 
 // byte positions/offsets within audio metadata page
 #define PAGE_ADDRESS_KIT_NAME 0
-#define PAGE_ADDRESS_KIT_SIZE 32
+#define PAGE_ADDRESS_KIT_START_SECTOR 32
+#define PAGE_ADDRESS_KIT_SIZE 34
 #define PAGE_ADDRESS_NUM_SAMPLES 36
 #define PAGE_ADDRESS_CHECK_NUM 37
 #define PAGE_ADDRESS_SAMPLE_INFO_START 38

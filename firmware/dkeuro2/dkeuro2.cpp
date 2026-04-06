@@ -69,18 +69,7 @@ int main()
     leds.init();
     menu.init(&leds, &memory, &cardReader, &kitManager);
 
-    // temporarily set channel data from kitmanager here
-    // for(int i=0; i<MAX_CHANNELS; i++) {
-    //     if(kitManager.kits[0].numSamples > i) {
-    //         channelManager.channels[i].sampleData = (const int16_t *)(XIP_BASE + (kitManager.kits[0].samples[i].address * FLASH_PAGE_SIZE));
-    //         channelManager.channels[i].sampleLength = kitManager.kits[0].samples[i].lengthSamples;
-    //         channelManager.channels[i].playbackSpeed = (int64_t)(kitManager.kits[0].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
-    //     }
-    // }
-    // numChannels = kitManager.kits[0].numSamples;
-
-    // newer way to init kit
-    kitManager.initKit(0);
+    kitManager.initKit(0); // i guess we need to remember last loaded kit now!
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
