@@ -12,18 +12,6 @@ void Memory::init() {
     }
 }
 
-// void Memory::writeToFlash(uint16_t page, const uint8_t* data, size_t length) {
-//     uint32_t address = page * FLASH_PAGE_SIZE;
-
-//     // check address begins after program/code ends and is within flash size limits
-//     if(address < MAX_PROGRAM_SIZE || address + length > FLASH_SIZE) {
-//         printf("Error: Attempt to write to invalid flash address 0x%08X\n", address);
-//         return;
-//     }
-    
-//     // for each page we need to write, check if it's ready (erased) and if not, erase the sector first
-// }
-
 void Memory::writeToFlashPage(uint16_t page, const uint8_t* data)
 {
     if(page * FLASH_PAGE_SIZE < MAX_PROGRAM_SIZE || page * FLASH_PAGE_SIZE >= FLASH_SIZE) {
@@ -75,6 +63,24 @@ void Memory::restoreSector(uint32_t sector) {
             writeToFlashPage((sector * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + i, &_sectorBuffer[i * FLASH_PAGE_SIZE]); 
         }
     }
+}
+
+void Memory::moveSector(uint32_t sourceSector, uint32_t destSector) {
+    if(sourceSector * FLASH_SECTOR_SIZE >= FLASH_SIZE || destSector * FLASH_SECTOR_SIZE >= FLASH_SIZE) {
+        printf("Error: Attempt to move invalid flash sector (source: %d, dest: %d)\n", sourceSector, destSector);
+        return;
+    }
+    if(sourceSector == destSector) {
+        printf("Warning: Attempt to move sector %d to the same location, skipping\n", sourceSector);
+        return;
+    }
+    printf("Moving flash sector from %d to %d\n", sourceSector, destSector);
+    
+    backupSector(sourceSector);
+    uint32_t interrupts = save_and_disable_interrupts();
+    flash_range_erase(destSector * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+    flash_range_program(destSector * FLASH_SECTOR_SIZE, _sectorBuffer, FLASH_SECTOR_SIZE);
+    restore_interrupts(interrupts);
 }
 
 // just an AI function for now, tidy up later...

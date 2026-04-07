@@ -134,4 +134,56 @@ void KitManager::createSpaceForKit(uint8_t kitSlot, uint32_t kitSizeSectors) {
     int32_t sectorShift = (newKitStartSector + kitSizeSectors) - existingNextKitStartSector;
     printf("Shifting existing kits starting from sector %d by %d sectors\n", existingNextKitStartSector, sectorShift);
 
+
+
+    if(sectorShift > 0) {
+        // need to move existing kits, start from the end to avoid overwriting data before it's moved
+        printf("move kits from kit %d right by %d sectors\n", kitSlot+1, sectorShift);
+        for(int i=MAX_KITS-1; i>kitSlot; i--) {
+            if(kits[i].sizeSectors > 0) {
+                // move kit's audio sectors one by one, starting from the end to avoid overwriting data before it's moved
+                for(int j=kits[i].startSector + kits[i].sizeSectors - 1; j>=kits[i].startSector; j--) {
+                    _memory->moveSector(j, j + sectorShift);
+                }
+                // update kit object's start sector (updated flash meta after moving audio data)
+                kits[i].startSector = kits[i].startSector + sectorShift;
+                for(int j=0; j<kits[i].numSamples; j++) {
+                    kits[i].samples[j].address = kits[i].samples[j].address + (sectorShift * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE); // update sample address in kit object
+                }
+            }
+        }
+    } else if(sectorShift < 0) {
+        // if sectorShift is negative, it means the new kit is smaller than the space it's replacing, so we can move existing kits starting from the beginning
+        printf("move kits from kit %d left by %d sectors (not done yet)\n", kitSlot+1, -sectorShift);
+
+        for(int i=kitSlot+1; i<MAX_KITS; i++) {
+            if(kits[i].sizeSectors > 0) {
+                // move kit's audio sectors one by one, starting from the beginning
+                for(int j=kits[i].startSector; j<kits[i].startSector + kits[i].sizeSectors; j++) {
+                    _memory->moveSector(j, j + sectorShift);
+                }
+                // update kit object's start sector (updated flash meta after moving audio data)
+                kits[i].startSector = kits[i].startSector + sectorShift;
+                for(int j=0; j<kits[i].numSamples; j++) {
+                    kits[i].samples[j].address = kits[i].samples[j].address + (sectorShift * FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE); // update sample address in kit object
+                }
+            }
+        }
+    }
+
+    // update flash metadata for moved kits (UNFINISHED!)
+    _memory->backupSector(SECTOR_AUDIO_METADATA); // backup metadata sector before updating
+    for(int i=kitSlot+1; i<MAX_KITS; i++) {
+        uint8_t metaPageBuffer[FLASH_PAGE_SIZE];
+        memcpy(metaPageBuffer, (const void *)(XIP_BASE + SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE + i * FLASH_PAGE_SIZE), FLASH_PAGE_SIZE); // read existing metadata page into buffer
+        if(kits[i].sizeSectors > 0) {
+            memcpy(&metaPageBuffer[PAGE_ADDRESS_KIT_START_SECTOR], &kits[i].startSector, 2); // update start sector in metadata
+            for(int j=0; j<kits[i].numSamples; j++) {
+                memcpy(&metaPageBuffer[PAGE_ADDRESS_SAMPLE_INFO_START + j * (4+4+4) + PAGE_OFFSET_SAMPLE_ADDRESS], &kits[i].samples[j].address, 4); // update sample address in metadata
+            }
+            _memory->writeToFlashPage((SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + i, metaPageBuffer); // write updated metadata page back to flash
+        }
+    }
+    _memory->restoreSector(SECTOR_AUDIO_METADATA); // restore metadata sector after updating
+
 }

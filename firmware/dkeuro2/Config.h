@@ -37,7 +37,7 @@ For each kit:
     Number of samples (1 byte)
     Check number (1 byte, used to check whether flash is valid)
     For each sample in kit (up to 16 samples in theory):
-        Sample address in flash (4 bytes)
+        Sample address (page number) in flash (4 bytes)
         Sample length in bytes (4 bytes)
         Sample sample rate (4 bytes)
 

@@ -20,6 +20,7 @@ class Memory {
         uint32_t readIntFromFlash(uint32_t address, size_t length);
         void backupSector(uint32_t sector);
         void restoreSector(uint32_t sector);
+        void moveSector(uint32_t sourceSector, uint32_t destSector);
     private:
         bool _operationInProgress;
         uint8_t _pageReady[(FLASH_SIZE) / FLASH_PAGE_SIZE / 8]; // bitfield to track which pages have been erased and are ready for writing
