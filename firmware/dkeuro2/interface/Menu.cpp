@@ -100,12 +100,12 @@ void Menu::_handleButtonKitSelect(int16_t buttonIndex) {
             _state = MenuState::HOME;
             break;
         case BUTTON_INC:
-            _kitManager->kitNum = (_kitManager->kitNum + 1) % 3;
+            _kitManager->kitNum = (_kitManager->kitNum + 1) % 8;
             _kitManager->initKit(_kitManager->kitNum);
             printf("Selected kit %d\n", _kitManager->kitNum+1);
             break;
         case BUTTON_DEC:
-            _kitManager->kitNum = (_kitManager->kitNum - 1 + 3) % 3;
+            _kitManager->kitNum = (_kitManager->kitNum - 1 + 8) % 8;
             _kitManager->initKit(_kitManager->kitNum);
             printf("Selected kit %d\n", _kitManager->kitNum+1);
             break;

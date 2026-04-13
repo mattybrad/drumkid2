@@ -174,12 +174,20 @@ void KitManager::createSpaceForKit(uint8_t kitSlot, uint32_t kitSizeSectors) {
     // update flash metadata for moved kits (UNFINISHED!)
     _memory->backupSector(SECTOR_AUDIO_METADATA); // backup metadata sector before updating
     for(int i=kitSlot+1; i<MAX_KITS; i++) {
-        uint8_t metaPageBuffer[FLASH_PAGE_SIZE];
-        memcpy(metaPageBuffer, (const void *)(XIP_BASE + SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE + i * FLASH_PAGE_SIZE), FLASH_PAGE_SIZE); // read existing metadata page into buffer
+        uint8_t metaPageBuffer[FLASH_PAGE_SIZE] = {0};
+        //memcpy(metaPageBuffer, (const void *)(XIP_BASE + SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE + i * FLASH_PAGE_SIZE), FLASH_PAGE_SIZE); // read existing metadata page into buffer
+
         if(kits[i].sizeSectors > 0) {
+            // reconstruct metadata page
+            memcpy(&metaPageBuffer[PAGE_ADDRESS_KIT_NAME], kits[i].name, 32); // kit name
             memcpy(&metaPageBuffer[PAGE_ADDRESS_KIT_START_SECTOR], &kits[i].startSector, 2); // update start sector in metadata
+            memcpy(&metaPageBuffer[PAGE_ADDRESS_KIT_SIZE], &kits[i].sizeSectors, 2); // kit size in sectors
+            metaPageBuffer[PAGE_ADDRESS_NUM_SAMPLES] = kits[i].numSamples; // number of samples
+            metaPageBuffer[PAGE_ADDRESS_CHECK_NUM] = i;
             for(int j=0; j<kits[i].numSamples; j++) {
                 memcpy(&metaPageBuffer[PAGE_ADDRESS_SAMPLE_INFO_START + j * (4+4+4) + PAGE_OFFSET_SAMPLE_ADDRESS], &kits[i].samples[j].address, 4); // update sample address in metadata
+                memcpy(&metaPageBuffer[PAGE_ADDRESS_SAMPLE_INFO_START + j * (4+4+4) + PAGE_OFFSET_SAMPLE_LENGTH], &kits[i].samples[j].lengthSamples, 4); // sample length in bytes
+                memcpy(&metaPageBuffer[PAGE_ADDRESS_SAMPLE_INFO_START + j * (4+4+4) + PAGE_OFFSET_SAMPLE_RATE], &kits[i].samples[j].sampleRate, 4); // sample rate
             }
             _memory->writeToFlashPage((SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + i, metaPageBuffer); // write updated metadata page back to flash
         }

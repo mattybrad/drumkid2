@@ -14,8 +14,6 @@
 class Memory {
     public:
         void init();
-        //bool operationInProgress();
-        //void writeToFlash(uint16_t page, const uint8_t* data, size_t length);
         void writeToFlashPage(uint16_t page, const uint8_t* data);
         uint32_t readIntFromFlash(uint32_t address, size_t length);
         void backupSector(uint32_t sector);
