@@ -12,6 +12,7 @@ class KitManager {
         void reloadMetaData();
         void initKit(uint8_t newKitNum);
         void createSpaceForKit(uint8_t kitSlot, uint32_t kitSizeBytes);
+        void deleteKit(uint8_t kitSlot);
         uint8_t kitNum = 0;
         Kit kits[MAX_KITS];
         uint32_t getFreeSectors(uint8_t kitSlot);

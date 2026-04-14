@@ -15,6 +15,7 @@ class Leds {
         static uint8_t asciiChars[256];
         void update();
         int64_t lastUpdate();
+        void specialUpdateBeforeBlockingProcess();
         
     private:
         uint8_t _singleLedStates;

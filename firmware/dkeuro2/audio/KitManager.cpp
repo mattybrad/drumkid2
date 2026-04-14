@@ -195,3 +195,27 @@ void KitManager::createSpaceForKit(uint8_t kitSlot, uint32_t kitSizeSectors) {
     _memory->restoreSector(SECTOR_AUDIO_METADATA); // restore metadata sector after updating
 
 }
+
+void KitManager::deleteKit(uint8_t kitSlot) {
+    if(kitSlot >= MAX_KITS) {
+        printf("Invalid kit slot\n");
+        return;
+    }
+    printf("Deleting kit in slot %d\n", kitSlot);
+    
+    kits[kitSlot].numSamples = 0;
+    kits[kitSlot].sizeSectors = 0;
+    kits[kitSlot].startSector = 0;
+    kits[kitSlot].name[0] = '\0';
+    for(int i=0; i<MAX_CHANNELS; i++) {
+        kits[kitSlot].samples[i].address = 0;
+        kits[kitSlot].samples[i].lengthSamples = 0;
+        kits[kitSlot].samples[i].sampleRate = 0;
+    }
+    uint8_t metaPageBuffer[FLASH_PAGE_SIZE] = {0};
+    metaPageBuffer[PAGE_ADDRESS_CHECK_NUM] = kitSlot;
+    _memory->backupSector(SECTOR_AUDIO_METADATA); // backup metadata sector before updating
+    _memory->writeToFlashPage((SECTOR_AUDIO_METADATA * FLASH_SECTOR_SIZE) / FLASH_PAGE_SIZE + kitSlot, metaPageBuffer);
+    _memory->restoreSector(SECTOR_AUDIO_METADATA); // restore metadata sector after updating
+    createSpaceForKit(kitSlot, 0);
+}

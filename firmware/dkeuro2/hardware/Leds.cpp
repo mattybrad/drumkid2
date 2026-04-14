@@ -55,6 +55,13 @@ void Leds::update() {
     _lastUpdateTime = time_us_64();
 }
 
+void Leds::specialUpdateBeforeBlockingProcess() {
+    // sets all digits to "_" to indicate processing
+    uint16_t shiftRegData = 0b0000000000001000;
+    shiftRegData |= (_singleLedStates << 12);
+    sn74595::shiftreg_send(shiftRegData);
+}
+
 int64_t Leds::lastUpdate() {
     return _lastUpdateTime;
 }

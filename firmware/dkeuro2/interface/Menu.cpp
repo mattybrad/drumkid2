@@ -27,6 +27,12 @@ void Menu::handleButtonPress(int16_t buttonIndex) {
         case MenuState::KIT_LOAD_SLOT_SELECT:
             _handleButtonKitLoadSlotSelect(buttonIndex);
             break;
+        case MenuState::KIT_DELETE:
+            _handleButtonKitDelete(buttonIndex);
+            break;
+        case MenuState::CHECK_SPACE:
+            _handleButtonCheckSpace(buttonIndex);
+            break;
         default:
             printf("Unhandled menu state\n");
             break;
@@ -35,28 +41,38 @@ void Menu::handleButtonPress(int16_t buttonIndex) {
 }
 
 void Menu::_updateDisplay() {
-    char displayStr[5];
+    char displayStr[5] = {0};
     switch(_state) {
         case MenuState::HOME:
             _leds->setDisplayString("HOME");
             break;
         case MenuState::KIT_SELECT:
-            char kitStr[2];
-            kitStr[0] = '1' + _kitManager->kitNum;
-            kitStr[1] = '\0';
-            _leds->setDisplayString(kitStr);
+            if(_kitManager->kits[_kitManager->kitNum].numSamples > 0) {
+                strncpy(displayStr, _kitManager->kits[_kitManager->kitNum].name, 4);
+                displayStr[4] = '\0';
+            } else {
+                snprintf(displayStr, 5, "na\0"); // untested, need to delete kits first!
+            }
+            _leds->setDisplayString(displayStr);
             break;
         case MenuState::SUBMENU_SELECTING:
             switch(_subMenuStates[_subMenuIndex]) {
+                case MenuState::KIT_LOAD_FOLDER_SELECT:
+                    _leds->setDisplayString("LOAD");
+                    break;
                 case MenuState::INPUT_PPQN_SELECT:
                     _leds->setDisplayString("PPQI");
                     break;
                 case MenuState::OUTPUT_PPQN_SELECT:
                     _leds->setDisplayString("PPQO");
                     break;
-                case MenuState::KIT_LOAD_FOLDER_SELECT:
-                    _leds->setDisplayString("LOAD");
+                case MenuState::KIT_DELETE:
+                    _leds->setDisplayString("DEL");
                     break;
+                case MenuState::CHECK_SPACE:
+                    _leds->setDisplayString("FREE");
+                    break;
+
                 default:
                     _leds->setDisplayString("????");
                     break;
@@ -69,11 +85,28 @@ void Menu::_updateDisplay() {
             _leds->setDisplayString(displayStr);
             break;
         case MenuState::KIT_LOAD_SLOT_SELECT:
-            char slotStr[2];
-            slotStr[0] = '1' + _kitLoadSlot;
-            slotStr[1] = '\0';
-            _leds->setDisplayString(slotStr);
+            displayStr[0] = '1' + _kitLoadSlot;
+            displayStr[1] = '\0';
+            _leds->setDisplayString(displayStr);
             break;
+        case MenuState::KIT_DELETE:
+            displayStr[0] = '1' + _kitLoadSlot;
+            displayStr[1] = '\0';
+            _leds->setDisplayString(displayStr);
+            break;
+        case MenuState::CHECK_SPACE:
+        {
+            uint32_t freeSectors = _kitManager->getFreeSectors(MAX_KITS); // pass invalid kit slot to get total free sectors
+            uint32_t freePercentage = (freeSectors * 100) / ((1023 - SECTOR_AUDIO_DATA_START) + 1);
+            printf("Free sectors: %d (%d%%)\n", freeSectors, freePercentage);
+            if(freePercentage > 100) {
+                snprintf(displayStr, 5, "err");
+            } else {
+                snprintf(displayStr, 5, "%d", freePercentage);
+            }
+            _leds->setDisplayString(displayStr);
+            break;
+        }
         default:
             _leds->setDisplayString("????");
             break;
@@ -123,6 +156,9 @@ void Menu::_handleButtonSubMenuSelecting(int16_t buttonIndex) {
         case BUTTON_INC:
             _subMenuIndex = (_subMenuIndex + 1) % _subMenuStates.size();
             break;
+        case BUTTON_DEC:
+            _subMenuIndex = (_subMenuIndex - 1 + _subMenuStates.size()) % _subMenuStates.size();
+            break;
         case BUTTON_YES:
             _state = _subMenuStates[_subMenuIndex];
             break;
@@ -140,6 +176,11 @@ void Menu::_handleButtonKitLoadFolderSelect(int16_t buttonIndex) {
         case BUTTON_INC:
             printf("Load: INC button pressed\n");
             _kitLoadFolderIndex = (_kitLoadFolderIndex + 1) % _cardReader->getNumSampleFolders();
+            printf("Selected kit index: %d\n", _kitLoadFolderIndex);
+            break;
+        case BUTTON_DEC:
+            printf("Load: DEC button pressed\n");
+            _kitLoadFolderIndex = (_kitLoadFolderIndex - 1 + _cardReader->getNumSampleFolders()) % _cardReader->getNumSampleFolders();
             printf("Selected kit index: %d\n", _kitLoadFolderIndex);
             break;
         case BUTTON_YES:
@@ -164,7 +205,13 @@ void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
         case BUTTON_INC:
             _kitLoadSlot = (_kitLoadSlot + 1) % MAX_KITS;
             break;
+        case BUTTON_DEC:
+            _kitLoadSlot = (_kitLoadSlot - 1 + MAX_KITS) % MAX_KITS;
+            break;
         case BUTTON_YES:
+            // force display update
+            _leds->specialUpdateBeforeBlockingProcess();
+
             // check kit size and free space, then load if possible
             kitSizeSectors = _cardReader->getKitSizeSectors(_kitLoadFolderIndex);
             freeSectors = _kitManager->getFreeSectors(_kitLoadSlot);
@@ -187,6 +234,41 @@ void Menu::_handleButtonKitLoadSlotSelect(int16_t buttonIndex) {
             break;
         default:
             printf("Unhandled button in KIT_LOAD_SLOT_SELECT\n");
+            break;
+    }
+}
+
+void Menu::_handleButtonKitDelete(int16_t buttonIndex) {
+    switch(buttonIndex) {
+        case BUTTON_BACK:
+            _state = MenuState::SUBMENU_SELECTING;
+            break;
+        case BUTTON_INC:
+            _kitLoadSlot = (_kitLoadSlot + 1) % MAX_KITS;
+            break;
+        case BUTTON_DEC:
+            _kitLoadSlot = (_kitLoadSlot - 1 + MAX_KITS) % MAX_KITS;
+            break;
+        case BUTTON_YES:
+            _leds->specialUpdateBeforeBlockingProcess();
+            printf("Deleting kit in slot %d\n", _kitLoadSlot);
+            _kitManager->deleteKit(_kitLoadSlot);
+            _kitManager->initKit(_kitLoadSlot);
+            _state = MenuState::SUBMENU_SELECTING;
+            break;
+        default:
+            printf("Unhandled button in KIT_DELETE\n");
+            break;
+    }
+}
+
+void Menu::_handleButtonCheckSpace(int16_t buttonIndex) {
+    switch(buttonIndex) {
+        case BUTTON_BACK:
+            _state = MenuState::SUBMENU_SELECTING;
+            break;
+        default:
+            printf("Unhandled button in CHECK_SPACE\n");
             break;
     }
 }

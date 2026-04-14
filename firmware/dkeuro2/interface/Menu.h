@@ -19,8 +19,10 @@ enum class MenuState {
     OUTPUT_PPQN_SELECT,
     KIT_LOAD_FOLDER_SELECT,
     KIT_LOAD_SLOT_SELECT,
+    KIT_DELETE,
     KIT_SELECT,
     TIME_SIGNATURE_SELECT,
+    CHECK_SPACE
 };
 
 
@@ -39,10 +41,12 @@ class Menu {
         uint8_t _subMenuIndex = 0;
         uint16_t _kitLoadFolderIndex = 0;
         uint16_t _kitLoadSlot = 0;
-        std::array<MenuState, 3> _subMenuStates = {
+        std::array<MenuState, 5> _subMenuStates = {
+            MenuState::KIT_LOAD_FOLDER_SELECT,
+            MenuState::KIT_DELETE,
+            MenuState::CHECK_SPACE,
             MenuState::INPUT_PPQN_SELECT,
             MenuState::OUTPUT_PPQN_SELECT,
-            MenuState::KIT_LOAD_FOLDER_SELECT,
         };
 
         void _handleButtonHome(int16_t buttonIndex);
@@ -50,5 +54,7 @@ class Menu {
         void _handleButtonSubMenuSelecting(int16_t buttonIndex);
         void _handleButtonKitLoadFolderSelect(int16_t buttonIndex);
         void _handleButtonKitLoadSlotSelect(int16_t buttonIndex);
+        void _handleButtonKitDelete(int16_t buttonIndex);
+        void _handleButtonCheckSpace(int16_t buttonIndex);
         void _updateDisplay();
 };
