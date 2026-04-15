@@ -43,10 +43,31 @@ For each kit:
 
 */
 
+#define SECTOR_SETTINGS 256
 #define SECTOR_AUDIO_METADATA 384
 #define SECTOR_AUDIO_DATA_START 385
 
+// byte positions/offsets within settings page
+// all settings are currently 32-bit (4-byte) values
+#define SETTINGS_CLOCK_MODE 0
+#define SETTINGS_TEMPO 4
+#define SETTINGS_TIME_SIGNATURE 8
+#define SETTINGS_TUPLET 12
+#define SETTINGS_BEAT_NUM 16
+#define SETTINGS_KIT_NUM 20
+#define SETTINGS_CHECK_NUM 252
+#define VALUE_SETTINGS_CHECK_NUM 12345678
+
+// default settings values
+#define DEFAULT_CLOCK_MODE 0
+#define DEFAULT_TEMPO 120
+#define DEFAULT_TIME_SIGNATURE 4
+#define DEFAULT_TUPLET 0
+#define DEFAULT_BEAT_NUM 0
+#define DEFAULT_KIT_NUM 0
+
 // byte positions/offsets within audio metadata page
+// (TODO rename these constants for consistency)
 #define PAGE_ADDRESS_KIT_NAME 0
 #define PAGE_ADDRESS_KIT_START_SECTOR 32
 #define PAGE_ADDRESS_KIT_SIZE 34
@@ -76,3 +97,4 @@ For each kit:
 #define BUTTON_DEC 17
 #define BUTTON_YES 18
 #define BUTTON_NO 19
+#define BUTTON_POWER_OFF 20

@@ -19,11 +19,13 @@ bool Buttons::update() {
     uint32_t data;
     bool tempInputChanged = false;
     data = sn74165::shiftreg_get(&tempInputChanged);
-    data &= ~(0x1F << 3); // set bits 3-7 to 0 (unused buttons)
+    data &= ~(0xF << 4); // set bits 4-7 to 0 (unused buttons)
+    data ^= (1 << 3); // invert bit 3 to detect power off
     if (tempInputChanged)
     {
         _newButtonPresses = data & ~_buttonStates;
         _buttonStates = data;
+        //printf("INPUT CHANGED\n"); // power off is detected but not as a button press, maybe need to invert logic? buttons go high when pressed, power voltage divider goes low when power off
     } else {
         _newButtonPresses = 0;
     }

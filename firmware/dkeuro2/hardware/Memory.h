@@ -16,6 +16,7 @@ class Memory {
         void init();
         void writeToFlashPage(uint16_t page, const uint8_t* data);
         uint32_t readIntFromFlash(uint32_t address, size_t length);
+        uint32_t readSetting(uint32_t settingOffset);
         void backupSector(uint32_t sector);
         void restoreSector(uint32_t sector);
         void moveSector(uint32_t sourceSector, uint32_t destSector);

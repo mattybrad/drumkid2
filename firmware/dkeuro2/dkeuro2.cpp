@@ -48,11 +48,7 @@ void pulseInCallback(uint gpio, uint32_t events) {
 
 int main()
 {
-    channelManager.init();
-    // for(uint i = 0; i < MAX_CHANNELS; i++) {
-    //     channels[i].init();
-    // }
-
+    
     stdio_init_all();
     
     gpio_init(Pins::SYNC_IN);
@@ -62,20 +58,26 @@ int main()
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
     
-    memory.init();
-    kitManager.init(&memory, &channelManager);
-    cardReader.init(&memory);
     buttons.init();
     leds.init();
+    memory.init();
+    channelManager.init();
+    kitManager.init(&memory, &channelManager);
+    cardReader.init(&memory);
     menu.init(&leds, &memory, &cardReader, &kitManager);
+    audio.init();
+    transport.init();
 
-    kitManager.initKit(0); // i guess we need to remember last loaded kit now!
+    // read settings from flash
+    //transport.clockMode = memory.readSetting(SETTINGS_CLOCK_MODE);
+    //transport.tempo = memory.readSetting(SETTINGS_TEMPO);
+    //transport.timeSignature = memory.readSetting(SETTINGS_TIME_SIGNATURE);
+    //transport.tuplet = memory.readSetting(SETTINGS_TUPLET);
+    kitManager.initKit(memory.readSetting(SETTINGS_KIT_NUM));
 
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
 
-    audio.init();
-    transport.init();
     int64_t lastTransportPositionFP = 0;
     uint64_t now;
     int longestTime = 0;
@@ -155,7 +157,27 @@ int main()
                 if(buttons.update()) {
                     int16_t buttonIndex;
                     while((buttonIndex = buttons.getButtonPress()) != -1) {
-                        menu.handleButtonPress(buttonIndex);
+                        if(buttonIndex == BUTTON_POWER_OFF) {
+                            // save settings to flash
+                            printf("Power off, save settings...\n");
+                            uint8_t settingsData[FLASH_PAGE_SIZE] = {0};
+                            // *(uint32_t*)(&settingsData[SETTINGS_CLOCK_MODE]) = transport.clockMode;
+                            // *(uint32_t*)(&settingsData[SETTINGS_TEMPO]) = transport.tempo;
+                            // *(uint32_t*)(&settingsData[SETTINGS_TIME_SIGNATURE]) = transport.timeSignature;
+                            // *(uint32_t*)(&settingsData[SETTINGS_TUPLET]) = transport.tuplet;
+                            // *(uint32_t*)(&settingsData[SETTINGS_BEAT_NUM]) = transport.beatNum;
+                            settingsData[SETTINGS_KIT_NUM] = kitManager.kitNum;
+                            *(uint32_t*)(&settingsData[SETTINGS_CHECK_NUM]) = VALUE_SETTINGS_CHECK_NUM;
+                            memory.writeToFlashPage(SECTOR_SETTINGS * (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), settingsData);
+                            printf("Settings saved!\n");
+                            uint64_t timeAfterSave = time_us_64();
+                            while(1) {
+                                printf("Time since power off: %llu ms\n", (time_us_64() - timeAfterSave) / 1000);
+                                sleep_ms(1);
+                            }
+                        } else {
+                            menu.handleButtonPress(buttonIndex);
+                        }
                     }
                 }
             }

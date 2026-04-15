@@ -10,6 +10,23 @@ void Memory::init() {
     for(size_t i = 0; i < sizeof(_pageReady); i++) {
         _pageReady[i] = 0;
     }
+
+    // check settings page is valid
+    uint32_t checkNumber = readSetting(SETTINGS_CHECK_NUM);
+    if(checkNumber != VALUE_SETTINGS_CHECK_NUM) {
+        printf("Warning: Settings page is invalid (check number: %u), resetting to default settings\n", checkNumber);
+
+        uint8_t defaultSettings[FLASH_PAGE_SIZE] = {0};
+        *(uint32_t*)(&defaultSettings[SETTINGS_CLOCK_MODE]) = DEFAULT_CLOCK_MODE;
+        *(uint32_t*)(&defaultSettings[SETTINGS_TEMPO]) = DEFAULT_TEMPO;
+        *(uint32_t*)(&defaultSettings[SETTINGS_TIME_SIGNATURE]) = DEFAULT_TIME_SIGNATURE;
+        *(uint32_t*)(&defaultSettings[SETTINGS_TUPLET]) = DEFAULT_TUPLET;
+        *(uint32_t*)(&defaultSettings[SETTINGS_BEAT_NUM]) = DEFAULT_BEAT_NUM;
+        *(uint32_t*)(&defaultSettings[SETTINGS_KIT_NUM]) = DEFAULT_KIT_NUM;
+        *(uint32_t*)(&defaultSettings[SETTINGS_CHECK_NUM]) = VALUE_SETTINGS_CHECK_NUM;
+
+        writeToFlashPage(SECTOR_SETTINGS * (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE), defaultSettings);
+    }
 }
 
 void Memory::writeToFlashPage(uint16_t page, const uint8_t* data)
@@ -92,4 +109,8 @@ uint32_t Memory::readIntFromFlash(uint32_t address, size_t length) {
     uint32_t result = 0;
     memcpy(&result, (const void *)(XIP_BASE + address), length);
     return result;
+}
+
+uint32_t Memory::readSetting(uint32_t settingOffset) {
+    return readIntFromFlash(SECTOR_SETTINGS * FLASH_SECTOR_SIZE + settingOffset, 4);
 }
