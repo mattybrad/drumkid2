@@ -45,6 +45,7 @@ add_executable(dkeuro2
     hardware/CardReaderConfig.c
     hardware/Leds.cpp
     hardware/Buttons.cpp
+    hardware/AnalogInputs.cpp
     hardware/Memory.cpp
     audio/Audio.cpp
     audio/Channel.cpp

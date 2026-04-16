@@ -22,6 +22,7 @@ namespace Pins {
     constexpr uint8_t MUX_ADDRESS_C = 21;
     constexpr uint8_t MUX_READ_0 = 26;
     constexpr uint8_t MUX_READ_1 = 27;
+    constexpr uint8_t ADC_SMPS_MODE = 23;
 
     // DAC (audio output) pins
     constexpr uint8_t DAC_DOUT = 9;

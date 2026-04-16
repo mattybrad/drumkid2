@@ -20,6 +20,7 @@ Started Jan 2026
 #include "hardware/Pins.h"
 #include "hardware/Leds.h"
 #include "hardware/Buttons.h"
+#include "hardware/AnalogInputs.h"
 #include "hardware/Memory.h"
 #include "hardware/CardReader.h"
 #include "audio/Audio.h"
@@ -34,9 +35,9 @@ CardReader cardReader;
 Memory memory;
 Leds leds;
 Buttons buttons;
+AnalogInputs analogInputs;
 Audio audio;
 Transport transport;
-//Channel channels[MAX_CHANNELS];
 ChannelManager channelManager;
 KitManager kitManager;
 Menu menu;
@@ -62,6 +63,7 @@ int main()
     buttons.init();
     leds.init();
     memory.init();
+    analogInputs.init();
     channelManager.init();
     kitManager.init(&memory, &channelManager);
     cardReader.init(&memory);
@@ -175,6 +177,9 @@ int main()
                 }
             }
             // 4051 mux update will also go here
+            if(time_us_64() - analogInputs.lastUpdate() > 1000) {
+                analogInputs.update();
+            }
         }
 
 
