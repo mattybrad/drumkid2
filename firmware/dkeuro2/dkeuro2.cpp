@@ -40,6 +40,7 @@ Transport transport;
 ChannelManager channelManager;
 KitManager kitManager;
 Menu menu;
+Beat tempBeat;
 
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
@@ -67,6 +68,7 @@ int main()
     menu.init(&leds, &memory, &cardReader, &kitManager);
     audio.init();
     transport.init();
+    tempBeat.init();
 
     // read settings from flash
     //transport.clockMode = memory.readSetting(SETTINGS_CLOCK_MODE);
@@ -89,30 +91,21 @@ int main()
         while(audio.samplesRequired()) {
             uint32_t thisTransportPosition = transport.getPositionAtTimeFP(now+(sampleCount*22)) >> 32; // 22us per sample at 44.1kHz, approximate for now
 
+            // handle sample triggering from current beat and aleatoric algorithm
             if(thisTransportPosition != lastTransportPositionFP) {
                 lastTransportPositionFP = thisTransportPosition;
-                
-                // check for triggers
-                if(thisTransportPosition % 24 == 0) {
-                    channelManager.channels[0].samplePosition = 0;
-                    channelManager.channels[0].samplePositionFP = 0;
+
+                // if(thisTransportPositionFP % 24 == 0) {
+                //     channelManager.triggerChannel(0);
+                // }
+                while(tempBeat.hitAvailable(thisTransportPosition % 96)) {
+                    Beat::Hit hit = tempBeat.getNextHit();
+                    channelManager.triggerChannel(hit.channel);
                 }
-                if(thisTransportPosition % 48 == 24) {
-                    channelManager.channels[1].samplePosition = 0;
-                    channelManager.channels[1].samplePositionFP = 0;
-                }
-                if(thisTransportPosition % 6 == 0) {
-                    channelManager.channels[2].samplePosition = 0;
-                    channelManager.channels[2].samplePositionFP = 0;
-                }
-                for(uint i = 3; i < channelManager.numChannels; i++) {
-                    if(thisTransportPosition % 4 == 0 && rand() % 4 == 0) {
-                        channelManager.channels[i].samplePosition = 0;
-                        channelManager.channels[i].samplePositionFP = 0;
-                    }
-                }
+
             }
 
+            // generate audio
             int16_t leftSample = 0;
             int16_t rightSample = 0;
             for(uint ch=0; ch<channelManager.numChannels; ch++) {

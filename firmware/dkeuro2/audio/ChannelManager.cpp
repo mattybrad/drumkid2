@@ -5,3 +5,10 @@ void ChannelManager::init() {
         channels[i].init();
     }
 }
+
+void ChannelManager::triggerChannel(uint8_t channelNum) {
+    if(channelNum < numChannels) {
+        channels[channelNum].samplePosition = 0;
+        channels[channelNum].samplePositionFP = 0;
+    }
+}

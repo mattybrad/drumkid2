@@ -8,6 +8,7 @@ class ChannelManager {
         void init();
         Channel channels[MAX_CHANNELS];
         uint8_t numChannels = 0;
+        void triggerChannel(uint8_t channelNum);
 
     private:
 
