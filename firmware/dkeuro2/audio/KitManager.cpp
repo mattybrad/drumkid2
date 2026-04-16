@@ -219,3 +219,7 @@ void KitManager::deleteKit(uint8_t kitSlot) {
     _memory->restoreSector(SECTOR_AUDIO_METADATA); // restore metadata sector after updating
     createSpaceForKit(kitSlot, 0);
 }
+
+uint8_t KitManager::getNumChannels() {
+    return kits[kitNum].numSamples;
+}

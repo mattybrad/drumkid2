@@ -7,6 +7,7 @@ class AnalogInputs {
         void init();
         void update();
         int64_t lastUpdate();
+        uint16_t getInputValue(uint8_t inputNum);
         
     private:
         int64_t _lastUpdateTime = 0;

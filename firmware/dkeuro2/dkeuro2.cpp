@@ -29,6 +29,7 @@ Started Jan 2026
 #include "audio/ChannelManager.h"
 #include "rhythm/Transport.h"
 #include "rhythm/Beat.h"
+#include "rhythm/Aleatory.h"
 #include "interface/Menu.h"
 
 CardReader cardReader;
@@ -42,6 +43,7 @@ ChannelManager channelManager;
 KitManager kitManager;
 Menu menu;
 Beat tempBeat;
+Aleatory aleatory;
 
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
@@ -71,6 +73,7 @@ int main()
     audio.init();
     transport.init();
     tempBeat.init();
+    aleatory.init(&analogInputs);
 
     // read settings from flash
     //transport.clockMode = memory.readSetting(SETTINGS_CLOCK_MODE);
@@ -97,14 +100,23 @@ int main()
             if(thisTransportPosition != lastTransportPositionFP) {
                 lastTransportPositionFP = thisTransportPosition;
 
-                // if(thisTransportPositionFP % 24 == 0) {
-                //     channelManager.triggerChannel(0);
-                // }
+                Beat::Hit hits[MAX_CHANNELS] = {0};
+                
                 while(tempBeat.hitAvailable(thisTransportPosition % 96)) {
-                    Beat::Hit hit = tempBeat.getNextHit();
-                    channelManager.triggerChannel(hit.channel);
+                    Beat::Hit beatHit = tempBeat.getNextHit();
+                    hits[beatHit.channel] = beatHit;
                 }
 
+                for(uint8_t ch=0; ch<kitManager.getNumChannels(); ch++) {
+                    Beat::Hit aleatoryHit = aleatory.generateHit(ch, thisTransportPosition % 96);
+                    if(aleatoryHit.velocity > 0) {
+                        hits[aleatoryHit.channel] = aleatoryHit;
+                    }
+                    if(hits[ch].velocity > 0) {
+                        channelManager.triggerChannel(ch);
+                    }
+                }
+                    
             }
 
             // generate audio

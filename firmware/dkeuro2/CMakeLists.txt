@@ -53,6 +53,7 @@ add_executable(dkeuro2
     audio/KitManager.cpp
     rhythm/Transport.cpp
     rhythm/Beat.cpp
+    rhythm/Aleatory.cpp
     interface/Menu.cpp
     )
 pico_generate_pio_header(dkeuro2 ${CMAKE_CURRENT_LIST_DIR}/hardware/sn74595.pio)

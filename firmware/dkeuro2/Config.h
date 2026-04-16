@@ -78,6 +78,7 @@ For each kit:
 #define PAGE_OFFSET_SAMPLE_LENGTH 4
 #define PAGE_OFFSET_SAMPLE_RATE 8
 
+// button numbers (matched to KiCAD schematic SW numbers)
 #define BUTTON_PLAY 1
 #define BUTTON_TAP 2
 #define BUTTON_LIVE 3
@@ -98,3 +99,17 @@ For each kit:
 #define BUTTON_YES 18
 #define BUTTON_NO 19
 #define BUTTON_POWER_OFF 20
+
+// analog input numbers
+#define POT_CHANCE 0
+#define POT_ZOOM 1
+#define POT_CLUSTER 2
+#define POT_CROP 3
+#define POT_VELOCITY 4
+#define POT_VELOCITY_RANGE 5
+#define POT_MAGNET 6
+#define POT_SWING 7
+#define POT_CRUSH 8
+#define POT_PITCH 9
+#define POT_DROP_RANDOM 10
+#define POT_DROP_ALL 11

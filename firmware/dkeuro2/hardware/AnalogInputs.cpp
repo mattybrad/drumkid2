@@ -36,3 +36,11 @@ void AnalogInputs::update() {
 int64_t AnalogInputs::lastUpdate() {
     return _lastUpdateTime;
 }
+
+uint16_t AnalogInputs::getInputValue(uint8_t inputNum) {
+    if(inputNum < 16) {
+        return _inputValues[inputNum];
+    } else {
+        return 0;
+    }
+}

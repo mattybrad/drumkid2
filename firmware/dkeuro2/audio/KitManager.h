@@ -16,6 +16,7 @@ class KitManager {
         uint8_t kitNum = 0;
         Kit kits[MAX_KITS];
         uint32_t getFreeSectors(uint8_t kitSlot);
+        uint8_t getNumChannels();
 
     private:
         Memory* _memory;
