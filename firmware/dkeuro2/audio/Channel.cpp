@@ -3,6 +3,6 @@
 void Channel::init() {
     samplePosition = 0;
     samplePositionFP = 0;
-    playbackSpeed = 
-(int64_t)(1.03 * (1LL << 32));
+    playbackSpeedFP = 
+(int64_t)(2.00 * (1LL << 32));
 }

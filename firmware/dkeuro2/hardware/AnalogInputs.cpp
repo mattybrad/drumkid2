@@ -44,3 +44,7 @@ uint16_t AnalogInputs::getInputValue(uint8_t inputNum) {
         return 0;
     }
 }
+
+uint8_t AnalogInputs::getLastUpdatedMuxChannel() {
+    return (_muxChannel + 7) % 8;
+}

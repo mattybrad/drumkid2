@@ -8,6 +8,7 @@ class AnalogInputs {
         void update();
         int64_t lastUpdate();
         uint16_t getInputValue(uint8_t inputNum);
+        uint8_t getLastUpdatedMuxChannel();
         
     private:
         int64_t _lastUpdateTime = 0;

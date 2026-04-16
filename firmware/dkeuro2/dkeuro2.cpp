@@ -138,7 +138,7 @@ int main()
                         lerpedSample = channel.sampleData[indexInt];
                     }
                     leftSample += lerpedSample >> 4;
-                    channel.samplePositionFP += channel.playbackSpeed;
+                    channel.samplePositionFP += channel.playbackSpeedFP;
                     channel.samplePosition = channel.samplePositionFP >> 32;
                 }
             }
@@ -164,7 +164,7 @@ int main()
                 if(buttons.update()) {
                     int16_t buttonIndex;
                     while((buttonIndex = buttons.getButtonPress()) != -1) {
-                        if(buttonIndex == BUTTON_POWER_OFF) {
+                        if(buttonIndex == BUTTON_POWER_OFF && time_us_64() > 1000000) {
                             // save settings to flash
                             printf("Power off, save settings...\n");
                             uint8_t settingsData[FLASH_PAGE_SIZE] = {0};
@@ -191,6 +191,14 @@ int main()
             // 4051 mux update will also go here
             if(time_us_64() - analogInputs.lastUpdate() > 1000) {
                 analogInputs.update();
+
+                // update specific things if that input has changed
+                uint8_t lastMuxChannel = analogInputs.getLastUpdatedMuxChannel();
+                if(lastMuxChannel+8 == POT_PITCH) {
+                    for(int ch=0; ch<kitManager.getNumChannels(); ch++) {
+                        channelManager.channels[ch].playbackSpeedFP = (int64_t)(kitManager.kits[kitManager.kitNum].samples[ch].sampleRate * (1LL << 32) / 44100) * (1.0 + ((int16_t)analogInputs.getInputValue(POT_PITCH) - 2048) / 2048.0); // adjust playback speed by up to +/-100% based on pot position (FIX THIS, MESSY, JUST TEMPORARY)
+                    }
+                }
             }
         }
 

@@ -70,7 +70,7 @@ void KitManager::initKit(uint8_t newKitNum) {
         if(kits[kitNum].numSamples > i) {
             _channelManager->channels[i].sampleData = (const int16_t *)(XIP_BASE + (kits[kitNum].samples[i].address * FLASH_PAGE_SIZE));
             _channelManager->channels[i].sampleLength = kits[kitNum].samples[i].lengthSamples;
-            _channelManager->channels[i].playbackSpeed = (int64_t)(kits[kitNum].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
+            _channelManager->channels[i].playbackSpeedFP = (int64_t)(kits[kitNum].samples[i].sampleRate * (1LL << 32) / 44100); // convert sample rate to Q32.32 format for playback speed
         }
     }
     _channelManager->numChannels = kits[kitNum].numSamples;
