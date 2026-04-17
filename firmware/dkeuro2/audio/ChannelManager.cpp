@@ -6,9 +6,10 @@ void ChannelManager::init() {
     }
 }
 
-void ChannelManager::triggerChannel(uint8_t channelNum) {
+void ChannelManager::triggerChannel(uint8_t channelNum, uint8_t velocity) {
     if(channelNum < numChannels) {
         channels[channelNum].samplePosition = 0;
         channels[channelNum].samplePositionFP = 0;
+        channels[channelNum].velocity = velocity;
     }
 }

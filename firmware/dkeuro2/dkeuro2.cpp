@@ -109,11 +109,11 @@ int main()
 
                 for(uint8_t ch=0; ch<kitManager.getNumChannels(); ch++) {
                     Beat::Hit aleatoryHit = aleatory.generateHit(ch, thisTransportPosition % 96);
-                    if(aleatoryHit.velocity > 0) {
+                    if(aleatoryHit.velocity > hits[aleatoryHit.channel].velocity) {
                         hits[aleatoryHit.channel] = aleatoryHit;
                     }
                     if(hits[ch].velocity > 0) {
-                        channelManager.triggerChannel(ch);
+                        channelManager.triggerChannel(ch, hits[ch].velocity);
                     }
                 }
                     
@@ -137,7 +137,7 @@ int main()
                     } else {
                         lerpedSample = channel.sampleData[indexInt];
                     }
-                    leftSample += lerpedSample >> 4;
+                    leftSample += (int16_t)((int32_t)lerpedSample * channel.velocity >> 12);
                     channel.samplePositionFP += channel.playbackSpeedFP;
                     channel.samplePosition = channel.samplePositionFP >> 32;
                 }

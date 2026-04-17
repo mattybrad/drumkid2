@@ -11,6 +11,7 @@ class Channel {
         uint32_t samplePosition;
         int64_t samplePositionFP; // Q32.32
         int64_t playbackSpeedFP; // Q32.32
+        uint8_t velocity;
 
     private:
 
