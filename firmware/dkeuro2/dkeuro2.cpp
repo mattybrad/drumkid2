@@ -110,7 +110,7 @@ int main()
                 for(uint8_t ch=0; ch<kitManager.getNumChannels(); ch++) {
                     Beat::Hit aleatoryHit = aleatory.generateHit(ch, thisTransportPosition % 96);
                     if(aleatoryHit.velocity > hits[aleatoryHit.channel].velocity) {
-                        hits[aleatoryHit.channel] = aleatoryHit;
+                        //hits[aleatoryHit.channel] = aleatoryHit;
                     }
                     if(hits[ch].velocity > 0) {
                         channelManager.triggerChannel(ch, hits[ch].velocity);
@@ -124,22 +124,44 @@ int main()
             int16_t rightSample = 0;
             for(uint ch=0; ch<channelManager.numChannels; ch++) {
                 Channel &channel = channelManager.channels[ch];
-                if(channel.samplePosition < channel.sampleLength) {
-                    //leftSample += channel.sampleData[channel.samplePosition] >> 2;
-                    int16_t lerpedSample = 0;
-                    // simple linear interpolation
-                    uint32_t indexInt = channel.samplePositionFP >> 32;
-                    uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
-                    if(indexInt + 1 < channel.sampleLength) {
-                        int16_t sample1 = channel.sampleData[indexInt];
-                        int16_t sample2 = channel.sampleData[indexInt + 1];
-                        lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
-                    } else {
-                        lerpedSample = channel.sampleData[indexInt];
+
+                if(channel.playbackSpeedFP > 0) {
+                    // forward playback
+                    if(channel.samplePosition < channel.sampleLength) {
+                        int16_t lerpedSample = 0;
+                        // simple linear interpolation
+                        uint32_t indexInt = channel.samplePositionFP >> 32;
+                        uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
+                        if(indexInt + 1 < channel.sampleLength) {
+                            int16_t sample1 = channel.sampleData[indexInt];
+                            int16_t sample2 = channel.sampleData[indexInt + 1];
+                            lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
+                        } else {
+                            lerpedSample = channel.sampleData[indexInt];
+                        }
+                        leftSample += (int16_t)((int32_t)lerpedSample * channel.velocity >> 12);
+                        channel.samplePositionFP += channel.playbackSpeedFP;
+                        channel.samplePosition = channel.samplePositionFP >> 32;
                     }
-                    leftSample += (int16_t)((int32_t)lerpedSample * channel.velocity >> 12);
-                    channel.samplePositionFP += channel.playbackSpeedFP;
-                    channel.samplePosition = channel.samplePositionFP >> 32;
+
+                } else {
+                    // reverse playback (doesn't sound 100% perfect, need to thoroughly check code)
+                    if(channel.samplePosition > 0) {
+                        int16_t lerpedSample = 0;
+                        // simple linear interpolation
+                        uint32_t indexInt = channel.samplePositionFP >> 32;
+                        uint32_t indexFrac = channel.samplePositionFP & 0xFFFFFFFF;
+                        if(indexInt > 0) {
+                            int16_t sample1 = channel.sampleData[indexInt];
+                            int16_t sample2 = channel.sampleData[indexInt - 1];
+                            lerpedSample = sample1 + ((int64_t)(sample2 - sample1) * indexFrac >> 32);
+                        } else {
+                            lerpedSample = channel.sampleData[indexInt];
+                        }
+                        leftSample += (int16_t)((int32_t)lerpedSample * channel.velocity >> 12);
+                        channel.samplePositionFP += channel.playbackSpeedFP;
+                        channel.samplePosition = channel.samplePositionFP >> 32;
+                    }
                 }
             }
             //rightSample = channelManager.channels[3].sampleData[channelManager.channels[3].sampleLength - channelManager.channels[3].samplePosition - 1];
@@ -196,7 +218,7 @@ int main()
                 uint8_t lastMuxChannel = analogInputs.getLastUpdatedMuxChannel();
                 if(lastMuxChannel+8 == POT_PITCH) {
                     for(int ch=0; ch<kitManager.getNumChannels(); ch++) {
-                        channelManager.channels[ch].playbackSpeedFP = (int64_t)(kitManager.kits[kitManager.kitNum].samples[ch].sampleRate * (1LL << 32) / 44100) * (1.0 + ((int16_t)analogInputs.getInputValue(POT_PITCH) - 2048) / 2048.0); // adjust playback speed by up to +/-100% based on pot position (FIX THIS, MESSY, JUST TEMPORARY)
+                        channelManager.channels[ch].playbackSpeedFP = (int64_t)(kitManager.kits[kitManager.kitNum].samples[ch].sampleRate * (1LL << 32) / 44100) * (analogInputs.getInputValue(POT_PITCH) * 8.0f / 4095.0f - 4.0f);
                     }
                 }
             }

@@ -23,9 +23,9 @@ void AnalogInputs::init() {
 
 void AnalogInputs::update() {
     adc_select_input(0);
-    _inputValues[_muxChannel] = adc_read();
+    _inputValues[_muxChannel] = 4095-adc_read();
     adc_select_input(1);
-    _inputValues[_muxChannel + 8] = adc_read();
+    _inputValues[_muxChannel + 8] = 4095-adc_read();
     _muxChannel = (_muxChannel + 1) % 8;
     gpio_put(Pins::MUX_ADDRESS_A, _muxChannel & 1);
     gpio_put(Pins::MUX_ADDRESS_B, (_muxChannel >> 1) & 1);
