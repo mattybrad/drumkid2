@@ -7,7 +7,7 @@
 class Aleatory {
     public:
         void init(AnalogInputs* analogInputs);
-        Beat::Hit generateHit(uint8_t channelNum, uint16_t position);
+        Beat::Hit generateHit(uint8_t channelNum, uint32_t positionFP);
 
     private:
         AnalogInputs* _analogInputs;

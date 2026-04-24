@@ -85,7 +85,7 @@ int main()
     // interrupt for clock in pulse
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
 
-    int64_t lastTransportPositionFP = 0;
+    int32_t lastTransportPositionFP = 0;
     uint64_t now;
     int longestTime = 0;
     int dacIntervalUs = audio.dacIntervalUs();
@@ -94,23 +94,26 @@ int main()
         uint sampleCount = 0;
         now = time_us_64();
         while(audio.samplesRequired()) {
-            uint32_t thisTransportPosition = transport.getPositionAtTimeFP(now+(sampleCount*22)) >> 32; // 22us per sample at 44.1kHz, approximate for now
+            uint32_t thisTransportPositionFP = transport.getPositionAtTimeFP(now+(sampleCount*22)); // Keep full Q16.16 precision
+            uint32_t beatPositionFP = thisTransportPositionFP % (4 << 16); // 4 quarter notes per beat cycle
 
             // handle sample triggering from current beat and aleatoric algorithm
-            if(thisTransportPosition != lastTransportPositionFP) {
-                lastTransportPositionFP = thisTransportPosition;
+            if(thisTransportPositionFP != lastTransportPositionFP) {
+                //float thisBeatPositionQ16 = beatPositionFP / 65536.0f;
+                //printf("Position: %.4f\n", thisBeatPositionQ16);
+                lastTransportPositionFP = thisTransportPositionFP;
 
                 Beat::Hit hits[MAX_CHANNELS] = {0};
-                
-                while(tempBeat.hitAvailable(thisTransportPosition % 96)) {
+
+                while(tempBeat.hitAvailable(beatPositionFP)) {
                     Beat::Hit beatHit = tempBeat.getNextHit();
                     hits[beatHit.channel] = beatHit;
                 }
 
                 for(uint8_t ch=0; ch<kitManager.getNumChannels(); ch++) {
-                    Beat::Hit aleatoryHit = aleatory.generateHit(ch, thisTransportPosition % 96);
+                    Beat::Hit aleatoryHit = aleatory.generateHit(ch, beatPositionFP);
                     if(aleatoryHit.velocity > hits[aleatoryHit.channel].velocity) {
-                        //hits[aleatoryHit.channel] = aleatoryHit;
+                        hits[aleatoryHit.channel] = aleatoryHit;
                     }
                     if(hits[ch].velocity > 0) {
                         channelManager.triggerChannel(ch, hits[ch].velocity);

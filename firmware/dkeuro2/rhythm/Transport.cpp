@@ -22,20 +22,25 @@ void Transport::update() {
     uint64_t now = time_us_64();
     int64_t period = nextPulseTimeEstimate - lastPulseTime;
     lastPositionFP = positionFP;
-    positionFP = (pulseInCount << 32) + ((int64_t)(now - nextPulseTimeEstimate) << 32) / period;
-    uint64_t wholePulsePosition = positionFP >> 32;
-    if(wholePulsePosition > (lastPositionFP >> 32)) {
-        if(wholePulsePosition % 24 == 0) {
-            //printf("Pulse at position %llu\n", wholePulsePosition);
-            //tempTriggerPulse();
-        }
-        if(wholePulsePosition % 24 == 0 || wholePulsePosition % 24 == 6) {
-            //tempTriggerGate();
-        }
+    
+    // Convert pulse count to quarter notes: pulseCount / PPQN
+    uint64_t quarterNoteCount = pulseInCount / PPQN;
+    uint32_t quarterNoteFraction = ((pulseInCount % PPQN) << 16) / PPQN;
+    
+    // Add sub-pulse interpolation based on time
+    int64_t timeFractionFP = ((int64_t)(now - nextPulseTimeEstimate) << 16) / (period * PPQN);
+    
+    positionFP = (quarterNoteCount << 16) + quarterNoteFraction + timeFractionFP;
+    
+    uint32_t wholeQuarterNotePosition = positionFP >> 16;
+    if(wholeQuarterNotePosition > (lastPositionFP >> 16)) {
+        //printf("Quarter note at position %u\n", wholeQuarterNotePosition);
+        //tempTriggerPulse();
     }
 }
 
 void Transport::pulseIn() {
+    //printf("Pulse in %llu\n", pulseInCount);
     uint64_t now = time_us_64();
     int64_t period = now - lastPulseTime;
     pulseInCount++;
@@ -51,19 +56,24 @@ void Transport::pulseIn() {
 
     if(!secondPulseReceived) {
         secondPulseReceived = true;
+        // Calculate rate as microseconds per quarter note (Q16.16)
+        rateFP = ((int64_t)(period * PPQN)) << 16;  // period * PPQN = microseconds per quarter note
         return;
     }
+    
+    // Update rate calculation
+    rateFP = ((int64_t)(period * PPQN)) << 16;
 }
 
-int64_t Transport::getPositionFP() {
+uint32_t Transport::getPositionFP() {
     return positionFP;
 }
 
-int64_t Transport::getPositionAtTimeFP(uint64_t timeUs) {
+uint32_t Transport::getPositionAtTimeFP(uint64_t timeUs) {
     if(!secondPulseReceived) {
         return positionFP;
     }
     int64_t deltaTimeUs = (int64_t)(timeUs - lastPulseTime);
-    int64_t deltaPulsesFP = (rateFP * deltaTimeUs) >> 32;
-    return positionFP + deltaPulsesFP;
+    int64_t deltaQuarterNotesFP = (deltaTimeUs << 16) / rateFP;  // deltaTime / (us per quarter note)
+    return positionFP + deltaQuarterNotesFP;
 }
