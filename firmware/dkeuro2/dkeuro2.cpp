@@ -119,6 +119,7 @@ int main()
                         channelManager.triggerChannel(ch, hits[ch].velocity);
                     }
                 }
+                aleatory.finishGeneratingHits(beatPositionFP);
                     
             }
 
