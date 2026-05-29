@@ -1,11 +1,12 @@
 #include "Menu.h"
 #include <stdio.h>
 
-void Menu::init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* kitManager) {
+void Menu::init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* kitManager, Transport* transport) {
     _leds = leds;
     _memory = memory;
     _cardReader = cardReader;
     _kitManager = kitManager;
+    _transport = transport;
     _leds->setDisplayString("HOME");
 }
 
@@ -117,6 +118,9 @@ void Menu::_handleButtonHome(int16_t buttonIndex) {
     switch(buttonIndex) {
         case BUTTON_KIT:
             _state = MenuState::KIT_SELECT;
+            break;
+        case BUTTON_PLAY:
+            _transport->toggleStartStop();
             break;
         case BUTTON_MENU:
             _state = MenuState::SUBMENU_SELECTING;

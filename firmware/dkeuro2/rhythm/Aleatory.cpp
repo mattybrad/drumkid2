@@ -1,6 +1,7 @@
 #include "Aleatory.h"
 #include "Config.h"
 #include <cstdlib>
+#include <stdio.h>
 
 void Aleatory::init(AnalogInputs* analogInputs) {
     // todo: random seed using analog input noise, flash contents, timings, etc
@@ -19,7 +20,12 @@ Beat::Hit Aleatory::generateHit(uint8_t channelNum, uint32_t positionFP) {
 
     if(quantizedPositionFP != _lastPositionQuantizedFP && zoomPositionFP == quantizedPositionFP) {
         if(rand() % 4095 < _analogInputs->getInputValue(POT_CHANCE)) {
-            hit.velocity = _analogInputs->getInputValue(POT_VELOCITY) >> 5;
+            int32_t velRange = _analogInputs->getInputValue(POT_VELOCITY_RANGE);
+            int32_t vel = _analogInputs->getInputValue(POT_VELOCITY) + (rand() % (velRange * 2 + 1) - velRange); // currently max range is actually 2 x 4095, not sure if this is what we want
+            if(vel < 0) vel = 0;
+            if(vel > 4095) vel = 4095;
+            hit.velocity = vel >> 4;
+            //printf("V%d ", hit.velocity);
         } else {
             hit.velocity = 0;
         }

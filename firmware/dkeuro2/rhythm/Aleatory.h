@@ -4,6 +4,10 @@
 #include "Beat.h"
 #include "hardware/AnalogInputs.h"
 
+// For each sample frame update, run generateHit() for each channel, then run finishGeneratingHits() when done
+
+// TODO: cluster, magnet, swing?, drop..?
+
 class Aleatory {
     public:
         void init(AnalogInputs* analogInputs);

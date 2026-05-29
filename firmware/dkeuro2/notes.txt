@@ -6,3 +6,4 @@ Currently writing version 2 of the Drumkid Eurorack firmware. A few notes about 
     - 520kB SRAM (immediate audio storage?)
     - 4MB flash (code)
     - SD card (unlimited?)
+- Transport position is stored in Q16.16 fixed point format, so first 16 bits are the quarter notes, next sixteen bits are 8th, 16th, etc.

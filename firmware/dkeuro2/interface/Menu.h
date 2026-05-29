@@ -4,6 +4,7 @@
 #include "hardware/Memory.h"
 #include "hardware/CardReader.h"
 #include "audio/KitManager.h"
+#include "rhythm/Transport.h"
 #include "Config.h"
 
 enum class MenuState {
@@ -28,7 +29,7 @@ enum class MenuState {
 
 class Menu {
     public:
-        void init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* kitManager);
+        void init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* kitManager, Transport* transport);
         void handleButtonPress(int16_t buttonIndex);
     
     private:
@@ -36,6 +37,7 @@ class Menu {
         Memory* _memory = nullptr;
         CardReader* _cardReader = nullptr;
         KitManager* _kitManager = nullptr;
+        Transport* _transport = nullptr;
     
         MenuState _state = MenuState::HOME;
         uint8_t _subMenuIndex = 0;

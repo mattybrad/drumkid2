@@ -51,10 +51,10 @@ void pulseInCallback(uint gpio, uint32_t events) {
 }
 
 int main()
-{
-    
+{ 
     stdio_init_all();
     
+    // Init GPIO pins (temp)
     gpio_init(Pins::SYNC_IN);
     gpio_set_dir(Pins::SYNC_IN, GPIO_IN);
     gpio_init(Pins::SYNC_OUT);
@@ -62,6 +62,7 @@ int main()
     gpio_init(Pins::TRIGGER_1);
     gpio_set_dir(Pins::TRIGGER_1, GPIO_OUT);
     
+    // Init singleton classes
     buttons.init();
     leds.init();
     memory.init();
@@ -69,17 +70,17 @@ int main()
     channelManager.init();
     kitManager.init(&memory, &channelManager);
     cardReader.init(&memory);
-    menu.init(&leds, &memory, &cardReader, &kitManager);
+    menu.init(&leds, &memory, &cardReader, &kitManager, &transport);
     audio.init();
     transport.init();
     tempBeat.init();
     aleatory.init(&analogInputs);
 
-    // read settings from flash
-    //transport.clockMode = memory.readSetting(SETTINGS_CLOCK_MODE);
-    //transport.tempo = memory.readSetting(SETTINGS_TEMPO);
-    //transport.timeSignature = memory.readSetting(SETTINGS_TIME_SIGNATURE);
-    //transport.tuplet = memory.readSetting(SETTINGS_TUPLET);
+    // read settings from flash (incomplete)
+    transport.setClockMode(memory.readSetting(SETTINGS_CLOCK_MODE));
+    //transport.setBPM(memory.readSetting(SETTINGS_TEMPO));
+    //transport.setTimeSignature(memory.readSetting(SETTINGS_TIME_SIGNATURE));
+    //transport.setTupletMode(memory.readSetting(SETTINGS_TUPLET));
     kitManager.initKit(memory.readSetting(SETTINGS_KIT_NUM));
 
     // interrupt for clock in pulse
@@ -95,12 +96,10 @@ int main()
         now = time_us_64();
         while(audio.samplesRequired()) {
             uint32_t thisTransportPositionFP = transport.getPositionAtTimeFP(now+(sampleCount*22)); // Keep full Q16.16 precision
-            uint32_t beatPositionFP = thisTransportPositionFP % (4 << 16); // 4 quarter notes per beat cycle
+            uint32_t beatPositionFP = thisTransportPositionFP % (4 << 16); // this needs to be updated to handle different time signatures
 
             // handle sample triggering from current beat and aleatoric algorithm
             if(thisTransportPositionFP != lastTransportPositionFP) {
-                //float thisBeatPositionQ16 = beatPositionFP / 65536.0f;
-                //printf("Position: %.4f\n", thisBeatPositionQ16);
                 lastTransportPositionFP = thisTransportPositionFP;
 
                 Beat::Hit hits[MAX_CHANNELS] = {0};
@@ -120,7 +119,6 @@ int main()
                     }
                 }
                 aleatory.finishGeneratingHits(beatPositionFP);
-                    
             }
 
             // generate audio
@@ -227,7 +225,6 @@ int main()
                 }
             }
         }
-
 
         // check whether DAC needs data
         audio.update();
