@@ -77,7 +77,7 @@ int main()
     aleatory.init(&analogInputs);
 
     // read settings from flash (incomplete)
-    transport.setClockMode(memory.readSetting(SETTINGS_CLOCK_MODE));
+    //transport.setClockMode(memory.readSetting(SETTINGS_CLOCK_MODE));
     //transport.setBPM(memory.readSetting(SETTINGS_TEMPO));
     //transport.setTimeSignature(memory.readSetting(SETTINGS_TIME_SIGNATURE));
     //transport.setTupletMode(memory.readSetting(SETTINGS_TUPLET));
