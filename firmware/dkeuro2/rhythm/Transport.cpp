@@ -22,7 +22,7 @@ void Transport::toggleStartStop() {
             _pulseInCount = 0;
             _positionFP = 0;
             _lastPositionFP = 0;
-            _rateFP = 500000UL << 16; // default to 120 BPM (500us per quarter note)
+            _rateFP = 250000UL; // default to 120 BPM (500us per quarter note)
             _lastUpdateTime = 0;
             _lastPulseTime = 0;
             _nextPulseTimeEstimate = 0;
