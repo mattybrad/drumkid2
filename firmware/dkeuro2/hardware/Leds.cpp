@@ -43,6 +43,22 @@ void Leds::setDisplayString(const char* str) {
     }
 }
 
+void Leds::setDisplayNumberFP(int32_t numberFP, uint8_t decimalPlaces) {
+    // Display fixed point number on 7-segment display, with specified decimal places
+    int32_t adjustedNumber = numberFP;
+    for(uint8_t i=0; i<decimalPlaces; i++) {
+        adjustedNumber *= 10;
+    }
+    adjustedNumber = adjustedNumber >> 16;
+    for(uint8_t i=0; i<4; i++) {
+        uint8_t digitValue = adjustedNumber % 10;
+        bool isDecimalPoint = (i == decimalPlaces && decimalPlaces > 0);
+        bool isLeadingZero = (adjustedNumber == 0 && i >= decimalPlaces);
+        setDisplay(3-i, asciiChars[isLeadingZero ? 0 : '0' + digitValue] + (isDecimalPoint ? 0b10000000 : 0)); // add decimal point to appropriate digit
+        adjustedNumber /= 10;
+    }
+} 
+
 void Leds::update() {
     // Update LED states on hardware
     // first 8 bits toggle segments, next 4 bits toggle digits, last 4 bits toggle LEDs

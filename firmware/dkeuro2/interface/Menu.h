@@ -53,6 +53,7 @@ class Menu {
 
         void _handleButtonHome(int16_t buttonIndex);
         void _handleButtonKitSelect(int16_t buttonIndex);
+        void _handleButtonManualTempo(int16_t buttonIndex);
         void _handleButtonSubMenuSelecting(int16_t buttonIndex);
         void _handleButtonKitLoadFolderSelect(int16_t buttonIndex);
         void _handleButtonKitLoadSlotSelect(int16_t buttonIndex);

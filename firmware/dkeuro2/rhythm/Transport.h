@@ -10,8 +10,10 @@ class Transport {
         void pulseIn();
         void update();
         void toggleStartStop();
+        bool isRunning();
+        uint32_t getBpmFP(); // Q16.16
         uint32_t getPositionAtTimeFP(uint64_t timeUs); // Q16.16, quarter notes
-        void setBPM(float bpm); // not sure if float is right here...
+        void setBpmFP(uint32_t bpmFP); // Q16.16
         // void setClockMode(uint32_t mode);
         // void setTimeSignature(uint32_t timeSignature);
         // void setTupletMode(uint32_t tuplet);

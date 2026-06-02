@@ -99,7 +99,7 @@ int main()
             uint32_t beatPositionFP = thisTransportPositionFP % (4 << 16); // this needs to be updated to handle different time signatures
 
             // handle sample triggering from current beat and aleatoric algorithm
-            if(thisTransportPositionFP != lastTransportPositionFP) {
+            if(transport.isRunning() && thisTransportPositionFP != lastTransportPositionFP) {
                 lastTransportPositionFP = thisTransportPositionFP;
 
                 Beat::Hit hits[MAX_CHANNELS] = {0};
