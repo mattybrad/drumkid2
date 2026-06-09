@@ -95,7 +95,7 @@ int main()
         uint sampleCount = 0;
         now = time_us_64();
         while(audio.samplesRequired()) {
-            uint32_t thisTransportPositionFP = transport.getPositionAtTimeFP(now+(sampleCount*22)); // Keep full Q16.16 precision
+            uint32_t thisTransportPositionFP = transport.getPositionAtTimeQ16(now+(sampleCount*22)); // Keep full Q16.16 precision
             uint32_t beatPositionFP = thisTransportPositionFP % (4 << 16); // this needs to be updated to handle different time signatures
 
             // handle sample triggering from current beat and aleatoric algorithm

@@ -18,6 +18,7 @@ enum class MenuState {
     SUBMENU_SELECTING,
     INPUT_PPQN_SELECT,
     OUTPUT_PPQN_SELECT,
+    CLOCK_MODE_SELECT,
     KIT_LOAD_FOLDER_SELECT,
     KIT_LOAD_SLOT_SELECT,
     KIT_DELETE,
@@ -43,7 +44,8 @@ class Menu {
         uint8_t _subMenuIndex = 0;
         uint16_t _kitLoadFolderIndex = 0;
         uint16_t _kitLoadSlot = 0;
-        std::array<MenuState, 5> _subMenuStates = {
+        std::array<MenuState, 6> _subMenuStates = {
+            MenuState::CLOCK_MODE_SELECT,
             MenuState::KIT_LOAD_FOLDER_SELECT,
             MenuState::KIT_DELETE,
             MenuState::CHECK_SPACE,

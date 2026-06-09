@@ -51,8 +51,8 @@ void Menu::_updateDisplay() {
             _leds->setDisplayString("HOME");
             break;
         case MenuState::MANUAL_TEMPO:
-            printf("BPM: %d\n", _transport->getBpmFP() >> 16);
-            _leds->setDisplayNumberFP(_transport->getBpmFP(), 1);
+            printf("BPM: %d\n", _transport->getBpmQ16() >> 16);
+            _leds->setDisplayNumberFP(_transport->getBpmQ16(), 1);
             break;
         case MenuState::KIT_SELECT:
             if(_kitManager->kits[_kitManager->kitNum].numSamples > 0) {
@@ -65,6 +65,9 @@ void Menu::_updateDisplay() {
             break;
         case MenuState::SUBMENU_SELECTING:
             switch(_subMenuStates[_subMenuIndex]) {
+                case MenuState::CLOCK_MODE_SELECT:
+                    _leds->setDisplayString("CLK");
+                    break;
                 case MenuState::KIT_LOAD_FOLDER_SELECT:
                     _leds->setDisplayString("LOAD");
                     break;
@@ -288,18 +291,18 @@ void Menu::_handleButtonCheckSpace(int16_t buttonIndex) {
 }
 
 void Menu::_handleButtonManualTempo(int16_t buttonIndex) {
-    uint32_t bpmFP = _transport->getBpmFP();
+    uint32_t bpmQ16 = _transport->getBpmQ16();
     switch(buttonIndex) {
         case BUTTON_BACK:
             _state = MenuState::HOME;
             break;
         case BUTTON_INC:
-            bpmFP += (1 << 16) / 10;
-            _transport->setBpmFP(bpmFP);
+            bpmQ16 += (1 << 16) / 10;
+            _transport->setBpmQ16(bpmQ16);
             break;
         case BUTTON_DEC:
-            bpmFP -= (1 << 16) / 10;
-            _transport->setBpmFP(bpmFP);
+            bpmQ16 -= (1 << 16) / 10;
+            _transport->setBpmQ16(bpmQ16);
             break;
         default:
             printf("Unhandled button in MANUAL_TEMPO\n");
