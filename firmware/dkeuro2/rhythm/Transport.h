@@ -18,13 +18,13 @@ class Transport {
         // void setTimeSignature(uint32_t timeSignature);
         // void setTupletMode(uint32_t tuplet);
     private:
-        uint32_t _clockMode = MODE_CLOCK_INTERNAL;
+        uint32_t _clockMode = MODE_CLOCK_EXTERNAL;
         bool _running = false; // in internal clock mode, whether transport is running or stopped
         uint32_t _rateUsPerQuarterNote = 500000; // default 120 BPM, microseconds per quarter note
         uint64_t _startTimeUs = 0; // time when transport was started, in microseconds
         uint32_t _positionQ16 = 0; // Q16.16, quarter notes, measured at last update or pulse in
 
-        // int64_t _pulseInCount = 0; // total pulses received
+        //int64_t _pulseInCount = 0; // total pulses received
         // uint32_t _positionFP = 0; // Q16.16, quarter notes
         // uint32_t _lastPositionFP = 0; // Q16.16, quarter notes
         // int64_t _rateFP = 0;     // Q32.32, microseconds per quarter note

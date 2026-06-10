@@ -17,7 +17,7 @@ void Transport::toggleStartStop() {
 }
 
 bool Transport::isRunning() {
-    return _running || (_clockMode == MODE_CLOCK_EXTERNAL && _firstPulseReceived);
+    return _running;
 }
 
 uint32_t Transport::getBpmQ16() {
@@ -36,31 +36,24 @@ void Transport::pulseIn() {
         return;
     }
 
+    
     uint64_t nowUs = time_us_64();
     
     if(!_firstPulseReceived) {
         // this is first pulse
         _firstPulseReceived = true;
-        _lastPulseTimeUs = nowUs;
+        _running = true;
         _positionQ16 = 0;
+        printf("First pulse received, starting transport\n");
         return;
     }
 
-    int64_t _pulseIntervalUs = nowUs - _lastPulseTimeUs;
-    _nextPulseTimeEstimateUs = nowUs + _pulseIntervalUs;
-    _lastPulseTimeUs = nowUs;
-
     if(!_secondPulseReceived) {
-        // this is second pulse, we can now calculate a rate
         _secondPulseReceived = true;
     }
-
-    _rateUsPerQuarterNote = _pulseIntervalUs * PPQN;
-    _startTimeUs = nowUs; // reset start time to now, so position will be 0 at this pulse
-
-    _positionQ16 += (1 << 16) / PPQN;
-
-    printf("Pulse in: interval=%lld us, rate=%u us/qn, position=%u qn\n", _pulseIntervalUs, _rateUsPerQuarterNote, _positionQ16 >> 16);
+    
+    _positionQ16 += (1 << 16) / PPQN; // advance position by one pulse (in Q16.16)
+    //printf("Pulse, pos (QN): %d \n", _positionQ16 >> 16);
 }
 
 void Transport::setBpmQ16(uint32_t bpmQ16) {
@@ -72,9 +65,15 @@ void Transport::setBpmQ16(uint32_t bpmQ16) {
 }
 
 uint32_t Transport::getPositionAtTimeQ16(uint64_t timeUs) {
-    uint64_t elapsedUs = timeUs - _startTimeUs;
-    uint64_t newPositionQ16 = _positionQ16 + (elapsedUs << 16) / _rateUsPerQuarterNote;
-    return (uint32_t)newPositionQ16;
+    if(_clockMode == MODE_CLOCK_INTERNAL) {
+        uint64_t elapsedUs = timeUs - _startTimeUs;
+        uint64_t newPositionQ16 = _positionQ16 + (elapsedUs << 16) / _rateUsPerQuarterNote;
+        return (uint32_t)newPositionQ16;
+    } else if(_clockMode == MODE_CLOCK_EXTERNAL) {
+        // not done yet
+        return _positionQ16;
+    }
+    return 0; // default return value if clock mode is invalid
 }
 
 // void Transport::setClockMode(uint32_t mode) {
