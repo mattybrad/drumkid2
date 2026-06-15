@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "Config.h"
 
-static const int32_t PPQN = 24;  // Pulses per quarter note
+static const int32_t PPQN = 4;  // Pulses per quarter note
 
 class Transport {
     public:
@@ -19,18 +19,19 @@ class Transport {
         // void setTupletMode(uint32_t tuplet);
     private:
         uint32_t _clockMode = MODE_CLOCK_EXTERNAL;
-        bool _running = false; // in internal clock mode, whether transport is running or stopped
-        uint32_t _rateUsPerQuarterNote = 500000; // default 120 BPM, microseconds per quarter note
-        uint64_t _startTimeUs = 0; // time when transport was started, in microseconds
-        uint32_t _positionQ16 = 0; // Q16.16, quarter notes, measured at last update or pulse in
 
-        //int64_t _pulseInCount = 0; // total pulses received
-        // uint32_t _positionFP = 0; // Q16.16, quarter notes
-        // uint32_t _lastPositionFP = 0; // Q16.16, quarter notes
-        // int64_t _rateFP = 0;     // Q32.32, microseconds per quarter note
-        // int64_t _lastUpdateTime = 0; // microseconds
-        int64_t _lastPulseTimeUs = 0;   // microseconds
-        int64_t _nextPulseTimeEstimateUs = 0; // microseconds
+        // Internal clock state
+        bool _runningInt = true; // in internal clock mode, whether transport is running or stopped
+        uint32_t _rateUsPerQuarterNoteInt = 500000; // default 120 BPM, microseconds per quarter note
+        uint64_t _startTimeUsInt = 0; // time when transport was started, in microseconds
+        uint32_t _positionQ16Int = 0; // Q16.16, quarter notes, measured at last update or pulse in
+
+        // External clock state
+        bool _everWentBackwards = false;
+        bool _runningExt = false; // in external clock mode, whether transport is running or stopped
+        uint64_t _anchorTimeUsExt = 0; // time of last pulse, in microseconds
+        uint32_t _anchorPositionQ16Ext = 0; // Q16.16, quarter notes, measured at last pulse in
+        uint32_t _estimatedUsPerQuarterNoteExt = 500000; // default 120 BPM, microseconds per quarter note
         bool _firstPulseReceived = false;
         bool _secondPulseReceived = false;
 };

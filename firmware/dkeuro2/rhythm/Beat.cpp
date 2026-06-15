@@ -3,14 +3,19 @@
 
 void Beat::init() {
     uint16_t p = 0;
-    hits[p++] = {0, 0, 255};
-    hits[p++] = {0, 2, 255};
+    
+    hits[p++] = {0<<16, 0, 255}; // kick beat 1
+
+    // hats
+    hits[p++] = {0<<14, 2, 255};
     hits[p++] = {1<<14, 2, 255};
     hits[p++] = {2<<14, 2, 255};
     hits[p++] = {3<<14, 2, 255};
-    hits[p++] = {1<<16, 1, 255};
-    hits[p++] = {2<<16, 2, 255};
-    hits[p++] = {3<<16, 3, 255};
+    hits[p++] = {4<<14, 2, 255};
+
+    hits[p++] = {2<<16, 1, 255}; // snare
+    hits[p++] = {3<<16, 3, 255}; // tom
+
     numHits = p;
     _lastProcessedPositionFP = 0;
     _nextHitIndex = 0;
