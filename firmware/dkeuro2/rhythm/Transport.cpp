@@ -11,6 +11,7 @@ void Transport::toggleStartStop() {
         _runningInt = !_runningInt;
         if(_runningInt) {
             _positionQ16Int = 0;
+            _numResets++;
             _startTimeUsInt = time_us_64();
         }
     }
@@ -18,6 +19,10 @@ void Transport::toggleStartStop() {
 
 bool Transport::isRunning() {
     return (_clockMode == MODE_CLOCK_INTERNAL) ? _runningInt : _runningExt;
+}
+
+uint32_t Transport::getNumResets() {
+    return _numResets;
 }
 
 uint32_t Transport::getBpmQ16() {
@@ -56,6 +61,7 @@ void Transport::pulseIn() {
     
     int64_t elapsedUs = nowUs - _anchorTimeUsExt;
     uint64_t newMeasuredUsPerQuarterNote = (elapsedUs << 16) / PPQN; // Q16.16 per pulse
+
     // simple low-pass filter to smooth out BPM changes, with more weight on previous estimate to prevent erratic BPM changes due to jittery clock signals
     _estimatedUsPerQuarterNoteExt = (_estimatedUsPerQuarterNoteExt * 7 + newMeasuredUsPerQuarterNote) / 8; // feeds in new measurement with 1/8 weight
     _anchorTimeUsExt = nowUs;
@@ -86,6 +92,23 @@ uint32_t Transport::getPositionAtTimeQ16(uint64_t timeUs) {
     return 0; // default return value if clock mode is invalid
 }
 
-// void Transport::setClockMode(uint32_t mode) {
-//     _clockMode = mode;
-// }
+void Transport::setClockMode(uint32_t mode) {
+    if(mode == MODE_CLOCK_INTERNAL) {
+        _runningInt = true;
+        _positionQ16Int = 0;
+        _startTimeUsInt = time_us_64();
+    } else if(mode == MODE_CLOCK_EXTERNAL) {
+        _firstPulseReceived = false;
+        _secondPulseReceived = false;
+        _runningExt = false;
+        _estimatedUsPerQuarterNoteExt = 500000; // default to 120 BPM
+        _anchorTimeUsExt = time_us_64();
+        _anchorPositionQ16Ext = 0;
+    }
+    _numResets++;
+    _clockMode = mode;
+}
+
+uint32_t Transport::getClockMode() {
+    return _clockMode;
+}

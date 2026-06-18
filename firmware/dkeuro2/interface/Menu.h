@@ -61,5 +61,6 @@ class Menu {
         void _handleButtonKitLoadSlotSelect(int16_t buttonIndex);
         void _handleButtonKitDelete(int16_t buttonIndex);
         void _handleButtonCheckSpace(int16_t buttonIndex);
+        void _handleButtonClockModeSelect(int16_t buttonIndex);
         void _updateDisplay();
 };

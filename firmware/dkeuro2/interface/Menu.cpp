@@ -37,6 +37,9 @@ void Menu::handleButtonPress(int16_t buttonIndex) {
         case MenuState::CHECK_SPACE:
             _handleButtonCheckSpace(buttonIndex);
             break;
+        case MenuState::CLOCK_MODE_SELECT:
+            _handleButtonClockModeSelect(buttonIndex);
+            break;
         default:
             printf("Unhandled menu state\n");
             break;
@@ -116,6 +119,18 @@ void Menu::_updateDisplay() {
                 snprintf(displayStr, 5, "%d", freePercentage);
             }
             _leds->setDisplayString(displayStr);
+            break;
+        }
+        case MenuState::CLOCK_MODE_SELECT:
+        {
+            uint32_t clockMode = _transport->getClockMode();
+            if(clockMode == MODE_CLOCK_INTERNAL) {
+                _leds->setDisplayString("INT");
+            } else if(clockMode == MODE_CLOCK_EXTERNAL) {
+                _leds->setDisplayString("EXT");
+            } else {
+                _leds->setDisplayString("????");
+            }
             break;
         }
         default:
@@ -286,6 +301,31 @@ void Menu::_handleButtonCheckSpace(int16_t buttonIndex) {
             break;
         default:
             printf("Unhandled button in CHECK_SPACE\n");
+            break;
+    }
+}
+
+void Menu::_handleButtonClockModeSelect(int16_t buttonIndex) {
+    switch(buttonIndex) {
+        case BUTTON_BACK:
+        case BUTTON_YES:
+        case BUTTON_NO:
+            _state = MenuState::SUBMENU_SELECTING;
+            break;
+        case BUTTON_INC:
+        case BUTTON_DEC:
+        {
+            // cycle through clock modes
+            uint32_t currentMode = _transport->getClockMode();
+            if(currentMode == MODE_CLOCK_INTERNAL) {
+                _transport->setClockMode(MODE_CLOCK_EXTERNAL);
+            } else {
+                _transport->setClockMode(MODE_CLOCK_INTERNAL);
+            }
+            break;
+        }
+        default:
+            printf("Unhandled button in CLOCK_MODE_SELECT\n");
             break;
     }
 }

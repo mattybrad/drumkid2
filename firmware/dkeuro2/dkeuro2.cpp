@@ -87,10 +87,16 @@ int main()
     gpio_set_irq_enabled_with_callback(Pins::SYNC_IN, GPIO_IRQ_EDGE_FALL, true, pulseInCallback);
 
     int32_t lastTransportPositionFP = 0;
+    int32_t numTransportResets = 0;
     uint64_t now;
     int longestTime = 0;
     int dacIntervalUs = audio.dacIntervalUs();
     while(true) {
+        if(transport.getNumResets() != numTransportResets) {
+            numTransportResets = transport.getNumResets();
+            lastTransportPositionFP = 0;
+        }
+
         // generate audio in pre-buffer
         uint sampleCount = 0;
         now = time_us_64();
