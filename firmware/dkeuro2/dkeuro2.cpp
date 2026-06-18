@@ -48,6 +48,7 @@ Aleatory aleatory;
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
     transport.pulseIn();
+    menu.forceDisplayUpdate(); // to allow latest tempo to be shown
 }
 
 int main()

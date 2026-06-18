@@ -12,10 +12,8 @@ void Menu::init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* 
 
 void Menu::handleButtonPress(int16_t buttonIndex) {
     printf("Menu handling button %d\n", buttonIndex);
+    _handleButtonGeneral(buttonIndex);
     switch(_state) {
-        case MenuState::HOME:
-            _handleButtonHome(buttonIndex);
-            break;
         case MenuState::MANUAL_TEMPO:
             _handleButtonManualTempo(buttonIndex);
             break;
@@ -139,8 +137,12 @@ void Menu::_updateDisplay() {
     }
 }
 
-void Menu::_handleButtonHome(int16_t buttonIndex) {
+void Menu::_handleButtonGeneral(int16_t buttonIndex) {
     switch(buttonIndex) {
+        case BUTTON_TAP:
+            _transport->handleTapTempoPulse();
+            _state = MenuState::TAP_TEMPO;
+            break;
         case BUTTON_TEMPO:
             _state = MenuState::MANUAL_TEMPO;
             break;
@@ -152,9 +154,6 @@ void Menu::_handleButtonHome(int16_t buttonIndex) {
             break;
         case BUTTON_MENU:
             _state = MenuState::SUBMENU_SELECTING;
-            break;
-        default:
-            printf("Unhandled button in HOME\n");
             break;
     }
 }
@@ -347,5 +346,12 @@ void Menu::_handleButtonManualTempo(int16_t buttonIndex) {
         default:
             printf("Unhandled button in MANUAL_TEMPO\n");
             break;
+    }
+}
+
+void Menu::forceDisplayUpdate() {
+    // currently only used for external clock mode to update tempo display
+    if(_state == MenuState::MANUAL_TEMPO) {
+        _updateDisplay();
     }
 }

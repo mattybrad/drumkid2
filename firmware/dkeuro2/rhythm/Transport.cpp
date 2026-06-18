@@ -26,9 +26,19 @@ uint32_t Transport::getNumResets() {
 }
 
 uint32_t Transport::getBpmQ16() {
-    if(_rateUsPerQuarterNoteInt == 0) return 0; // prevent division by zero
-    uint64_t bpmQ16_16 = (60000000ULL << 16) / _rateUsPerQuarterNoteInt;
-    return (uint32_t)bpmQ16_16;
+    if(_clockMode == MODE_CLOCK_EXTERNAL) {
+        if(!_firstPulseReceived) {
+            return 0; // no pulses received yet, BPM is unknown
+        }
+        if(_estimatedUsPerQuarterNoteExt == 0) return 0; // prevent division by zero
+        uint64_t bpmQ16_16 = (60000000ULL << 16) / _estimatedUsPerQuarterNoteExt;
+        return (uint32_t)bpmQ16_16;
+    } else if(_clockMode == MODE_CLOCK_INTERNAL) {
+        if(_rateUsPerQuarterNoteInt == 0) return 0; // prevent division by zero
+        uint64_t bpmQ16_16 = (60000000ULL << 16) / _rateUsPerQuarterNoteInt;
+        return (uint32_t)bpmQ16_16;
+    }
+    return 0; // default return value if clock mode is invalid
 }
 
 void Transport::update() {
@@ -60,7 +70,9 @@ void Transport::pulseIn() {
     }
     
     int64_t elapsedUs = nowUs - _anchorTimeUsExt;
-    uint64_t newMeasuredUsPerQuarterNote = (elapsedUs << 16) / PPQN; // Q16.16 per pulse
+    uint64_t newMeasuredUsPerQuarterNote = elapsedUs * PPQN;
+
+    // this is not yet perfect - seems to take a while to smooth out
 
     // simple low-pass filter to smooth out BPM changes, with more weight on previous estimate to prevent erratic BPM changes due to jittery clock signals
     _estimatedUsPerQuarterNoteExt = (_estimatedUsPerQuarterNoteExt * 7 + newMeasuredUsPerQuarterNote) / 8; // feeds in new measurement with 1/8 weight
@@ -111,4 +123,37 @@ void Transport::setClockMode(uint32_t mode) {
 
 uint32_t Transport::getClockMode() {
     return _clockMode;
+}
+
+void Transport::handleTapTempoPulse() {
+    if(_clockMode != MODE_CLOCK_INTERNAL) {
+        // ignore tap tempo if not in internal clock mode
+        return;
+    }
+    uint64_t nowUs = time_us_64();
+    if(_lastTapTimeUs != 0) {
+        uint32_t intervalUs = (uint32_t)(nowUs - _lastTapTimeUs);
+        // shift previous taps and add new interval
+        for(int i = 3; i > 0; i--) {
+            _recentTapsUs[i] = _recentTapsUs[i-1];
+        }
+        _recentTapsUs[0] = intervalUs;
+
+        // calculate average interval from recent taps
+        uint32_t sumIntervals = 0;
+        int validTaps = 0;
+        for(int i = 0; i < 4; i++) {
+            if(_recentTapsUs[i] > 0) {
+                sumIntervals += _recentTapsUs[i];
+                validTaps++;
+            }
+        }
+        if(validTaps > 0) {
+            uint32_t avgIntervalUs = sumIntervals / validTaps;
+            uint32_t bpmQ16 = (60000000ULL << 16) / avgIntervalUs;
+            setBpmQ16(bpmQ16);
+            printf("Tap tempo set to %d BPM\n", bpmQ16 >> 16);
+        }
+    }
+    _lastTapTimeUs = nowUs;
 }

@@ -32,6 +32,7 @@ class Menu {
     public:
         void init(Leds* leds, Memory* memory, CardReader* cardReader, KitManager* kitManager, Transport* transport);
         void handleButtonPress(int16_t buttonIndex);
+        void forceDisplayUpdate();
     
     private:
         Leds* _leds = nullptr;
@@ -53,7 +54,7 @@ class Menu {
             MenuState::OUTPUT_PPQN_SELECT,
         };
 
-        void _handleButtonHome(int16_t buttonIndex);
+        void _handleButtonGeneral(int16_t buttonIndex);
         void _handleButtonKitSelect(int16_t buttonIndex);
         void _handleButtonManualTempo(int16_t buttonIndex);
         void _handleButtonSubMenuSelecting(int16_t buttonIndex);
