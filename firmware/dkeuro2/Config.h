@@ -82,6 +82,9 @@ For each kit:
 #define PAGE_OFFSET_SAMPLE_LENGTH 4
 #define PAGE_OFFSET_SAMPLE_RATE 8
 
+// misc
+#define NUM_TRIGGER_OUTPUTS 4
+
 // button numbers (matched to KiCAD schematic SW numbers)
 #define BUTTON_PLAY 1
 #define BUTTON_TAP 2

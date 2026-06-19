@@ -38,6 +38,9 @@ void Menu::handleButtonPress(int16_t buttonIndex) {
         case MenuState::CLOCK_MODE_SELECT:
             _handleButtonClockModeSelect(buttonIndex);
             break;
+        case MenuState::TIME_SIGNATURE_SELECT:
+            _handleButtonTimeSignatureSelect(buttonIndex);
+            break;
         default:
             printf("Unhandled menu state\n");
             break;
@@ -131,6 +134,14 @@ void Menu::_updateDisplay() {
             }
             break;
         }
+        case MenuState::TIME_SIGNATURE_SELECT:
+        {
+            // todo - handle two-digit numerators at least (e.g. 13/8)
+            Transport::TimeSignature ts = _transport->getTimeSignature();
+            snprintf(displayStr, 5, "%d-%d ", ts.numerator, ts.denominator);
+            _leds->setDisplayString(displayStr);
+            break;
+        }
         default:
             _leds->setDisplayString("????");
             break;
@@ -139,21 +150,36 @@ void Menu::_updateDisplay() {
 
 void Menu::_handleButtonGeneral(int16_t buttonIndex) {
     switch(buttonIndex) {
+        case BUTTON_PLAY:
+            _transport->toggleStartStop();
+            break;
         case BUTTON_TAP:
             _transport->handleTapTempoPulse();
             _state = MenuState::TAP_TEMPO;
             break;
+        case BUTTON_LIVE:
+            _state = MenuState::LIVE_EDIT;
+            break;
+        case BUTTON_STEP:
+            _state = MenuState::STEP_EDIT;
+            break;
+        case BUTTON_BEAT:
+            _state = MenuState::BEAT_SELECT;
+            break;
         case BUTTON_TEMPO:
             _state = MenuState::MANUAL_TEMPO;
+            break;
+        case BUTTON_TUPLET:
+            _state = MenuState::TUPLET_SELECT;
+            break;
+        case BUTTON_MENU:
+            _state = MenuState::SUBMENU_SELECTING;
             break;
         case BUTTON_KIT:
             _state = MenuState::KIT_SELECT;
             break;
-        case BUTTON_PLAY:
-            _transport->toggleStartStop();
-            break;
-        case BUTTON_MENU:
-            _state = MenuState::SUBMENU_SELECTING;
+        case BUTTON_TIME_SIGNATURE:
+            _state = MenuState::TIME_SIGNATURE_SELECT;
             break;
     }
 }
@@ -349,7 +375,32 @@ void Menu::_handleButtonManualTempo(int16_t buttonIndex) {
     }
 }
 
+void Menu::_handleButtonTimeSignatureSelect(int16_t buttonIndex) {
+    switch(buttonIndex) {
+        case BUTTON_BACK:
+            _state = MenuState::HOME;
+            break;
+        case BUTTON_INC:
+            _transport->incrementTimeSignatureNumerator();
+            break;
+        case BUTTON_DEC:
+            _transport->decrementTimeSignatureNumerator();
+            break;
+        case BUTTON_YES:
+            _transport->incrementTimeSignatureDenominator();
+            break;
+        case BUTTON_NO:
+            _transport->decrementTimeSignatureDenominator();
+            break;
+        default:
+            printf("Unhandled button in TIME_SIGNATURE_SELECT\n");
+            break;
+    }
+}
+
 void Menu::forceDisplayUpdate() {
+    // todo: rate limit
+
     // currently only used for external clock mode to update tempo display
     if(_state == MenuState::MANUAL_TEMPO) {
         _updateDisplay();

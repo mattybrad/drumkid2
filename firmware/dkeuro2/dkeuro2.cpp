@@ -92,6 +92,8 @@ int main()
 
     int32_t lastTransportPositionFP = 0;
     int32_t numTransportResets = 0;
+    int32_t nextClockPulsePositionFP = 0;
+    int32_t clockPulseIntervalFP = (1 << 16) / 24; // assuming 4 pulses per beat
     uint64_t now;
     int longestTime = 0;
     int dacIntervalUs = audio.dacIntervalUs();
@@ -99,18 +101,28 @@ int main()
         if(transport.getNumResets() != numTransportResets) {
             numTransportResets = transport.getNumResets();
             lastTransportPositionFP = 0;
+            nextClockPulsePositionFP = 0;
         }
 
         // generate audio in pre-buffer
         uint sampleCount = 0;
         now = time_us_64();
+        Transport::TimeSignature ts = transport.getTimeSignature();
+        uint32_t beatsPerMeasureFP = ((ts.numerator * 4)<< 16) / ts.denominator; // convert to fixed-point
         while(audio.samplesRequired()) {
             uint32_t thisTransportPositionFP = transport.getPositionAtTimeQ16(now+(sampleCount*22)); // Keep full Q16.16 precision
-            uint32_t beatPositionFP = thisTransportPositionFP % (4 << 16); // this needs to be updated to handle different time signatures
+            uint32_t beatPositionFP = thisTransportPositionFP % beatsPerMeasureFP;
 
             // handle sample triggering from current beat and aleatoric algorithm
             if(transport.isRunning() && thisTransportPositionFP >= lastTransportPositionFP) {
                 lastTransportPositionFP = thisTransportPositionFP;
+
+                // schedule clock output pulse if needed
+                if(thisTransportPositionFP >= nextClockPulsePositionFP) {
+                    absolute_time_t triggerTime = now + (sampleCount * 22);
+                    triggers.sendClockPulse(triggerTime);
+                    nextClockPulsePositionFP += clockPulseIntervalFP;
+                }
 
                 Beat::Hit hits[MAX_CHANNELS] = {0};
 

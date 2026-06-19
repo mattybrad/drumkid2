@@ -18,6 +18,15 @@ class Transport {
         void setClockMode(uint32_t mode);
         uint32_t getNumResets();
         void handleTapTempoPulse();
+        void incrementTimeSignatureNumerator();
+        void decrementTimeSignatureNumerator();
+        void incrementTimeSignatureDenominator();
+        void decrementTimeSignatureDenominator();
+        struct TimeSignature {
+            uint8_t numerator;
+            uint8_t denominator;
+        };
+        TimeSignature getTimeSignature();
     private:
         uint32_t _clockMode = MODE_CLOCK_INTERNAL;
         uint32_t _numResets = 0;
@@ -39,4 +48,6 @@ class Transport {
         uint32_t _estimatedUsPerQuarterNoteExt = 500000; // default 120 BPM, microseconds per quarter note
         bool _firstPulseReceived = false;
         bool _secondPulseReceived = false;
+        uint8_t _timeSignatureNumerator = 4;
+        uint8_t _timeSignatureDenominator = 4;
 };

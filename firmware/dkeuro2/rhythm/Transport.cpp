@@ -157,3 +157,32 @@ void Transport::handleTapTempoPulse() {
     }
     _lastTapTimeUs = nowUs;
 }
+
+void Transport::incrementTimeSignatureNumerator() {
+    _timeSignatureNumerator++;
+    _timeSignatureNumerator = (_timeSignatureNumerator > 32) ? 32 : _timeSignatureNumerator; // limit to 32
+}
+
+void Transport::decrementTimeSignatureNumerator() {
+    _timeSignatureNumerator--;
+    _timeSignatureNumerator = (_timeSignatureNumerator < 1) ? 1 : _timeSignatureNumerator; // limit to 1
+}
+
+void Transport::incrementTimeSignatureDenominator() {
+    if(_timeSignatureDenominator == 4) {
+        _timeSignatureDenominator = 8;
+    } else {
+        _timeSignatureDenominator = 4;
+    }
+}
+
+void Transport::decrementTimeSignatureDenominator() {
+    incrementTimeSignatureDenominator(); // toggle between 4 and 8 for now
+}
+
+Transport::TimeSignature Transport::getTimeSignature() {
+    TimeSignature ts;
+    ts.numerator = _timeSignatureNumerator;
+    ts.denominator = _timeSignatureDenominator;
+    return ts;
+}
