@@ -23,6 +23,7 @@ Started Jan 2026
 #include "hardware/AnalogInputs.h"
 #include "hardware/Memory.h"
 #include "hardware/CardReader.h"
+#include "hardware/Triggers.h"
 #include "audio/Audio.h"
 #include "audio/KitManager.h"
 #include "audio/Channel.h"
@@ -37,6 +38,7 @@ Memory memory;
 Leds leds;
 Buttons buttons;
 AnalogInputs analogInputs;
+Triggers triggers;
 Audio audio;
 Transport transport;
 ChannelManager channelManager;
@@ -68,6 +70,7 @@ int main()
     leds.init();
     memory.init();
     analogInputs.init();
+    triggers.init();
     channelManager.init();
     kitManager.init(&memory, &channelManager);
     cardReader.init(&memory);
@@ -123,6 +126,10 @@ int main()
                     }
                     if(hits[ch].velocity > 0) {
                         channelManager.triggerChannel(ch, hits[ch].velocity);
+
+                        // temp, testing GPIO trigger output
+                        absolute_time_t triggerTime = now + (sampleCount * 22);
+                        triggers.sendPulse(ch, triggerTime);
                     }
                 }
                 aleatory.finishGeneratingHits(beatPositionFP);

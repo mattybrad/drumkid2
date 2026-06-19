@@ -46,6 +46,7 @@ add_executable(dkeuro2
     hardware/Leds.cpp
     hardware/Buttons.cpp
     hardware/AnalogInputs.cpp
+    hardware/Triggers.cpp
     hardware/Memory.cpp
     audio/Audio.cpp
     audio/Channel.cpp
