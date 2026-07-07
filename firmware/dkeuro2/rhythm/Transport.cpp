@@ -169,15 +169,19 @@ void Transport::decrementTimeSignatureNumerator() {
 }
 
 void Transport::incrementTimeSignatureDenominator() {
-    if(_timeSignatureDenominator == 4) {
-        _timeSignatureDenominator = 8;
+    if(_timeSignatureDenominator < 32) {
+        _timeSignatureDenominator *= 2; // double the denominator
     } else {
-        _timeSignatureDenominator = 4;
+        _timeSignatureDenominator = 1; // wrap around to 1 if exceeding 32
     }
 }
 
 void Transport::decrementTimeSignatureDenominator() {
-    incrementTimeSignatureDenominator(); // toggle between 4 and 8 for now
+    if(_timeSignatureDenominator > 1) {
+        _timeSignatureDenominator /= 2; // halve the denominator
+    } else {
+        _timeSignatureDenominator = 32; // wrap around to 32 if below 1
+    }
 }
 
 Transport::TimeSignature Transport::getTimeSignature() {

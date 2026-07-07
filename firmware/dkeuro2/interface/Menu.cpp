@@ -52,7 +52,23 @@ void Menu::_updateDisplay() {
     char displayStr[5] = {0};
     switch(_state) {
         case MenuState::HOME:
-            _leds->setDisplayString("HOME");
+            //_leds->setDisplayString("HOME");
+            if(_transport->isRunning()) {
+                //_leds->setDisplayString("RUN");
+                uint32_t transportQuarterNotePositionQ16 = _transport->getPositionAtTimeQ16(time_us_64()) + (1 << 15); // add 0.5 for rounding
+                Transport::TimeSignature ts = _transport->getTimeSignature();
+                uint32_t beatsPerMeasureFP = ((ts.numerator * 4)<< 16) / ts.denominator; // convert to fixed-point
+                uint32_t transportQuarterNotePosition = (transportQuarterNotePositionQ16 % beatsPerMeasureFP) >> 16;
+                for(uint8_t i=0; i<4; i++) {
+                    if(i == transportQuarterNotePosition % 4) {
+                        _leds->setDisplayDigit(i, transportQuarterNotePosition < 4 ? 0b00100000 : 0b00010000); // turn on decimal point for current beat
+                    } else {
+                        _leds->setDisplayDigit(i, 0); // turn off other digits
+                    }
+                }
+            } else {
+                _leds->setDisplayString("STOP");
+            }
             break;
         case MenuState::MANUAL_TEMPO:
             printf("BPM: %d\n", _transport->getBpmQ16() >> 16);
@@ -138,7 +154,11 @@ void Menu::_updateDisplay() {
         {
             // todo - handle two-digit numerators at least (e.g. 13/8)
             Transport::TimeSignature ts = _transport->getTimeSignature();
-            snprintf(displayStr, 5, "%d-%d ", ts.numerator, ts.denominator);
+            if(ts.numerator >= 10 && ts.denominator >= 10) {
+                snprintf(displayStr, 5, "%d%d", ts.numerator, ts.denominator);
+            } else {
+                snprintf(displayStr, 5, "%d-%d ", ts.numerator, ts.denominator);
+            }
             _leds->setDisplayString(displayStr);
             break;
         }
@@ -402,7 +422,9 @@ void Menu::forceDisplayUpdate() {
     // todo: rate limit
 
     // currently only used for external clock mode to update tempo display
-    if(_state == MenuState::MANUAL_TEMPO) {
+    if(_state == MenuState::MANUAL_TEMPO && _transport->getClockMode() == MODE_CLOCK_EXTERNAL) {
+        _updateDisplay();
+    } else if(_state == MenuState::HOME) {
         _updateDisplay();
     }
 }

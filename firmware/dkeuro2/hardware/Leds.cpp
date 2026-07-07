@@ -1,9 +1,13 @@
 #include "Leds.h"
+#include "Config.h"
 #include "sn74595.pio.h"
 #include "hardware/Pins.h"
 #include "hardware/gpio.h"
 
+Leds* Leds::_instance = nullptr;
+
 void Leds::init() {
+    _instance = this;
     // Initialize LED hardware
     gpio_init(Pins::SR_OUT_DATA);
     gpio_set_dir(Pins::SR_OUT_DATA, GPIO_OUT);
@@ -28,7 +32,29 @@ void Leds::setLed(uint8_t ledNum, bool state) {
     }
 }
 
-void Leds::setDisplay(uint8_t digitNum, uint8_t digitSegmentData) {
+void Leds::sendLedPulse(uint8_t ledNum, absolute_time_t startTimeUs) {
+    if(ledNum >= NUM_LEDS) return;
+
+    void *userData = (void*)(uintptr_t)ledNum;
+    add_alarm_at(startTimeUs, _alarmCallbackHigh, userData, true);
+    add_alarm_at(startTimeUs + (_pulseLengthMs * 1000), _alarmCallbackLow, userData, true);
+}
+
+int64_t Leds::_alarmCallbackHigh(alarm_id_t id, void* userData) {
+    uint8_t ledNum = (uint8_t)(uintptr_t)userData;
+    _instance->setLed(ledNum, true);
+
+    return 0; // no need to repeat
+}
+
+int64_t Leds::_alarmCallbackLow(alarm_id_t id, void* userData) {
+    uint8_t ledNum = (uint8_t)(uintptr_t)userData;
+    _instance->setLed(ledNum, false);
+
+    return 0; // no need to repeat
+}
+
+void Leds::setDisplayDigit(uint8_t digitNum, uint8_t digitSegmentData) {
     // Set 7-segment display data
     if(digitNum < 4) {
         _segmentData[digitNum] = digitSegmentData;
@@ -39,7 +65,23 @@ void Leds::setDisplayString(const char* str) {
     bool stringFinished = false;
     for(uint8_t i=0; i<4; i++) {
         if(str[i] == '\0') stringFinished = true;
-        setDisplay(i, stringFinished ? 0 : asciiChars[(uint8_t)str[i]]);
+        setDisplayDigit(i, stringFinished ? 0 : asciiChars[(uint8_t)str[i]]);
+    }
+}
+
+void Leds::setDisplayInt(int32_t number) {
+    // Display integer on 7-segment display
+    
+    // todo: handle negative and >9999
+
+    for(uint8_t i=0; i<4; i++) {
+        uint8_t digitValue = number % 10;
+        if(number == 0 && i > 0) {
+            setDisplayDigit(3-i, asciiChars[0]); // leading zeros as blank
+        } else {
+            setDisplayDigit(3-i, asciiChars['0' + digitValue]);
+        }
+        number /= 10;
     }
 }
 
@@ -54,7 +96,7 @@ void Leds::setDisplayNumberFP(int32_t numberFP, uint8_t decimalPlaces) {
         uint8_t digitValue = adjustedNumber % 10;
         bool isDecimalPoint = (i == decimalPlaces && decimalPlaces > 0);
         bool isLeadingZero = (adjustedNumber == 0 && i >= decimalPlaces);
-        setDisplay(3-i, asciiChars[isLeadingZero ? 0 : '0' + digitValue] + (isDecimalPoint ? 0b10000000 : 0)); // add decimal point to appropriate digit
+        setDisplayDigit(3-i, asciiChars[isLeadingZero ? 0 : '0' + digitValue] + (isDecimalPoint ? 0b10000000 : 0)); // add decimal point to appropriate digit
         adjustedNumber /= 10;
     }
 } 

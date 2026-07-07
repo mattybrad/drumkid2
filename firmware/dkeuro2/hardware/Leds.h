@@ -6,8 +6,10 @@ class Leds {
     public:
         void init();
         void setLed(uint8_t ledNum, bool state);
-        void setDisplay(uint8_t digitNum, uint8_t segmentData);
+        void sendLedPulse(uint8_t ledNum, absolute_time_t startTimeUs);
+        void setDisplayDigit(uint8_t digitNum, uint8_t segmentData);
         void setDisplayString(const char* str);
+        void setDisplayInt(int32_t number);
         void setDisplayNumberFP(int32_t numberFP, uint8_t decimalPlaces);
         static const uint8_t CLOCK_OUT = 0;
         static const uint8_t CLOCK_IN = 1;
@@ -19,6 +21,10 @@ class Leds {
         void specialUpdateBeforeBlockingProcess();
         
     private:
+        static Leds* _instance;
+        static int64_t _alarmCallbackHigh(alarm_id_t id, void* userData);
+        static int64_t _alarmCallbackLow(alarm_id_t id, void* userData);
+        uint16_t _pulseLengthMs = 10; // pulse length in milliseconds
         uint8_t _singleLedStates;
         uint8_t _segmentData[4];
         uint8_t _currentDigit = 0;

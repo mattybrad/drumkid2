@@ -84,6 +84,7 @@ For each kit:
 
 // misc
 #define NUM_TRIGGER_OUTPUTS 4
+#define NUM_LEDS 4
 
 // button numbers (matched to KiCAD schematic SW numbers)
 #define BUTTON_PLAY 1

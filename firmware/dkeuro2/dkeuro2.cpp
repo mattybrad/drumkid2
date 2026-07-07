@@ -50,6 +50,7 @@ Aleatory aleatory;
 // Static wrapper function for GPIO interrupt
 void pulseInCallback(uint gpio, uint32_t events) {
     transport.pulseIn();
+    leds.sendLedPulse(Leds::CLOCK_IN, time_us_64());
     menu.forceDisplayUpdate(); // to allow latest tempo to be shown
 }
 
@@ -93,7 +94,7 @@ int main()
     int32_t lastTransportPositionFP = 0;
     int32_t numTransportResets = 0;
     int32_t nextClockPulsePositionFP = 0;
-    int32_t clockPulseIntervalFP = (1 << 16) / 24; // assuming 4 pulses per beat
+    int32_t clockPulseIntervalFP = (1 << 16) / 1; // assuming 24 pulses per beat for now
     uint64_t now;
     int longestTime = 0;
     int dacIntervalUs = audio.dacIntervalUs();
@@ -122,6 +123,11 @@ int main()
                     absolute_time_t triggerTime = now + (sampleCount * 22);
                     triggers.sendClockPulse(triggerTime);
                     nextClockPulsePositionFP += clockPulseIntervalFP;
+
+                    // also schedule LED pulse
+                    leds.sendLedPulse(Leds::CLOCK_OUT, triggerTime);
+
+                    menu.forceDisplayUpdate(); // temp, doesn't need to be this often
                 }
 
                 Beat::Hit hits[MAX_CHANNELS] = {0};
