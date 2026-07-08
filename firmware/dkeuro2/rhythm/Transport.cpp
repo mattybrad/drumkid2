@@ -3,7 +3,8 @@
 #include <stdio.h>
 
 void Transport::init() {
-    
+    _currentBarLengthQ16 = _computeBarLengthQ16();
+    _barStartPositionQ16 = 0;
 }
 
 void Transport::toggleStartStop() {
@@ -11,6 +12,8 @@ void Transport::toggleStartStop() {
         _runningInt = !_runningInt;
         if(_runningInt) {
             _positionQ16Int = 0;
+            _barStartPositionQ16 = 0;
+            _currentBarLengthQ16 = _computeBarLengthQ16();
             _numResets++;
             _startTimeUsInt = time_us_64();
         }
@@ -182,6 +185,22 @@ void Transport::decrementTimeSignatureDenominator() {
     } else {
         _timeSignatureDenominator = 32; // wrap around to 32 if below 1
     }
+}
+
+uint32_t Transport::_computeBarLengthQ16() {
+    // Calculate the length of a bar in Q16.16 format based on the time signature
+    // Bar length = (numerator / denominator) * 4 quarter notes
+    uint32_t barLengthQ16 = (_timeSignatureNumerator << 16) * 4 / _timeSignatureDenominator;
+    return barLengthQ16;
+}
+
+uint32_t Transport::getBarPositionAtTimeQ16(uint64_t timeUs) {
+    uint32_t absPos = getPositionAtTimeQ16(timeUs);
+    while(absPos >= _barStartPositionQ16 + _currentBarLengthQ16) {
+        _barStartPositionQ16 += _currentBarLengthQ16;
+        _currentBarLengthQ16 = _computeBarLengthQ16(); // reads new TS at bar boundary
+    }
+    return absPos - _barStartPositionQ16;
 }
 
 Transport::TimeSignature Transport::getTimeSignature() {

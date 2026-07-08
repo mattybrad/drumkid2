@@ -13,6 +13,7 @@ class Transport {
         bool isRunning();
         uint32_t getBpmQ16(); // Q16.16
         uint32_t getPositionAtTimeQ16(uint64_t timeUs); // Q16.16, quarter notes
+        uint32_t getBarPositionAtTimeQ16(uint64_t timeUs); // Q16.16, quarter notes
         void setBpmQ16(uint32_t bpmQ16); // Q16.16
         uint32_t getClockMode();
         void setClockMode(uint32_t mode);
@@ -30,6 +31,11 @@ class Transport {
     private:
         uint32_t _clockMode = MODE_CLOCK_INTERNAL;
         uint32_t _numResets = 0;
+
+        // Transport state (int + ext)
+        uint32_t _barStartPositionQ16 = 0;
+        uint32_t _currentBarLengthQ16 = 0;
+        uint32_t _computeBarLengthQ16();
 
         // Internal clock state
         bool _runningInt = false; // in internal clock mode, whether transport is running or stopped

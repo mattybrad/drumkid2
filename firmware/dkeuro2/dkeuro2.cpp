@@ -108,11 +108,12 @@ int main()
         // generate audio in pre-buffer
         uint sampleCount = 0;
         now = time_us_64();
-        Transport::TimeSignature ts = transport.getTimeSignature();
-        uint32_t beatsPerMeasureFP = ((ts.numerator * 4)<< 16) / ts.denominator; // convert to fixed-point
+        // Transport::TimeSignature ts = transport.getTimeSignature();
+        // uint32_t beatsPerMeasureFP = ((ts.numerator * 4)<< 16) / ts.denominator; // convert to fixed-point
         while(audio.samplesRequired()) {
             uint32_t thisTransportPositionFP = transport.getPositionAtTimeQ16(now+(sampleCount*22)); // Keep full Q16.16 precision
-            uint32_t beatPositionFP = thisTransportPositionFP % beatsPerMeasureFP;
+            // uint32_t beatPositionFP = thisTransportPositionFP % beatsPerMeasureFP;
+            uint32_t beatPositionFP = transport.getBarPositionAtTimeQ16(now+(sampleCount*22)); // Keep full Q16.16 precision
 
             // handle sample triggering from current beat and aleatoric algorithm
             if(transport.isRunning() && thisTransportPositionFP >= lastTransportPositionFP) {

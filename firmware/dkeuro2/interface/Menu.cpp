@@ -54,8 +54,7 @@ void Menu::_updateDisplay() {
         case MenuState::HOME:
             //_leds->setDisplayString("HOME");
             if(_transport->isRunning()) {
-                //_leds->setDisplayString("RUN");
-                uint32_t transportQuarterNotePositionQ16 = _transport->getPositionAtTimeQ16(time_us_64()) + (1 << 15); // add 0.5 for rounding
+                uint32_t transportQuarterNotePositionQ16 = _transport->getBarPositionAtTimeQ16(time_us_64() + 10000); // slight hack for now, look ahead because display update is called during audio scheduling when transport position is slightly behind
                 Transport::TimeSignature ts = _transport->getTimeSignature();
                 uint32_t beatsPerMeasureFP = ((ts.numerator * 4)<< 16) / ts.denominator; // convert to fixed-point
                 uint32_t transportQuarterNotePosition = (transportQuarterNotePositionQ16 % beatsPerMeasureFP) >> 16;
